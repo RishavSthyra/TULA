@@ -1,0 +1,187 @@
+{
+  "headline": {
+    "line1": "A 20+ Year Legacy,",
+    "line2": "Delivering Successful Projects for Over 13 Years."
+  },
+  "mission": "Design, construct, and maintain sustainable, value-rich spaces by listening, trying, and doing our best always transparently.",
+  "vision": "Legacy Forward: Every Trifecta property leaves the planet and its people better off.",
+  "timelineCardImage": "/images/sollievo.jpg",
+  "stats": [
+    { "label": "Completed Projects", "value": "14" },
+    { "label": "Delivered", "value": "4 Million sq.ft." },
+    { "label": "Consistent Completion Record", "value": "3 Year" },
+    { "label": "Ongoing", "value": "2 Million sq.ft." }
+  ],
+  "timeline": [
+    {
+      "id": "beaumonde-2013",
+      "year": 2013,
+      "title": "BEAUMONDE",
+      "launch": "N/A",
+      "completion": "Jun-13",
+      "type": "Residential",
+      "variant": "slab",
+      "towerHeight": 8.5,
+      "width": 2.6,
+      "depth": 2.6
+    },
+    {
+      "id": "solliveo-2014",
+      "year": 2014,
+      "title": "SOLLIVEO",
+      "launch": "Mar-12",
+      "completion": "Jul-14",
+      "type": "Residential",
+      "variant": "offset",
+      "towerHeight": 9.5,
+      "width": 2.75,
+      "depth": 2.7
+    },
+    {
+      "id": "verdure-2015",
+      "year": 2015,
+      "title": "VERDURE",
+      "launch": "Jan-14",
+      "completion": "Sep-15",
+      "type": "Residential",
+      "variant": "slab",
+      "towerHeight": 10.8,
+      "width": 2.9,
+      "depth": 2.8
+    },
+    {
+      "id": "esplanade-2016",
+      "year": 2016,
+      "title": "ESPLANADE",
+      "launch": "Feb-13",
+      "completion": "Jan-16",
+      "type": "Residential",
+      "variant": "twin",
+      "image": "/images/ESPLANADE.jpg",
+      "towerHeight": 12.2,
+      "width": 3,
+      "depth": 2.9
+    },
+    {
+      "id": "starlight-2017",
+      "year": 2017,
+      "title": "STARLIGHT",
+      "launch": "Sep-14",
+      "completion": "Jun-17",
+      "type": "Residential",
+      "variant": "offset",
+      "image": "/images/trifecta_starlight-bangalore-bengaluru-trifecta_projects_pvt_ltd.avif",
+      "towerHeight": 13.4,
+      "width": 3.05,
+      "depth": 2.95
+    },
+    {
+      "id": "joli-2017",
+      "year": 2017,
+      "title": "JOLI",
+      "launch": "Sep-15",
+      "completion": "Oct-17",
+      "type": "Residential",
+      "variant": "slab",
+      "towerHeight": 14,
+      "width": 3.1,
+      "depth": 3
+    },
+    {
+      "id": "adatto-2018",
+      "year": 2018,
+      "title": "ADATTO",
+      "launch": "Apr-16",
+      "completion": "Nov-18",
+      "type": "Commercial",
+      "variant": "offset",
+      "towerHeight": 15.5,
+      "width": 3.15,
+      "depth": 3.05
+    },
+    {
+      "id": "fait-pour-2019",
+      "year": 2019,
+      "title": "FAIT POUR",
+      "launch": "Jun-18",
+      "completion": "Mar-19",
+      "type": "Commercial",
+      "variant": "twin",
+      "towerHeight": 17.2,
+      "width": 3.2,
+      "depth": 3.1
+    },
+    {
+      "id": "rowhomes-ph1-2022",
+      "year": 2022,
+      "title": "VERDEN EN RESPLANDOR ROW HOMES (Ph 1)",
+      "launch": "Feb-20",
+      "completion": "May-22",
+      "type": "Residential",
+      "variant": "slab",
+      "towerHeight": 20,
+      "width": 3.35,
+      "depth": 3.2
+    },
+    {
+      "id": "bueno-2022",
+      "year": 2022,
+      "title": "BUENO",
+      "launch": "Oct-20",
+      "completion": "Dec-22",
+      "type": "Residential",
+      "variant": "offset",
+      "towerHeight": 22,
+      "width": 3.45,
+      "depth": 3.25
+    },
+    {
+      "id": "villas-ph1-2023",
+      "year": 2023,
+      "title": "VERDEN EN RESPLANDOR VILLAS (Ph 1)",
+      "launch": "Aug-20",
+      "completion": "Oct-23",
+      "type": "Residential",
+      "variant": "twin",
+      "towerHeight": 24.8,
+      "width": 3.55,
+      "depth": 3.35
+    },
+    {
+      "id": "rowhomes-ph2-2024",
+      "year": 2024,
+      "title": "VERDEN EN RESPLANDOR ROW HOMES (Ph 2)",
+      "launch": "Jun-22",
+      "completion": "Feb-24",
+      "type": "Residential",
+      "variant": "slab",
+      "towerHeight": 27.8,
+      "width": 3.7,
+      "depth": 3.45
+    },
+    {
+      "id": "villas-ph2-2024",
+      "year": 2024,
+      "title": "VERDEN EN RESPLANDOR VILLAS (Ph 2)",
+      "launch": "Aug-22",
+      "completion": "Nov-24",
+      "type": "Residential",
+      "variant": "offset",
+      "towerHeight": 30.8,
+      "width": 3.9,
+      "depth": 3.55
+    },
+    {
+      "id": "retto-2025",
+      "year": 2025,
+      "title": "RETTO",
+      "launch": "Feb-23",
+      "completion": "Aug-25",
+      "type": "Residential",
+      "variant": "needle",
+      "towerHeight": 34.5,
+      "width": 4,
+      "depth": 3.7
+    }
+  ]
+}

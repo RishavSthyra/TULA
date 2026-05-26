@@ -1,0 +1,3049 @@
+"use client";
+
+import NextImage from "next/image";
+import {
+  startTransition,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import InfiniteScroll from "react-infinite-scroll-component";
+import {
+  motion,
+  AnimatePresence,
+  type Variants,
+  type Easing,
+} from "framer-motion";
+import MasterPlanTopViewStage from "./MasterPlanTopViewStage";
+import MasterPlanFrameHoverStage from "./MasterPlanFrameHoverStage";
+import SelectedFlatDetailsPanel from "./SelectedFlatDetailsPanel";
+import {
+  ArrowLeft,
+  ArrowRight,
+  BedDouble,
+  Building2,
+  ChevronDown,
+  ChevronUp,
+  MapPin,
+  Ruler,
+  Search,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
+import TowerSelect from "./TowerSelect";
+import { unitPlans } from "@/data/unitPlans";
+import { scheduleAmenityVideoWarmup } from "@/lib/amenity-video-warmup";
+import {
+  getNearestMasterPlanHotspot,
+  isInventoryApartmentAllowedAtHotspot,
+} from "@/lib/master-plan-hotspots";
+import type { MasterPlanHotspotKey } from "@/lib/master-plan-hotspots";
+import type { InventoryApartment, TowerType } from "@/types/inventory";
+import { primeSignedAssetUrls } from "@/src/lib/signed-assets";
+import { useSignedAssetUrls } from "@/src/lib/use-signed-assets";
+
+const facingOptions = ["All", "North", "South", "East", "West"] as const;
+const statusOptions = ["All", "Available", "Reserved", "Sold"] as const;
+const bhkOptions = ["All", "2", "3"] as const;
+const FLOOR_ALL_VALUE = "All";
+const INVENTORY_REFRESH_INTERVAL = 15000;
+const MATCHING_FLATS_PAGE_SIZE = 24;
+const TOTAL_MASTER_PLAN_FRAMES = 360;
+const MASTER_PLAN_SNAP_FRAMES = [1, 61, 121, 181, 241, 301] as const;
+const SPECIAL_UNIT_VIDEO_TOWER: TowerType = "Tower B";
+const SPECIAL_UNIT_VIDEO_HOTSPOT = "A1";
+const SPECIAL_UNIT_VIDEO_FRAME = 1;
+type SpecialUnitVideoConfig = {
+  forwardUrl: string;
+  reverseUrl: string;
+};
+
+const SPECIAL_UNIT_VIDEO_CONFIGS: Record<string, SpecialUnitVideoConfig> = {
+  "3601": {
+    forwardUrl: "videos/Unit  View.mp4",
+    reverseUrl: "videos/Unit View 3S Reversed New_Compressed.mp4",
+  },
+  "3001": {
+    forwardUrl: "videos/Unit  View4sec.mp4",
+    reverseUrl: "videos/Unit_View4sec_reversed_SMALL.mp4",
+  },
+};
+const MASTER_PLAN_STAGE_FALLBACK_IMAGE = "images/first_frame_again.png";
+const SPECIAL_UNIT_VIDEO_NAVIGATION_DELAY_MS = 760;
+const HOTSPOT_NAVIGATION_MIN_DURATION_MS = 380;
+const HOTSPOT_NAVIGATION_MAX_DURATION_MS = 720;
+const HOTSPOT_NAVIGATION_MS_PER_FRAME = 6.8;
+const smoothEase: Easing = [0.22, 1, 0.36, 1];
+let sharedInventoryRequest: Promise<InventoryApartment[]> | null = null;
+
+const panelVariants: Variants = {
+  hidden: {
+    opacity: 0,
+    x: "100%",
+  },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: {
+      duration: 0.9,
+      ease: smoothEase,
+      delay: 0.2,
+    },
+  },
+  exit: {
+    opacity: 0,
+    x: "100%",
+    transition: {
+      duration: 0.75,
+      ease: smoothEase,
+    },
+  },
+};
+
+const staggerWrap: Variants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.06,
+      delayChildren: 0.12,
+    },
+  },
+};
+
+const itemAnim: Variants = {
+  hidden: { opacity: 0, x: 30, scale: 0.98 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    scale: 1,
+    transition: { duration: 0.42, ease: smoothEase },
+  },
+  exit: {
+    opacity: 0,
+    x: 20,
+    scale: 0.98,
+    transition: { duration: 0.2 },
+  },
+};
+
+function getApartmentMeshId(apartment: InventoryApartment) {
+  const towerCode = apartment.tower === "Tower B" ? "B" : "A";
+  const floorCode = String(apartment.floor)
+    .replace(/[^0-9]/g, "")
+    .padStart(2, "0");
+  const flatCode = apartment.flatNumber.replace(/[^0-9A-Za-z]/g, "").toUpperCase();
+
+  if (!floorCode || !flatCode) {
+    return null;
+  }
+
+  return `Tower_${towerCode}_${floorCode}_${flatCode}`;
+}
+
+type MasterPlanLayoutProps = {
+  initialApartments?: InventoryApartment[];
+  initialSignedAssetUrls?: Record<string, string>;
+};
+
+type FloorFilterOption = {
+  value: string;
+  label: string;
+};
+
+type FilterableApartmentRow = {
+  apartment: InventoryApartment;
+  floorValue: string;
+  searchText: string;
+};
+
+type WarmVideoHandle = {
+  preloadLink: HTMLLinkElement;
+  warmVideo: HTMLVideoElement;
+};
+
+function createVideoWarmup(src: string) {
+  const preloadLink = document.createElement("link");
+  preloadLink.rel = "preload";
+  preloadLink.as = "video";
+  preloadLink.href = src;
+  preloadLink.crossOrigin = "anonymous";
+  document.head.appendChild(preloadLink);
+
+  const warmVideo = document.createElement("video");
+  warmVideo.preload = "auto";
+  warmVideo.muted = true;
+  warmVideo.playsInline = true;
+  warmVideo.crossOrigin = "anonymous";
+  warmVideo.src = src;
+  warmVideo.load();
+
+  return {
+    preloadLink,
+    warmVideo,
+  };
+}
+
+function cleanupVideoWarmup(handle: WarmVideoHandle | null) {
+  if (!handle) {
+    return;
+  }
+
+  handle.preloadLink.remove();
+  handle.warmVideo.pause();
+  handle.warmVideo.removeAttribute("src");
+  handle.warmVideo.load();
+}
+
+async function fetchSharedInventory() {
+  if (!sharedInventoryRequest) {
+    sharedInventoryRequest = fetch("/api/inventory", {
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        const result = (await response.json()) as {
+          apartments?: InventoryApartment[];
+          message?: string;
+        };
+
+        if (!response.ok || !result.apartments) {
+          throw new Error(result.message || "Failed to fetch inventory.");
+        }
+
+        return result.apartments;
+      })
+      .finally(() => {
+        sharedInventoryRequest = null;
+      });
+  }
+
+  return sharedInventoryRequest;
+}
+
+function getApartmentSignature(apartments: InventoryApartment[]) {
+  return apartments
+    .map(
+      ({
+        id,
+        title,
+        tower,
+        bhk,
+        priceLakhs,
+        areaSqft,
+        facing,
+        status,
+        floorLabel,
+      }) =>
+        [
+          id,
+          title,
+          tower,
+          bhk,
+          priceLakhs,
+          areaSqft,
+          facing,
+          status,
+          floorLabel,
+        ].join(":"),
+    )
+    .join("|");
+}
+
+function getApartmentFlatToken(apartment: InventoryApartment) {
+  return (apartment.flatNumber || apartment.title || "")
+    .replace(/[^0-9]/g, "")
+    .trim();
+}
+
+function getRoomDimensionItems(roomDimensions: string) {
+  return roomDimensions
+    .split("|")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part, index) => {
+      const [label, ...valueParts] = part.split(":");
+      const value = valueParts.join(":").trim();
+
+      return {
+        key: `${label || part}-${index}`,
+        label: value ? label.trim() : `Space ${index + 1}`,
+        value: value || label.trim(),
+      };
+    });
+}
+
+function compareMasterPlanApartments(
+  left: InventoryApartment,
+  right: InventoryApartment,
+) {
+  if (left.floor !== right.floor) {
+    return left.floor - right.floor;
+  }
+
+  const leftFlatKey = left.flatNumber || left.title;
+  const rightFlatKey = right.flatNumber || right.title;
+  const flatComparison = leftFlatKey.localeCompare(rightFlatKey, undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+
+  if (flatComparison !== 0) {
+    return flatComparison;
+  }
+
+  return left.title.localeCompare(right.title, undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+}
+
+function getUnitPlanForApartment(apartment: InventoryApartment) {
+  const flatToken = getApartmentFlatToken(apartment);
+  const unitEnding = Number(flatToken.at(-1));
+  const unitPlanByEnding =
+    Number.isFinite(unitEnding) && unitEnding > 0
+      ? unitPlans[unitEnding - 1]
+      : null;
+
+  return (
+    unitPlanByEnding ??
+    unitPlans.find((plan) => plan.bhk === `${apartment.bhk} BHK`) ??
+    unitPlans[0]
+  );
+}
+
+function wrapMasterPlanFrame(frame: number, totalFrames = TOTAL_MASTER_PLAN_FRAMES) {
+  return ((frame - 1 + totalFrames) % totalFrames) + 1;
+}
+
+function getShortestMasterPlanFrameDistance(
+  fromFrame: number,
+  toFrame: number,
+  totalFrames = TOTAL_MASTER_PLAN_FRAMES,
+) {
+  const normalizedFromFrame = wrapMasterPlanFrame(fromFrame, totalFrames);
+  const normalizedToFrame = wrapMasterPlanFrame(toFrame, totalFrames);
+  const directDistance = Math.abs(normalizedToFrame - normalizedFromFrame);
+
+  return Math.min(directDistance, totalFrames - directDistance);
+}
+
+function getMasterPlanFrameTransitionDuration(
+  fromFrame: number,
+  toFrame: number,
+) {
+  const frameDistance = getShortestMasterPlanFrameDistance(fromFrame, toFrame);
+
+  return Math.min(
+    HOTSPOT_NAVIGATION_MAX_DURATION_MS,
+    Math.max(
+      HOTSPOT_NAVIGATION_MIN_DURATION_MS,
+      frameDistance * HOTSPOT_NAVIGATION_MS_PER_FRAME,
+    ),
+  );
+}
+
+function isSpecialVideoApartment(apartment: InventoryApartment | null) {
+  if (!apartment) {
+    return false;
+  }
+
+  return (
+    apartment.tower === SPECIAL_UNIT_VIDEO_TOWER &&
+    Boolean(SPECIAL_UNIT_VIDEO_CONFIGS[getApartmentFlatToken(apartment)])
+  );
+}
+
+function getSpecialUnitVideoConfig(flatToken: string) {
+  return SPECIAL_UNIT_VIDEO_CONFIGS[flatToken] ?? null;
+}
+
+function MasterPlanHotspotControls({
+  onPrevious,
+  onNext,
+  compact = false,
+}: {
+  onPrevious: () => void;
+  onNext: () => void;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      data-master-plan-stage-controls
+      className={`pointer-events-auto inline-flex items-center gap-2 rounded-full border border-white/35 bg-[linear-gradient(135deg,rgba(255,255,255,0.42),rgba(255,255,255,0.14))] shadow-[0_18px_46px_rgba(15,23,42,0.16)] backdrop-blur-2xl dark:border-white/10 dark:bg-[linear-gradient(135deg,rgba(20,20,24,0.46),rgba(20,20,24,0.2))] ${
+        compact ? "" : ""
+      } ${compact ? "p-1.5" : "p-2"}`}
+    >
+      <button
+        type="button"
+        onClick={onPrevious}
+        onContextMenu={(event) => event.preventDefault()}
+        className={`group inline-flex touch-manipulation items-center justify-center rounded-full border border-white/45 bg-white/72 text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_8px_24px_rgba(15,23,42,0.12)] transition duration-300 hover:bg-white/88 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-white/10 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_8px_24px_rgba(0,0,0,0.22)] dark:hover:bg-white/14 ${
+          compact
+            ? "h-9 w-9"
+            : "h-10 w-10 hover:-translate-x-0.5 sm:h-11 sm:w-11"
+        }`}
+        aria-label="Previous master plan hotspot"
+      >
+        <ArrowLeft
+          className={`h-4 w-4 transition duration-300 ${
+            compact ? "" : "group-hover:-translate-x-0.5"
+          }`}
+        />
+      </button>
+
+      <div className="h-7 w-px bg-gradient-to-b from-white/0 via-white/35 to-white/0 dark:via-white/12 sm:h-8" />
+
+      <button
+        type="button"
+        onClick={onNext}
+        onContextMenu={(event) => event.preventDefault()}
+        className={`group inline-flex touch-manipulation items-center justify-center rounded-full border border-white/45 bg-white/72 text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_8px_24px_rgba(15,23,42,0.12)] transition duration-300 hover:bg-white/88 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-white/10 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_8px_24px_rgba(0,0,0,0.22)] dark:hover:bg-white/14 ${
+          compact
+            ? "h-9 w-9"
+            : "h-10 w-10 hover:translate-x-0.5 sm:h-11 sm:w-11"
+        }`}
+        aria-label="Next master plan hotspot"
+      >
+        <ArrowRight
+          className={`h-4 w-4 transition duration-300 ${
+            compact ? "" : "group-hover:translate-x-0.5"
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
+
+function SelectedFlatPlanPanel({
+  apartment,
+}: {
+  apartment: InventoryApartment;
+}) {
+  const dimensionItems = useMemo(
+    () => getRoomDimensionItems(apartment.roomDimensions),
+    [apartment.roomDimensions],
+  );
+  const unitPlan = useMemo(() => getUnitPlanForApartment(apartment), [apartment]);
+
+  if (!unitPlan) {
+    return null;
+  }
+
+  return (
+    <div
+      className="pointer-events-auto custom-scrollbar relative max-h-[min(78dvh,42rem)] w-[clamp(17rem,24vw,22.5rem)] overflow-y-auto bg-transparent p-0 text-zinc-900 2xl:w-[24rem]"
+      data-scroll-area="flat-plan-panel"
+    >
+      <div className="space-y-3">
+        <div className="overflow-hidden rounded-[26px] border border-white/48 bg-white/26 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.58),0_18px_44px_rgba(15,23,42,0.12)] backdrop-blur-[26px] 2xl:rounded-[30px] 2xl:p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[8px] font-semibold uppercase tracking-[0.26em] text-zinc-500">
+                Floor Plan
+              </p>
+              <h3 className="mt-1 text-[1rem] font-semibold leading-tight tracking-[-0.03em] text-zinc-950 2xl:text-[1.15rem]">
+                {apartment.title} layout
+              </h3>
+            </div>
+            <span className="rounded-full border border-white/60 bg-white/55 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-zinc-600">
+              {apartment.floorLabel || apartment.floor}
+            </span>
+          </div>
+
+          <div className="relative mt-3 aspect-[4/3] w-full">
+            <NextImage
+              src={unitPlan.image2D}
+              alt={`${apartment.title} floor plan`}
+              fill
+              sizes="(min-width: 1536px) 360px, 320px"
+              className="object-contain mix-blend-multiply drop-shadow-[0_14px_24px_rgba(15,23,42,0.10)]"
+            />
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="rounded-full border border-white/42 bg-white/24 px-2.5 py-1.5 text-[10px] font-semibold text-zinc-700 backdrop-blur-xl">
+              {apartment.bhk} BHK
+            </div>
+            <div className="rounded-full border border-white/42 bg-white/24 px-2.5 py-1.5 text-right text-[10px] font-semibold text-zinc-700 backdrop-blur-xl">
+              {apartment.areaSqft} sqft
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-[26px] border border-white/48 bg-white/26 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.58),0_18px_44px_rgba(15,23,42,0.12)] backdrop-blur-[26px] 2xl:rounded-[30px] 2xl:p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[8px] font-semibold uppercase tracking-[0.26em] text-zinc-500">
+                Spatial Composition
+              </p>
+              <h4 className="mt-1 text-sm font-semibold tracking-[-0.03em] text-zinc-950">
+                Room Dimensions
+              </h4>
+            </div>
+            <span className="rounded-full border border-white/42 bg-white/24 px-2 py-1 text-[9px] font-medium text-zinc-500 backdrop-blur-xl">
+              {dimensionItems.length} rooms
+            </span>
+          </div>
+
+          <div className="mt-3 space-y-2">
+            {dimensionItems.length > 0 ? (
+              dimensionItems.map((item, index) => (
+                <div
+                  key={item.key}
+                  className="flex items-center justify-between gap-3 border-b border-white/45 pb-2 last:border-b-0 last:pb-0"
+                >
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/42 bg-white/22 backdrop-blur-xl">
+                      <Ruler className="h-3.5 w-3.5 text-zinc-600" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[8px] uppercase tracking-[0.2em] text-zinc-400">
+                        {String(index + 1).padStart(2, "0")}
+                      </p>
+                      <p className="truncate text-[11px] font-medium text-zinc-800">
+                        {item.label}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="shrink-0 text-right text-[11px] font-semibold text-zinc-900">
+                    {item.value}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <p className="py-3 text-xs text-zinc-500">
+                Room dimensions are not available for this apartment yet.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MasterPlanModeToggle({
+  isTopViewMode,
+  onNormalView,
+  onTopView,
+}: {
+  isTopViewMode: boolean;
+  onNormalView: () => void;
+  onTopView: () => void;
+}) {
+  return (
+    <div className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-black/68 p-1.5 text-white shadow-[0_18px_46px_rgba(0,0,0,0.3)] backdrop-blur-xl">
+      <button
+        type="button"
+        onClick={() => {
+          if (isTopViewMode) {
+            onNormalView();
+          }
+        }}
+        className={`rounded-full px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] transition ${
+          !isTopViewMode
+            ? "bg-white text-black shadow-[0_10px_20px_rgba(255,255,255,0.18)]"
+            : "text-white/72 hover:text-white"
+        }`}
+      >
+        Normal View
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          if (!isTopViewMode) {
+            onTopView();
+          }
+        }}
+        className={`rounded-full px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] transition ${
+          isTopViewMode
+            ? "bg-white text-black shadow-[0_10px_20px_rgba(255,255,255,0.18)]"
+            : "text-white/72 hover:text-white"
+        }`}
+      >
+        Top View
+      </button>
+    </div>
+  );
+}
+
+export default function MasterPlanLayout({
+  initialApartments = [],
+  initialSignedAssetUrls = {},
+}: MasterPlanLayoutProps) {
+  primeSignedAssetUrls(initialSignedAssetUrls);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const selectedFlatPanelRef = useRef<HTMLDivElement | null>(null);
+  const specialUnitVideoRef = useRef<HTMLVideoElement | null>(null);
+  const specialUnitWarmupRef = useRef<WarmVideoHandle | null>(null);
+  const specialUnitReverseWarmupRef = useRef<WarmVideoHandle | null>(null);
+  const specialVideoLoadedUrlRef = useRef<string | null>(null);
+  const specialUnitVideoTimeoutRef = useRef<number | null>(null);
+  const leavingRef = useRef(false);
+  const lastApartmentSelectionAtRef = useRef(0);
+  const inventorySignatureRef = useRef("");
+  const currentFrameRef = useRef(1);
+  const signedAssetUrls = useSignedAssetUrls([
+    MASTER_PLAN_STAGE_FALLBACK_IMAGE,
+    ...Object.values(SPECIAL_UNIT_VIDEO_CONFIGS).flatMap((config) => [
+      config.forwardUrl,
+      config.reverseUrl,
+    ]),
+  ]);
+
+  const [search, setSearch] = useState("");
+  const [selectedTower, setSelectedTower] = useState<TowerType | null>(null);
+  const [apartments, setApartments] = useState<InventoryApartment[]>(
+    initialApartments,
+  );
+  const [isInventoryLoading, setIsInventoryLoading] = useState(
+    initialApartments.length === 0,
+  );
+  const [inventoryError, setInventoryError] = useState<string | null>(null);
+  const [bhk, setBhk] = useState<(typeof bhkOptions)[number]>("All");
+  const [facing, setFacing] = useState<(typeof facingOptions)[number]>("All");
+  const [status, setStatus] = useState<(typeof statusOptions)[number]>("All");
+  const [floor, setFloor] = useState(FLOOR_ALL_VALUE);
+  const [minArea, setMinArea] = useState(0);
+
+  const isLeaving = false;
+  const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(true);
+  const [isCompactViewport, setIsCompactViewport] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [isDesktopCompactViewport, setIsDesktopCompactViewport] =
+    useState(false);
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
+  const [isTouchTabletViewport, setIsTouchTabletViewport] = useState(false);
+  const [isTopViewMode, setIsTopViewMode] = useState(false);
+  const [currentFrame, setCurrentFrame] = useState(1);
+  const [isStageInteracting, setIsStageInteracting] = useState(false);
+  const [selectedApartment, setSelectedApartment] =
+    useState<InventoryApartment | null>(null);
+  const [selectedApartmentMeshId, setSelectedApartmentMeshId] = useState<
+    string | null
+  >(null);
+  const [isSpecialVideoOpen, setIsSpecialVideoOpen] = useState(false);
+  const [isSpecialVideoLaunching, setIsSpecialVideoLaunching] = useState(false);
+  const [isSpecialVideoReady, setIsSpecialVideoReady] = useState(false);
+  const [isSpecialVideoQueuedToOpen, setIsSpecialVideoQueuedToOpen] =
+    useState(false);
+  const [shouldAutoplaySpecialVideo, setShouldAutoplaySpecialVideo] =
+    useState(false);
+  const [isSpecialVideoCompleted, setIsSpecialVideoCompleted] = useState(false);
+  const [isSpecialVideoReversing, setIsSpecialVideoReversing] = useState(false);
+  const [specialVideoApartment, setSpecialVideoApartment] =
+    useState<InventoryApartment | null>(null);
+  const [specialVideoFreezeFrameUrl, setSpecialVideoFreezeFrameUrl] = useState<
+    string | null
+  >(null);
+  const [isSpecialVideoFreezeFrameVisible, setIsSpecialVideoFreezeFrameVisible] =
+    useState(false);
+  const deferredSearch = useDeferredValue(search);
+  const selectedApartmentInventoryId = selectedApartment?.id ?? null;
+  const activeHotspot = useMemo(
+    () => getNearestMasterPlanHotspot(currentFrame),
+    [currentFrame],
+  );
+  const isSpecialVideoExperienceActive =
+    isSpecialVideoLaunching || isSpecialVideoOpen;
+  const isSpecialVideoOverlayMounted =
+    Boolean(specialVideoApartment) || isSpecialVideoLaunching || isSpecialVideoOpen;
+  const shouldUseCompactLayout =
+    isCompactViewport || isTouchTabletViewport;
+  const shouldRenderCompactSpecialVideoStage =
+    shouldUseCompactLayout && Boolean(specialVideoApartment);
+  const shouldShowCompactSpecialVideoPanel =
+    shouldUseCompactLayout &&
+    Boolean(specialVideoApartment) &&
+    !isSpecialVideoReversing;
+  const isFlatPanelOpen = Boolean(
+    selectedApartment ||
+      shouldShowCompactSpecialVideoPanel ||
+      (isSpecialVideoCompleted && specialVideoApartment),
+  );
+  const shouldEnableCompactStageScrubbing = !isMobileViewport;
+  const compactTouchHighlightProfile = isMobileViewport
+    ? "mobile"
+    : isTouchTabletViewport
+      ? "tablet"
+      : "desktop";
+  const compactStageHeightClassName = shouldUseCompactLayout
+    ? "h-[clamp(18.75rem,45svh,27rem)] sm:h-[clamp(20.5rem,48svh,31rem)]"
+    : "h-[clamp(20rem,50svh,32rem)]";
+  const compactLowerContentClassName = shouldUseCompactLayout
+    ? selectedApartment
+      ? "-mt-1 min-h-0 flex-1 px-0 pb-0"
+      : "-mt-1 min-h-0 flex-1 px-0 pb-0"
+    : "mt-2 min-h-0 flex-1 px-3 pb-3";
+  const shouldShowDesktopSidebar =
+    !shouldUseCompactLayout && !isLeaving && !selectedApartment;
+  const shouldShowTopViewFullscreen =
+    isTopViewMode &&
+    !selectedTower &&
+    !selectedApartment &&
+    !isSpecialVideoExperienceActive;
+  const shouldHideInlineCompactShell = !shouldUseCompactLayout && isSpecialVideoOpen;
+  const activeSpecialVideoFlatToken = specialVideoApartment
+    ? getApartmentFlatToken(specialVideoApartment)
+    : null;
+  const activeSpecialVideoConfig = useMemo(() => {
+    if (!specialVideoApartment) {
+      return null;
+    }
+
+    const rawConfig = getSpecialUnitVideoConfig(activeSpecialVideoFlatToken!);
+
+    if (!rawConfig) {
+      return null;
+    }
+
+    const signedForwardUrl = signedAssetUrls[rawConfig.forwardUrl];
+    const signedReverseUrl = signedAssetUrls[rawConfig.reverseUrl];
+
+    if (!signedForwardUrl || !signedReverseUrl) {
+      return null;
+    }
+
+    return {
+      forwardUrl: signedForwardUrl,
+      reverseUrl: signedReverseUrl,
+    };
+  }, [activeSpecialVideoFlatToken, signedAssetUrls, specialVideoApartment]);
+  const signedMasterPlanStageFallbackImage =
+    signedAssetUrls[MASTER_PLAN_STAGE_FALLBACK_IMAGE] ?? null;
+  const activeSpecialVideoUrl = isSpecialVideoReversing
+    ? activeSpecialVideoConfig?.reverseUrl ?? null
+    : activeSpecialVideoConfig?.forwardUrl ?? null;
+
+  const captureSpecialVideoFreezeFrame = useCallback(() => {
+    const video = specialUnitVideoRef.current;
+    if (!video || video.videoWidth <= 0 || video.videoHeight <= 0) {
+      return;
+    }
+
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext("2d");
+
+      if (!context) {
+        return;
+      }
+
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      setSpecialVideoFreezeFrameUrl(canvas.toDataURL("image/jpeg", 0.92));
+      setIsSpecialVideoFreezeFrameVisible(true);
+    } catch (error) {
+      console.warn("Failed to capture special unit video freeze frame:", error);
+      setSpecialVideoFreezeFrameUrl(null);
+      setIsSpecialVideoFreezeFrameVisible(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    currentFrameRef.current = currentFrame;
+  }, [currentFrame]);
+
+  useEffect(() => {
+    if (initialApartments.length > 0) {
+      inventorySignatureRef.current = getApartmentSignature(initialApartments);
+    }
+  }, [initialApartments]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    document.body.dataset.masterPlanFlatOpen = isFlatPanelOpen ? "true" : "false";
+
+    return () => {
+      delete document.body.dataset.masterPlanFlatOpen;
+    };
+  }, [isFlatPanelOpen]);
+
+  useEffect(() => {
+    if (!activeSpecialVideoConfig?.forwardUrl) {
+      return;
+    }
+
+    cleanupVideoWarmup(specialUnitWarmupRef.current);
+    specialUnitWarmupRef.current = createVideoWarmup(activeSpecialVideoConfig.forwardUrl);
+
+    return () => {
+      if (specialUnitVideoTimeoutRef.current !== null) {
+        window.clearTimeout(specialUnitVideoTimeoutRef.current);
+        specialUnitVideoTimeoutRef.current = null;
+      }
+
+      cleanupVideoWarmup(specialUnitWarmupRef.current);
+      specialUnitWarmupRef.current = null;
+    };
+  }, [activeSpecialVideoConfig?.forwardUrl]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      scheduleAmenityVideoWarmup({ profile: "master-plan" });
+    }, 1800);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (
+      !isSpecialVideoOpen ||
+      isSpecialVideoReversing ||
+      !activeSpecialVideoConfig?.reverseUrl
+    ) {
+      return;
+    }
+
+    cleanupVideoWarmup(specialUnitReverseWarmupRef.current);
+    specialUnitReverseWarmupRef.current = createVideoWarmup(
+      activeSpecialVideoConfig.reverseUrl,
+    );
+
+    return () => {
+      cleanupVideoWarmup(specialUnitReverseWarmupRef.current);
+      specialUnitReverseWarmupRef.current = null;
+    };
+  }, [activeSpecialVideoConfig?.reverseUrl, isSpecialVideoOpen, isSpecialVideoReversing]);
+
+  useEffect(() => {
+    if (!isSpecialVideoOverlayMounted || !activeSpecialVideoUrl) {
+      return;
+    }
+
+    const video = specialUnitVideoRef.current;
+
+    if (!video) {
+      return;
+    }
+
+    const markReady = () => {
+      specialVideoLoadedUrlRef.current = activeSpecialVideoUrl;
+      setIsSpecialVideoReady(true);
+    };
+
+    if (video.getAttribute("src") !== activeSpecialVideoUrl) {
+      specialVideoLoadedUrlRef.current = null;
+      setIsSpecialVideoReady(false);
+      video.pause();
+      video.currentTime = 0;
+      video.src = activeSpecialVideoUrl;
+      video.load();
+    } else if (
+      specialVideoLoadedUrlRef.current === activeSpecialVideoUrl ||
+      video.readyState >= 3
+    ) {
+      markReady();
+    }
+
+    video.addEventListener("loadeddata", markReady);
+    video.addEventListener("canplay", markReady);
+
+    return () => {
+      video.removeEventListener("loadeddata", markReady);
+      video.removeEventListener("canplay", markReady);
+    };
+  }, [activeSpecialVideoUrl, isSpecialVideoOverlayMounted]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const compactViewportMedia = window.matchMedia("(max-width: 1279px)");
+    const mobileViewportMedia = window.matchMedia("(max-width: 767px)");
+    const desktopCompactViewportMedia = window.matchMedia(
+      "(min-width: 1280px) and (max-width: 1699px)",
+    );
+    const touchViewportMedia = window.matchMedia("(max-width: 1366px)");
+    const syncCompactViewport = () => {
+      setIsCompactViewport(compactViewportMedia.matches);
+      setIsMobileViewport(mobileViewportMedia.matches);
+      setIsDesktopCompactViewport(desktopCompactViewportMedia.matches);
+      setIsTouchTabletViewport(
+        touchViewportMedia.matches && window.navigator.maxTouchPoints > 0,
+      );
+    };
+
+    syncCompactViewport();
+    compactViewportMedia.addEventListener("change", syncCompactViewport);
+    mobileViewportMedia.addEventListener("change", syncCompactViewport);
+    desktopCompactViewportMedia.addEventListener("change", syncCompactViewport);
+    touchViewportMedia.addEventListener("change", syncCompactViewport);
+
+    return () => {
+      compactViewportMedia.removeEventListener("change", syncCompactViewport);
+      mobileViewportMedia.removeEventListener("change", syncCompactViewport);
+      desktopCompactViewportMedia.removeEventListener(
+        "change",
+        syncCompactViewport,
+      );
+      touchViewportMedia.removeEventListener("change", syncCompactViewport);
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    let refreshTimeoutId: number | null = null;
+    const isVisibleRef = {
+      current: document.visibilityState === "visible",
+    };
+
+    const clearRefreshTimeout = () => {
+      if (refreshTimeoutId !== null) {
+        window.clearTimeout(refreshTimeoutId);
+        refreshTimeoutId = null;
+      }
+    };
+
+    const loadInventory = async (showLoadingState: boolean) => {
+      if (showLoadingState && isMounted) {
+        setIsInventoryLoading(true);
+      }
+
+      try {
+        const nextApartments = await fetchSharedInventory();
+        if (!isMounted) {
+          return;
+        }
+
+        const nextSignature = getApartmentSignature(nextApartments);
+
+        if (nextSignature !== inventorySignatureRef.current) {
+          inventorySignatureRef.current = nextSignature;
+
+          if (showLoadingState) {
+            setApartments(nextApartments);
+          } else {
+            startTransition(() => {
+              setApartments(nextApartments);
+            });
+          }
+        }
+
+        setInventoryError(null);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setInventoryError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load inventory from the database.",
+        );
+      } finally {
+        if (showLoadingState && isMounted) {
+          setIsInventoryLoading(false);
+        }
+      }
+    };
+
+    if (initialApartments.length === 0) {
+      void loadInventory(true);
+    }
+
+    const queueNextRefresh = () => {
+      clearRefreshTimeout();
+      if (!isVisibleRef.current || !isMounted) {
+        return;
+      }
+
+      const jitterMs = Math.round(Math.random() * 3500);
+      refreshTimeoutId = window.setTimeout(() => {
+        refreshInventory();
+        if (isVisibleRef.current) {
+          queueNextRefresh();
+        }
+      }, INVENTORY_REFRESH_INTERVAL + jitterMs);
+    };
+
+    const refreshInventory = () => {
+      if (!isVisibleRef.current || isStageInteracting) {
+        return;
+      }
+
+      void loadInventory(false);
+    };
+
+    const handleVisibilityChange = () => {
+      isVisibleRef.current = document.visibilityState === "visible";
+
+      if (!isVisibleRef.current) {
+        clearRefreshTimeout();
+        return;
+      }
+
+      refreshInventory();
+      queueNextRefresh();
+    };
+
+    const handleWindowFocus = () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      isVisibleRef.current = true;
+      refreshInventory();
+      queueNextRefresh();
+    };
+
+    queueNextRefresh();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleWindowFocus);
+
+    return () => {
+      isMounted = false;
+      clearRefreshTimeout();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleWindowFocus);
+    };
+  }, [initialApartments.length, isStageInteracting]);
+
+  const normalizedDeferredSearch = useMemo(
+    () => deferredSearch.trim().toLowerCase(),
+    [deferredSearch],
+  );
+  const selectedBhkNumber = useMemo(
+    () => (bhk === "All" ? null : Number(bhk)),
+    [bhk],
+  );
+  const filterableApartmentsByTower = useMemo(() => {
+    const next = new Map<TowerType, FilterableApartmentRow[]>([
+      ["Tower A", []],
+      ["Tower B", []],
+    ]);
+
+    apartments.forEach((apartment) => {
+      next.get(apartment.tower)?.push({
+        apartment,
+        floorValue: String(apartment.floor),
+        searchText: `${apartment.title} ${apartment.flatNumber}`.toLowerCase(),
+      });
+    });
+
+    next.forEach((rows) => {
+      rows.sort((left, right) =>
+        compareMasterPlanApartments(left.apartment, right.apartment),
+      );
+    });
+
+    return next;
+  }, [apartments]);
+
+  const filteredApartments = useMemo(() => {
+    if (!selectedTower) {
+      return [];
+    }
+
+    const towerRows = filterableApartmentsByTower.get(selectedTower) ?? [];
+    const hasSearch = normalizedDeferredSearch.length > 0;
+
+    return towerRows.reduce<InventoryApartment[]>((matches, row) => {
+      const { apartment } = row;
+      const matchesSearch =
+        !hasSearch || row.searchText.includes(normalizedDeferredSearch);
+      const matchesFloor =
+        apartment.floor >= 0 &&
+        (floor === FLOOR_ALL_VALUE || row.floorValue === floor);
+      const matchesBhk =
+        selectedBhkNumber === null || apartment.bhk === selectedBhkNumber;
+      const matchesFacing = facing === "All" || apartment.facing === facing;
+      const matchesStatus = status === "All" || apartment.status === status;
+      const matchesArea = apartment.areaSqft >= minArea;
+
+      if (
+        matchesFloor &&
+        matchesSearch &&
+        matchesBhk &&
+        matchesFacing &&
+        matchesStatus &&
+        matchesArea
+      ) {
+        matches.push(apartment);
+      }
+
+      return matches;
+    }, []);
+  }, [
+    filterableApartmentsByTower,
+    normalizedDeferredSearch,
+    selectedTower,
+    selectedBhkNumber,
+    facing,
+    status,
+    floor,
+    minArea,
+  ]);
+  const floorOptions = useMemo<FloorFilterOption[]>(() => {
+    if (!selectedTower) {
+      return [{ value: FLOOR_ALL_VALUE, label: "All floors" }];
+    }
+
+    const towerRows = filterableApartmentsByTower.get(selectedTower) ?? [];
+    const floors = new Map<number, string>();
+
+    towerRows.forEach(({ apartment }) => {
+      if (apartment.floor < 0) {
+        return;
+      }
+
+      floors.set(
+        apartment.floor,
+        apartment.floor === 0
+          ? apartment.floorLabel || "G"
+          : apartment.floorLabel || String(apartment.floor),
+      );
+    });
+
+    return [
+      { value: FLOOR_ALL_VALUE, label: "All floors" },
+      ...Array.from(floors.entries())
+        .sort(([a], [b]) => a - b)
+        .map(([value, label]) => ({
+          value: String(value),
+          label: value === 0 ? "G" : label,
+      })),
+    ];
+  }, [filterableApartmentsByTower, selectedTower]);
+  useEffect(() => {
+    if (!floorOptions.some((option) => option.value === floor)) {
+      setFloor(FLOOR_ALL_VALUE);
+    }
+  }, [floor, floorOptions]);
+  const hasActiveInventoryFilters = useMemo(
+    () =>
+      normalizedDeferredSearch.length > 0 ||
+      bhk !== "All" ||
+      facing !== "All" ||
+      status !== "All" ||
+      floor !== FLOOR_ALL_VALUE ||
+      minArea > 0,
+    [normalizedDeferredSearch, bhk, facing, status, floor, minArea],
+  );
+
+  const resetFilters = () => {
+    setSearch("");
+    setBhk("All");
+    setFacing("All");
+    setStatus("All");
+    setFloor(FLOOR_ALL_VALUE);
+    setMinArea(0);
+  };
+
+  const handleTowerSelect = (tower: TowerType) => {
+    setIsTopViewMode(false);
+    setSelectedTower(tower);
+    setIsDesktopSidebarOpen(true);
+    setIsMobileSheetOpen(true);
+  };
+
+  const handleTopViewToggle = useCallback(() => {
+    setSelectedApartment(null);
+    setSelectedApartmentMeshId(null);
+    setSelectedTower(null);
+    setIsMobileSheetOpen(true);
+    setIsTopViewMode((currentValue) => !currentValue);
+  }, []);
+
+  const handleBackToTowerSelect = () => {
+    resetFilters();
+    setSelectedApartment(null);
+    setSelectedApartmentMeshId(null);
+    setSelectedTower(null);
+    setIsDesktopSidebarOpen(true);
+    setIsTopViewMode(false);
+    setIsMobileSheetOpen(true);
+  };
+
+  const clearSelectedApartment = useCallback(() => {
+    setSelectedApartment(null);
+    setSelectedApartmentMeshId(null);
+
+    if (selectedTower) {
+      setIsMobileSheetOpen(true);
+    }
+  }, [selectedTower]);
+
+  const closeSpecialUnitVideo = useCallback(() => {
+    if (specialUnitVideoTimeoutRef.current !== null) {
+      window.clearTimeout(specialUnitVideoTimeoutRef.current);
+      specialUnitVideoTimeoutRef.current = null;
+    }
+
+    const video = specialUnitVideoRef.current;
+    if (video) {
+      video.pause();
+      video.currentTime = 0;
+    }
+
+    setIsSpecialVideoLaunching(false);
+    setIsSpecialVideoQueuedToOpen(false);
+    setIsSpecialVideoReady(false);
+    setShouldAutoplaySpecialVideo(false);
+    setIsSpecialVideoOpen(false);
+    setIsSpecialVideoCompleted(false);
+    setIsSpecialVideoReversing(false);
+    setSpecialVideoApartment(null);
+    setSpecialVideoFreezeFrameUrl(null);
+    setIsSpecialVideoFreezeFrameVisible(false);
+    specialVideoLoadedUrlRef.current = null;
+  }, []);
+
+  const handleNormalViewToggle = useCallback(() => {
+    closeSpecialUnitVideo();
+    setSelectedApartment(null);
+    setSelectedApartmentMeshId(null);
+    setSelectedTower(null);
+    currentFrameRef.current = SPECIAL_UNIT_VIDEO_FRAME;
+    setCurrentFrame(SPECIAL_UNIT_VIDEO_FRAME);
+    setIsMobileSheetOpen(true);
+    setIsTopViewMode(false);
+  }, [closeSpecialUnitVideo]);
+
+  const handleSpecialVideoBack = useCallback(() => {
+    if (isSpecialVideoReversing) {
+      return;
+    }
+
+    captureSpecialVideoFreezeFrame();
+    setSelectedApartment(null);
+    setSelectedApartmentMeshId(null);
+    setIsSpecialVideoCompleted(false);
+    setIsSpecialVideoReversing(true);
+    setShouldAutoplaySpecialVideo(true);
+  }, [captureSpecialVideoFreezeFrame, isSpecialVideoReversing]);
+
+  const handleApartmentSelect = useCallback(
+    (apartment: InventoryApartment | null, apartmentMeshId: string | null) => {
+      if (!apartment || !apartmentMeshId) {
+        return;
+      }
+
+      lastApartmentSelectionAtRef.current =
+        typeof performance !== "undefined" ? performance.now() : Date.now();
+
+      setSelectedTower(apartment.tower);
+      setIsDesktopSidebarOpen(true);
+
+      if (isSpecialVideoApartment(apartment)) {
+        setSelectedApartment(null);
+        setSelectedApartmentMeshId(null);
+        setIsMobileSheetOpen(false);
+        setIsSpecialVideoCompleted(false);
+        setIsSpecialVideoReversing(false);
+        setIsSpecialVideoReady(false);
+        setIsSpecialVideoQueuedToOpen(false);
+        setShouldAutoplaySpecialVideo(true);
+        setSpecialVideoApartment(apartment);
+        setSpecialVideoFreezeFrameUrl(null);
+        setIsSpecialVideoFreezeFrameVisible(false);
+        specialVideoLoadedUrlRef.current = null;
+
+        if (specialUnitVideoTimeoutRef.current !== null) {
+          window.clearTimeout(specialUnitVideoTimeoutRef.current);
+          specialUnitVideoTimeoutRef.current = null;
+        }
+
+        if (activeHotspot === SPECIAL_UNIT_VIDEO_HOTSPOT) {
+          setIsSpecialVideoLaunching(true);
+          setIsSpecialVideoOpen(false);
+          setIsSpecialVideoQueuedToOpen(true);
+          return;
+        }
+
+        setIsSpecialVideoLaunching(true);
+        setIsSpecialVideoOpen(false);
+        const navigationDelayMs =
+          getMasterPlanFrameTransitionDuration(
+            currentFrameRef.current,
+            SPECIAL_UNIT_VIDEO_FRAME,
+          ) + 80;
+        currentFrameRef.current = SPECIAL_UNIT_VIDEO_FRAME;
+        setCurrentFrame(SPECIAL_UNIT_VIDEO_FRAME);
+        specialUnitVideoTimeoutRef.current = window.setTimeout(() => {
+          specialUnitVideoTimeoutRef.current = null;
+          setIsSpecialVideoQueuedToOpen(true);
+        }, Math.max(navigationDelayMs, SPECIAL_UNIT_VIDEO_NAVIGATION_DELAY_MS));
+        return;
+      }
+
+      closeSpecialUnitVideo();
+      setSelectedApartment(apartment);
+      setSelectedApartmentMeshId(apartmentMeshId);
+      setIsMobileSheetOpen(false);
+    },
+    [activeHotspot, closeSpecialUnitVideo],
+  );
+
+  const handleApartmentListSelect = useCallback((apartment: InventoryApartment) => {
+    if (!isInventoryApartmentAllowedAtHotspot(apartment, activeHotspot)) {
+      return;
+    }
+
+    const apartmentMeshId = getApartmentMeshId(apartment);
+
+    if (!apartmentMeshId) {
+      return;
+    }
+
+    handleApartmentSelect(apartment, apartmentMeshId);
+  }, [activeHotspot, handleApartmentSelect]);
+
+  useEffect(() => {
+    if (!selectedApartment) {
+      return;
+    }
+
+    if (selectedApartment.floor < 0) {
+      clearSelectedApartment();
+      return;
+    }
+
+    if (selectedTower && selectedApartment.tower !== selectedTower) {
+      clearSelectedApartment();
+    }
+  }, [clearSelectedApartment, selectedApartment, selectedTower]);
+
+  useEffect(() => {
+    if (
+      !isSpecialVideoLaunching ||
+      !isSpecialVideoQueuedToOpen ||
+      !isSpecialVideoReady
+    ) {
+      return;
+    }
+
+    setIsSpecialVideoLaunching(false);
+    setIsSpecialVideoOpen(true);
+    setIsSpecialVideoQueuedToOpen(false);
+  }, [
+    isSpecialVideoLaunching,
+    isSpecialVideoQueuedToOpen,
+    isSpecialVideoReady,
+  ]);
+
+  useEffect(() => {
+    if (!selectedApartment) {
+      return;
+    }
+
+    const syncedApartment =
+      apartments.find((apartment) => apartment.id === selectedApartment.id) ?? null;
+
+    if (!syncedApartment) {
+      setSelectedApartment(null);
+      setSelectedApartmentMeshId(null);
+      return;
+    }
+
+    if (syncedApartment !== selectedApartment) {
+      setSelectedApartment(syncedApartment);
+    }
+  }, [apartments, selectedApartment]);
+
+  useEffect(() => {
+    if (!selectedApartment || shouldUseCompactLayout) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const selectionAgeMs =
+        (typeof performance !== "undefined" ? performance.now() : Date.now()) -
+        lastApartmentSelectionAtRef.current;
+
+      if (selectionAgeMs < 450) {
+        return;
+      }
+
+      const target = event.target;
+
+      if (
+        selectedFlatPanelRef.current &&
+        target instanceof Node &&
+        selectedFlatPanelRef.current.contains(target)
+      ) {
+        return;
+      }
+
+      clearSelectedApartment();
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown, true);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+    };
+  }, [clearSelectedApartment, selectedApartment, shouldUseCompactLayout]);
+
+  useEffect(() => {
+    if (!isSpecialVideoOpen || !shouldAutoplaySpecialVideo) {
+      return;
+    }
+
+    const video = specialUnitVideoRef.current;
+
+    if (!video) {
+      return;
+    }
+
+    if (!activeSpecialVideoUrl) {
+      return;
+    }
+
+    if (video.getAttribute("src") !== activeSpecialVideoUrl) {
+      video.src = activeSpecialVideoUrl;
+      video.load();
+    }
+
+    const playVideo = () => {
+      const handlePlaying = () => {
+        video.removeEventListener("playing", handlePlaying);
+        setIsSpecialVideoFreezeFrameVisible(false);
+      };
+
+      video.addEventListener("playing", handlePlaying);
+      video.currentTime = 0;
+      setShouldAutoplaySpecialVideo(false);
+      void video.play().catch(() => {
+        video.removeEventListener("playing", handlePlaying);
+        // playback may still require a second user gesture on some devices
+      });
+    };
+
+    if (video.readyState >= 3) {
+      playVideo();
+      return;
+    }
+
+    const handleCanPlay = () => {
+      video.removeEventListener("canplay", handleCanPlay);
+      playVideo();
+    };
+
+    video.addEventListener("canplay", handleCanPlay);
+
+    return () => {
+      video.removeEventListener("canplay", handleCanPlay);
+    };
+  }, [activeSpecialVideoUrl, isSpecialVideoOpen, shouldAutoplaySpecialVideo]);
+
+  useEffect(() => {
+    if (!isSpecialVideoOpen) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        handleSpecialVideoBack();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleSpecialVideoBack, isSpecialVideoOpen]);
+
+  const wrapFrame = useCallback(
+    (frame: number) =>
+      ((frame - 1 + TOTAL_MASTER_PLAN_FRAMES) % TOTAL_MASTER_PLAN_FRAMES) + 1,
+    [],
+  );
+
+  const setWrappedFrame = useCallback(
+    (frame: number) => {
+      const nextFrame = wrapFrame(frame);
+      currentFrameRef.current = nextFrame;
+      setCurrentFrame(nextFrame);
+    },
+    [wrapFrame],
+  );
+
+  const getNextHotspotFrame = useCallback(
+    (frame: number, direction: 1 | -1) => {
+      const normalizedFrame = wrapFrame(frame);
+
+      if (direction === 1) {
+        return (
+          MASTER_PLAN_SNAP_FRAMES.find((snapFrame) => snapFrame > normalizedFrame) ??
+          MASTER_PLAN_SNAP_FRAMES[0]
+        );
+      }
+
+      const previousSnapFrames = MASTER_PLAN_SNAP_FRAMES.filter(
+        (snapFrame) => snapFrame < normalizedFrame,
+      );
+
+      return previousSnapFrames.at(-1) ?? MASTER_PLAN_SNAP_FRAMES.at(-1) ?? 1;
+    },
+    [wrapFrame],
+  );
+
+  const goToHotspot = useCallback(
+    (direction: 1 | -1) => {
+      if (leavingRef.current) return;
+
+      const targetFrame = getNextHotspotFrame(currentFrameRef.current, direction);
+      if (targetFrame === currentFrameRef.current) {
+        return;
+      }
+      currentFrameRef.current = targetFrame;
+      setCurrentFrame(targetFrame);
+    },
+    [getNextHotspotFrame],
+  );
+
+  useEffect(() => {
+    const getScrollAreaElement = (
+      target: EventTarget | null,
+      event?: Event,
+    ) => {
+      const composedPath = event?.composedPath?.() ?? [];
+
+      for (const pathNode of composedPath) {
+        if (pathNode instanceof HTMLElement && pathNode.dataset.scrollArea) {
+          return pathNode;
+        }
+
+        if (pathNode instanceof Element) {
+          const scrollArea = pathNode.closest("[data-scroll-area]");
+
+          if (scrollArea instanceof HTMLElement) {
+            return scrollArea;
+          }
+        }
+      }
+
+      if (target instanceof HTMLElement) {
+        return target.closest("[data-scroll-area]");
+      }
+
+      if (target instanceof Node) {
+        return target.parentElement?.closest("[data-scroll-area]") ?? null;
+      }
+
+      return null;
+    };
+
+    const isInsideScrollArea = (target: EventTarget | null, event?: Event) => {
+      return Boolean(getScrollAreaElement(target, event));
+    };
+    const blockAllScrollLikeActions = (e: Event) => {
+      if (leavingRef.current) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+
+      if (leavingRef.current) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+
+      if (isInsideScrollArea(target, e)) return;
+
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (leavingRef.current) {
+        const blockedKeys = ["ArrowUp", "PageUp", "Home", " "];
+
+        if (blockedKeys.includes(e.key)) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        return;
+      }
+
+      if (isInsideScrollArea(e.target)) return;
+
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        goToHotspot(-1);
+        return;
+      }
+
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        goToHotspot(1);
+        return;
+      }
+
+    };
+
+    window.addEventListener("wheel", handleWheel, { passive: false });
+    window.addEventListener("keydown", handleKeyDown, { passive: false });
+
+    window.addEventListener("scroll", blockAllScrollLikeActions, {
+      passive: false,
+    });
+    document.addEventListener(
+      "gesturestart",
+      blockAllScrollLikeActions as EventListener,
+      { passive: false },
+    );
+
+    return () => {
+      window.removeEventListener("wheel", handleWheel);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("scroll", blockAllScrollLikeActions);
+      document.removeEventListener(
+        "gesturestart",
+        blockAllScrollLikeActions as EventListener,
+      );
+    };
+  }, [
+    goToHotspot,
+  ]);
+
+  return (
+      <div
+        ref={rootRef}
+        className="relative app-screen w-full bg-black text-zinc-900 [overflow-anchor:none] dark:text-white"
+      >
+      {shouldShowTopViewFullscreen ? <MasterPlanTopViewStage /> : null}
+
+      {!shouldUseCompactLayout && !shouldShowTopViewFullscreen ? (
+        isTopViewMode && !selectedTower ? (
+          <MasterPlanTopViewStage />
+        ) : (
+          <MasterPlanFrameHoverStage
+            apartments={apartments}
+            currentFrame={currentFrame}
+            dragEnabled
+            filteredApartments={hasActiveInventoryFilters ? filteredApartments : []}
+            inventoryError={inventoryError}
+            inventoryState={isInventoryLoading ? "loading" : inventoryError ? "error" : "ready"}
+            onApartmentSelect={handleApartmentSelect}
+            onInteractionChange={setIsStageInteracting}
+            onSetFrame={setWrappedFrame}
+            selectedApartmentId={selectedApartmentMeshId}
+            selectedTower={selectedTower}
+            touchHighlightProfile="desktop"
+          />
+        )
+      ) : null}
+
+      {!shouldUseCompactLayout &&
+      !isTopViewMode &&
+      !isLeaving &&
+      !isSpecialVideoOpen ? (
+        <div
+          className={`pointer-events-none absolute inset-x-0 z-40 flex justify-center px-4 ${
+            isDesktopCompactViewport
+              ? "top-8"
+              : "top-24 sm:top-28 md:top-30"
+          }`}
+        >
+          <MasterPlanHotspotControls
+            onPrevious={() => goToHotspot(-1)}
+            onNext={() => goToHotspot(1)}
+          />
+        </div>
+      ) : null}
+
+      {shouldShowTopViewFullscreen ? (
+        <div
+          className={`pointer-events-none absolute inset-x-0 z-40 flex justify-center px-4 ${
+            isDesktopCompactViewport
+              ? "top-8"
+              : "top-24 sm:top-28 md:top-30"
+          }`}
+        >
+          <MasterPlanModeToggle
+            isTopViewMode
+            onNormalView={handleNormalViewToggle}
+            onTopView={handleTopViewToggle}
+          />
+        </div>
+      ) : null}
+
+      {!shouldShowTopViewFullscreen ? (
+        <div
+        className={`relative z-10 h-full flex-col transition-opacity duration-300 ${
+          shouldUseCompactLayout ? "flex" : "flex xl:hidden"
+        } ${
+          shouldHideInlineCompactShell
+            ? "pointer-events-none opacity-0"
+            : "opacity-100"
+        }`}
+      >
+        <div className="relative w-full shrink-0">
+          <div className={`relative overflow-hidden ${compactStageHeightClassName}`}>
+            <div className="absolute inset-0">
+              {shouldRenderCompactSpecialVideoStage ? (
+                <div className="absolute inset-0 bg-black">
+                  <div
+                    className={`absolute inset-0 bg-cover bg-center transition-opacity duration-300 ${
+                      isSpecialVideoReady ? "opacity-0" : "opacity-100"
+                    }`}
+                    style={{
+                      backgroundImage: signedMasterPlanStageFallbackImage
+                        ? `url('${signedMasterPlanStageFallbackImage}')`
+                        : undefined,
+                    }}
+                  />
+
+                  <video
+                    ref={specialUnitVideoRef}
+                    muted
+                    playsInline
+                    preload="auto"
+                    poster={signedMasterPlanStageFallbackImage ?? undefined}
+                    crossOrigin="anonymous"
+                    disablePictureInPicture
+                    className={`h-full w-full object-cover transition-opacity duration-300 ${
+                      isSpecialVideoReady ? "opacity-100" : "opacity-0"
+                    }`}
+                    onEnded={() => {
+                      if (isSpecialVideoReversing) {
+                        closeSpecialUnitVideo();
+                        return;
+                      }
+
+                      setIsSpecialVideoCompleted(true);
+                    }}
+                  />
+
+                  {specialVideoFreezeFrameUrl ? (
+                    <div
+                      className={`pointer-events-none absolute inset-0 bg-cover bg-center transition-opacity duration-200 ${
+                        isSpecialVideoFreezeFrameVisible ? "opacity-100" : "opacity-0"
+                      }`}
+                      style={{
+                        backgroundImage: `url('${specialVideoFreezeFrameUrl}')`,
+                      }}
+                    />
+                  ) : null}
+
+                  <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.1)_0%,rgba(0,0,0,0.02)_48%,rgba(0,0,0,0.26)_100%)]" />
+                </div>
+              ) : isTopViewMode && !selectedTower ? (
+                <MasterPlanTopViewStage />
+              ) : (
+                <MasterPlanFrameHoverStage
+                  apartments={apartments}
+                  currentFrame={currentFrame}
+                  dragEnabled={shouldEnableCompactStageScrubbing}
+                  filteredApartments={hasActiveInventoryFilters ? filteredApartments : []}
+                  inventoryError={inventoryError}
+                  inventoryState={isInventoryLoading ? "loading" : inventoryError ? "error" : "ready"}
+                  onApartmentSelect={handleApartmentSelect}
+                  onInteractionChange={setIsStageInteracting}
+                  onSetFrame={setWrappedFrame}
+                  selectedApartmentId={selectedApartmentMeshId}
+                  selectedTower={selectedTower}
+                  touchHighlightProfile={compactTouchHighlightProfile}
+                />
+              )}
+            </div>
+
+            {!isTopViewMode && !isLeaving && !shouldRenderCompactSpecialVideoStage ? (
+              <div
+                className={`pointer-events-none absolute inset-x-0 z-30 flex justify-center px-4 ${
+                  shouldUseCompactLayout
+                    ? "bottom-3"
+                    : "bottom-[max(env(safe-area-inset-bottom),1rem)]"
+                }`}
+              >
+                <MasterPlanHotspotControls
+                  compact
+                  onPrevious={() => goToHotspot(-1)}
+                  onNext={() => goToHotspot(1)}
+                />
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        <div className={compactLowerContentClassName}>
+          <div
+            className={
+              selectedApartment || shouldShowCompactSpecialVideoPanel
+                ? "flex h-full min-h-0 flex-col overflow-hidden"
+                : "surface-contain flex h-full min-h-0 flex-col overflow-hidden rounded-[28px] border border-white/60 bg-white/92 shadow-[0_24px_64px_rgba(15,23,42,0.16)] backdrop-blur-2xl dark:border-white/10 dark:bg-black/70"
+            }
+          >
+            {selectedApartment ? (
+                <div
+                  className="flex min-h-0 flex-1 items-stretch justify-center overflow-hidden px-0 pb-[max(env(safe-area-inset-bottom),0rem)] pt-0"
+                  data-scroll-area="compact-panel"
+                >
+                  <SelectedFlatDetailsPanel
+                    ref={selectedFlatPanelRef}
+                    apartment={selectedApartment}
+                    compact
+                    onClose={clearSelectedApartment}
+                  />
+                </div>
+            ) : shouldShowCompactSpecialVideoPanel && specialVideoApartment ? (
+                <div
+                  className="flex min-h-0 flex-1 items-stretch justify-center overflow-hidden px-0 pb-[max(env(safe-area-inset-bottom),0rem)] pt-0"
+                  data-scroll-area="compact-panel"
+                >
+                  <SelectedFlatDetailsPanel
+                    ref={selectedFlatPanelRef}
+                    apartment={specialVideoApartment}
+                    compact
+                    onClose={handleSpecialVideoBack}
+                  />
+                </div>
+            ) : selectedTower ? (
+                <div
+                  className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden px-2 pb-2.5 pt-2 sm:gap-3 sm:px-2.5"
+                  data-scroll-area="compact-panel"
+                >
+                  <MasterPlanFiltersCard
+                    search={search}
+                    onSearchChange={setSearch}
+                    selectedTower={selectedTower}
+                    onTowerChange={handleTowerSelect}
+                    bhk={bhk}
+                    onBhkChange={setBhk}
+                    facing={facing}
+                    onFacingChange={setFacing}
+                    status={status}
+                    onStatusChange={setStatus}
+                    floor={floor}
+                    floorOptions={floorOptions}
+                    onFloorChange={setFloor}
+                    minArea={minArea}
+                    onMinAreaChange={setMinArea}
+                    onReset={resetFilters}
+                    onBack={handleBackToTowerSelect}
+                    compact
+                  />
+
+                  <MasterPlanResultsCard
+                    filteredApartments={filteredApartments}
+                    isInventoryLoading={isInventoryLoading}
+                    inventoryError={inventoryError}
+                    onApartmentSelect={handleApartmentListSelect}
+                    activeHotspot={activeHotspot}
+                    selectedApartmentId={selectedApartmentInventoryId}
+                    compact
+                  />
+                </div>
+            ) : (
+              <div
+                className="custom-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-2 pb-2.5 pt-2 [-webkit-overflow-scrolling:touch] touch-pan-y sm:px-2.5"
+                data-scroll-area="compact-panel"
+              >
+                <TowerSelect
+                  embedded
+                  isTopViewActive={isTopViewMode}
+                  mobile
+                  onTopViewClick={handleTopViewToggle}
+                  selectedTower={selectedTower}
+                  onSelectTower={handleTowerSelect}
+                />
+              </div>
+            )}
+          </div>
+          </div>
+        </div>
+      ) : null}
+
+      {!shouldShowTopViewFullscreen ? (
+      <div
+        className={`pointer-events-none relative z-10 h-full w-full px-4 py-6 transition-opacity duration-500 md:px-6 lg:px-8 ${
+          shouldUseCompactLayout ? "hidden" : "hidden xl:block"
+        } ${
+          isSpecialVideoOpen ? "opacity-0" : "opacity-100"
+        }`}
+      >
+        <div
+          className={`grid h-full gap-6 ${
+            shouldShowDesktopSidebar && isDesktopSidebarOpen
+              ? selectedTower
+                ? isDesktopCompactViewport
+                  ? "xl:grid-cols-[minmax(0,1fr)_330px]"
+                  : "xl:grid-cols-[minmax(0,1fr)_clamp(320px,27vw,380px)] 2xl:grid-cols-[minmax(0,1fr)_420px]"
+                : isDesktopCompactViewport
+                  ? "xl:grid-cols-[minmax(0,1fr)_310px]"
+                  : "xl:grid-cols-[minmax(0,1fr)_clamp(300px,22vw,360px)] 2xl:grid-cols-[minmax(0,1fr)_380px]"
+              : selectedTower
+                ? "xl:grid-cols-[minmax(0,1fr)]"
+                : "xl:grid-cols-[minmax(0,1fr)]"
+          }`}
+        >
+          {!selectedApartment ? (
+            <div
+              className={`pointer-events-none ${
+                shouldUseCompactLayout ? "hidden" : "hidden xl:block"
+              }`}
+            />
+          ) : null}
+
+          <AnimatePresence>
+            {selectedApartment ? (
+              <motion.div
+                initial={{ opacity: 0, x: 24, y: 12 }}
+                animate={{ opacity: 1, x: 0, y: 0 }}
+                exit={{ opacity: 0, x: 24, y: 12 }}
+                transition={{ duration: 0.26, ease: smoothEase }}
+                className="pointer-events-none absolute left-4 top-1/2 z-40 hidden -translate-y-1/2 xl:block 2xl:left-8"
+              >
+                <SelectedFlatPlanPanel apartment={selectedApartment} />
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {selectedApartment ? (
+              <motion.div
+                initial={{ opacity: 0, x: 24, y: 12 }}
+                animate={{ opacity: 1, x: 0, y: 0 }}
+                exit={{ opacity: 0, x: 24, y: 12 }}
+                transition={{ duration: 0.26, ease: smoothEase }}
+                className="pointer-events-none absolute right-6 top-1/2 z-40 w-full max-w-[23rem] -translate-y-1/2 overflow-visible xl:origin-right xl:scale-[0.92] 2xl:right-10 2xl:max-w-[26rem] 2xl:scale-100"
+              >
+                <SelectedFlatDetailsPanel
+                  ref={selectedFlatPanelRef}
+                  apartment={selectedApartment}
+                  compact
+                  desktopEnhancedCompact
+                  hideCloseButton
+                  onClose={clearSelectedApartment}
+                />
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+
+          <AnimatePresence mode="wait">
+            {shouldShowDesktopSidebar && !isDesktopSidebarOpen ? (
+              <motion.button
+                key="desktop-sidebar-open"
+                type="button"
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 16 }}
+                transition={{ duration: 0.24, ease: smoothEase }}
+                onClick={() => setIsDesktopSidebarOpen(true)}
+                className="pointer-events-auto absolute right-0 top-12 z-40 hidden h-16 w-14 translate-x-[22%] items-center justify-center rounded-l-[1.45rem] rounded-r-[0.5rem] border border-white/40 bg-[linear-gradient(145deg,rgba(255,255,255,0.58),rgba(255,255,255,0.2))] text-zinc-900 shadow-[0_22px_48px_rgba(15,23,42,0.2)] backdrop-blur-2xl transition hover:bg-[linear-gradient(145deg,rgba(255,255,255,0.72),rgba(255,255,255,0.28))] xl:inline-flex"
+                aria-label="Open master plan panel"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </motion.button>
+            ) : null}
+          </AnimatePresence>
+
+          <AnimatePresence mode="wait">
+            {shouldShowDesktopSidebar && isDesktopSidebarOpen ? (
+              <motion.aside
+                key="sidebar"
+                variants={panelVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                className="pointer-events-auto gpu-layer min-w-0 hidden overflow-visible xl:col-start-2 xl:block xl:h-full"
+              >
+                <div
+                  className={`custom-scrollbar sticky ml-auto min-h-0 w-full overflow-hidden pr-1 [overflow-anchor:none] ${
+                    selectedTower
+                      ? isDesktopCompactViewport
+                        ? "max-w-[330px]"
+                        : "max-w-[clamp(320px,27vw,380px)] 2xl:max-w-[420px]"
+                      : isDesktopCompactViewport
+                        ? "max-w-[310px]"
+                        : "max-w-[clamp(300px,22vw,360px)] 2xl:max-w-[380px]"
+                  }`}
+                  style={{
+                    height:
+                      "calc(100dvh - max(env(safe-area-inset-top), 1.5rem) - 1.5rem)",
+                    top: "max(env(safe-area-inset-top), 1.5rem)",
+                  }}
+                >
+                  <div
+                    className="relative flex h-full min-h-0 flex-col gap-6 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]"
+                    data-scroll-area="sidebar"
+                  >
+                    {selectedTower ? (
+                      <>
+                        <MasterPlanFiltersCard
+                          search={search}
+                          onSearchChange={setSearch}
+                          selectedTower={selectedTower}
+                          onTowerChange={handleTowerSelect}
+                          bhk={bhk}
+                          onBhkChange={setBhk}
+                          facing={facing}
+                          onFacingChange={setFacing}
+                          status={status}
+                          onStatusChange={setStatus}
+                          floor={floor}
+                          floorOptions={floorOptions}
+                          onFloorChange={setFloor}
+                          minArea={minArea}
+                          onMinAreaChange={setMinArea}
+                          onClosePanel={() => setIsDesktopSidebarOpen(false)}
+                          onReset={resetFilters}
+                          onBack={handleBackToTowerSelect}
+                        />
+
+                        <MasterPlanResultsCard
+                          filteredApartments={filteredApartments}
+                          isInventoryLoading={isInventoryLoading}
+                          inventoryError={inventoryError}
+                          onApartmentSelect={handleApartmentListSelect}
+                          activeHotspot={activeHotspot}
+                          selectedApartmentId={selectedApartmentInventoryId}
+                        />
+                      </>
+                    ) : (
+                      <TowerSelect
+                        compactDesktop={isDesktopCompactViewport}
+                        embedded
+                        isTopViewActive={isTopViewMode}
+                        onClose={() => setIsDesktopSidebarOpen(false)}
+                        onTopViewClick={handleTopViewToggle}
+                        selectedTower={selectedTower}
+                        onSelectTower={handleTowerSelect}
+                      />
+                    )}
+                  </div>
+                </div>
+              </motion.aside>
+            ) : null}
+          </AnimatePresence>
+        </div>
+
+        {!isLeaving ? (
+          <>
+            <AnimatePresence>
+              {selectedTower && isMobileSheetOpen && !selectedApartment ? (
+                <motion.button
+                  type="button"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setIsMobileSheetOpen(false)}
+                  className={`pointer-events-auto absolute inset-0 z-20 bg-black/10 backdrop-blur-[1px] ${
+                    shouldUseCompactLayout ? "" : "xl:hidden"
+                  }`}
+                  aria-label="Close master plan panel"
+                />
+              ) : null}
+            </AnimatePresence>
+
+            {!isMobileSheetOpen && selectedTower && !selectedApartment ? (
+              <button
+                type="button"
+                onClick={() => setIsMobileSheetOpen(true)}
+                className={`pointer-events-auto absolute right-4 z-30 inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/90 px-4 py-3 text-sm font-medium text-zinc-900 shadow-[0_14px_36px_rgba(15,23,42,0.18)] backdrop-blur-xl ${
+                  shouldUseCompactLayout ? "" : "xl:hidden"
+                } ${
+                  shouldUseCompactLayout
+                    ? "bottom-[calc(env(safe-area-inset-bottom)+0.85rem)]"
+                    : "bottom-6"
+                }`}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                {filteredApartments.length} units
+              </button>
+            ) : null}
+
+            <motion.div
+              initial={false}
+              animate={
+                isMobileSheetOpen
+                  ? { y: 0, opacity: 1 }
+                  : { y: "110%", opacity: 0 }
+              }
+              transition={{ duration: 0.45, ease: smoothEase }}
+              className={`gpu-layer absolute inset-x-0 z-30 ${
+                shouldUseCompactLayout ? "" : "xl:hidden"
+              } ${
+                isMobileSheetOpen ? "pointer-events-auto" : "pointer-events-none"
+              } ${
+                shouldUseCompactLayout
+                  ? "bottom-0"
+                  : "bottom-3"
+              }`}
+            >
+              <div
+                className={`surface-contain flex min-h-0 flex-col overflow-hidden overscroll-none rounded-t-[26px] border border-white/60 border-b-0 bg-white/92 shadow-[0_-20px_50px_rgba(15,23,42,0.20)] backdrop-blur-2xl dark:border-white/10 dark:bg-black/70 sm:mx-1 sm:rounded-t-[28px] sm:rounded-b-none ${
+                  selectedTower ? "h-[min(84dvh,48rem)] max-h-[min(84dvh,48rem)]" : "h-auto"
+                }`}
+                data-scroll-area={selectedTower ? "mobile-sheet" : undefined}
+              >
+                {selectedTower && !selectedApartment ? (
+                  <>
+                    <div className="flex items-center justify-between border-b border-zinc-200/80 px-4 py-3 dark:border-white/10">
+                      <div className="flex items-center gap-3">
+                        <div className="h-1.5 w-12 rounded-full bg-zinc-300 dark:bg-white/20" />
+                        <div>
+                          <p className="text-sm font-semibold">Master Plan</p>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                            {filteredApartments.length} matching units
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsMobileSheetOpen(false)}
+                        className="rounded-xl border border-zinc-200 bg-white/80 p-2 text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-900 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white"
+                        aria-label="Close master plan panel"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden px-2 pb-2.5 pt-2 sm:gap-3 sm:px-2.5">
+                      <MasterPlanFiltersCard
+                        search={search}
+                        onSearchChange={setSearch}
+                        selectedTower={selectedTower}
+                        onTowerChange={handleTowerSelect}
+                        bhk={bhk}
+                        onBhkChange={setBhk}
+                        facing={facing}
+                        onFacingChange={setFacing}
+                        status={status}
+                        onStatusChange={setStatus}
+                        floor={floor}
+                        floorOptions={floorOptions}
+                        onFloorChange={setFloor}
+                        minArea={minArea}
+                        onMinAreaChange={setMinArea}
+                        onReset={resetFilters}
+                        onBack={handleBackToTowerSelect}
+                        compact
+                      />
+
+                      <MasterPlanResultsCard
+                        filteredApartments={filteredApartments}
+                        isInventoryLoading={isInventoryLoading}
+                        inventoryError={inventoryError}
+                        onApartmentSelect={handleApartmentListSelect}
+                        activeHotspot={activeHotspot}
+                        selectedApartmentId={selectedApartmentInventoryId}
+                        compact
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-4">
+                    <TowerSelect
+                      embedded
+                      isTopViewActive={isTopViewMode}
+                      mobile
+                      onTopViewClick={handleTopViewToggle}
+                      selectedTower={selectedTower}
+                      onSelectTower={handleTowerSelect}
+                    />
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </>
+        ) : null}
+
+      </div>
+      ) : null}
+
+      <AnimatePresence>
+        {!shouldUseCompactLayout && isSpecialVideoOverlayMounted ? (
+          <motion.div
+            initial={false}
+            animate={{
+              opacity: isSpecialVideoOpen ? 1 : 0,
+              scale: isSpecialVideoOpen ? 1 : 1.02,
+            }}
+            exit={{ opacity: 0, scale: 1.015 }}
+            transition={{ duration: 0.38, ease: smoothEase }}
+            className={`absolute inset-0 z-[70] overflow-hidden bg-black ${
+              isSpecialVideoOpen ? "pointer-events-auto" : "pointer-events-none"
+            }`}
+          >
+            <div className="absolute inset-0">
+              <video
+                ref={specialUnitVideoRef}
+                muted
+                playsInline
+                preload="auto"
+                crossOrigin="anonymous"
+                disablePictureInPicture
+                className="h-full w-full object-cover"
+                onEnded={() => {
+                  if (isSpecialVideoReversing) {
+                    closeSpecialUnitVideo();
+                    return;
+                  }
+
+                  setIsSpecialVideoCompleted(true);
+                }}
+              />
+            </div>
+
+            {specialVideoFreezeFrameUrl ? (
+              <div
+                className={`pointer-events-none absolute inset-0 bg-cover bg-center transition-opacity duration-200 ${
+                  isSpecialVideoFreezeFrameVisible ? "opacity-100" : "opacity-0"
+                }`}
+                style={{
+                  backgroundImage: `url('${specialVideoFreezeFrameUrl}')`,
+                }}
+              />
+            ) : null}
+
+            <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
+              <button
+                type="button"
+                onClick={handleSpecialVideoBack}
+                className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/78 px-4 py-2.5 text-sm font-medium text-zinc-900 shadow-[0_18px_44px_rgba(15,23,42,0.18)] backdrop-blur-xl transition hover:bg-white"
+                aria-label={`Go back from unit ${activeSpecialVideoFlatToken ?? "special"} preview`}
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back
+              </button>
+            </div>
+
+            <AnimatePresence>
+              {isSpecialVideoCompleted &&
+              !isSpecialVideoReversing &&
+              specialVideoApartment ? (
+                <motion.div
+                  initial={{ opacity: 0, x: -24, y: 12 }}
+                  animate={{ opacity: 1, x: 0, y: 0 }}
+                  exit={{ opacity: 0, x: -24, y: 12 }}
+                  transition={{ duration: 0.28, ease: smoothEase }}
+                  className="pointer-events-none absolute left-4 top-1/2 z-20 hidden -translate-y-1/2 xl:block 2xl:left-8"
+                >
+                  <SelectedFlatPlanPanel apartment={specialVideoApartment} />
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+
+            <AnimatePresence>
+              {isSpecialVideoCompleted &&
+              !isSpecialVideoReversing &&
+              specialVideoApartment ? (
+                <motion.div
+                  initial={{ opacity: 0, x: 24, y: 12 }}
+                  animate={{ opacity: 1, x: 0, y: 0 }}
+                  exit={{ opacity: 0, x: 24, y: 12 }}
+                  transition={{ duration: 0.28, ease: smoothEase }}
+                  className="pointer-events-none absolute right-6 top-1/2 z-20 w-full max-w-[23rem] -translate-y-1/2 overflow-visible xl:origin-right xl:scale-[0.92] 2xl:right-10 2xl:max-w-[26rem] 2xl:scale-100"
+                >
+                  <SelectedFlatDetailsPanel
+                    apartment={specialVideoApartment}
+                    compact
+                    desktopEnhancedCompact
+                    hideCloseButton
+                    onClose={handleSpecialVideoBack}
+                  />
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function MasterPlanFiltersCard({
+  search,
+  onSearchChange,
+  selectedTower,
+  onTowerChange,
+  bhk,
+  onBhkChange,
+  facing,
+  onFacingChange,
+  status,
+  onStatusChange,
+  floor,
+  floorOptions,
+  onFloorChange,
+  minArea,
+  onMinAreaChange,
+  onClosePanel,
+  onReset,
+  onBack,
+  compact = false,
+}: {
+  search: string;
+  onSearchChange: (value: string) => void;
+  selectedTower: TowerType;
+  onTowerChange: (tower: TowerType) => void;
+  bhk: (typeof bhkOptions)[number];
+  onBhkChange: (value: (typeof bhkOptions)[number]) => void;
+  facing: (typeof facingOptions)[number];
+  onFacingChange: (value: (typeof facingOptions)[number]) => void;
+  status: (typeof statusOptions)[number];
+  onStatusChange: (value: (typeof statusOptions)[number]) => void;
+  floor: string;
+  floorOptions: FloorFilterOption[];
+  onFloorChange: (value: string) => void;
+  minArea: number;
+  onMinAreaChange: (value: number) => void;
+  onClosePanel?: () => void;
+  onReset: () => void;
+  onBack: () => void;
+  compact?: boolean;
+}) {
+  const activeFilterCount =
+    Number(search.trim().length > 0) +
+    Number(bhk !== "All") +
+    Number(facing !== "All") +
+    Number(status !== "All") +
+    Number(floor !== FLOOR_ALL_VALUE) +
+    Number(minArea > 0);
+  const [isCompactOpen, setIsCompactOpen] = useState(compact);
+  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(true);
+  const handleSearchInputChange = (value: string) => {
+    onSearchChange(value.replace(/\D+/g, ""));
+  };
+  const towerOptions: TowerType[] = ["Tower A", "Tower B"];
+  const searchControl = (
+    <div
+      className={`group flex items-center gap-2 rounded-full border px-3 py-2 transition ${
+        compact
+          ? "border-[#eadfce] bg-white/94 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_12px_26px_rgba(15,23,42,0.08)] focus-within:border-[#c8a86a] focus-within:bg-white"
+          : "border-white/55 bg-white/68 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_10px_24px_rgba(15,23,42,0.06)] focus-within:border-white/80 focus-within:bg-white/82 dark:border-white/10 dark:bg-white/7 dark:focus-within:border-white/24 dark:focus-within:bg-white/12"
+      }`}
+    >
+      <Search className="h-3.5 w-3.5 shrink-0 text-zinc-500 transition group-focus-within:text-zinc-800 dark:text-zinc-400 dark:group-focus-within:text-white" />
+      <input
+        value={search}
+        onChange={(e) => handleSearchInputChange(e.target.value)}
+        inputMode="numeric"
+        pattern="[0-9]*"
+        enterKeyHint="search"
+        autoComplete="off"
+        placeholder="Search unit number"
+        className={`w-full bg-transparent text-xs font-medium outline-none sm:text-[13px] ${
+          compact
+            ? "text-zinc-800 placeholder:text-zinc-400"
+            : "text-zinc-800 placeholder:text-zinc-400 dark:text-white"
+        }`}
+      />
+    </div>
+  );
+
+  if (compact) {
+    return (
+      <motion.div className="surface-contain shrink-0 rounded-[20px] border border-[#ece3d6] bg-white/94 p-2.5 text-zinc-900 shadow-[0_18px_38px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-2xl sm:rounded-[24px] sm:p-3">
+        <div className="flex items-start gap-2">
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#e6dccf] bg-white text-zinc-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.92)] transition hover:bg-[#faf5ec]"
+            aria-label="Back to tower selection"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+          </button>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-xs font-semibold text-zinc-900 sm:text-[13px]">
+                Refine Flats
+              </p>
+              <span className="inline-flex items-center gap-1 rounded-full border border-[#e9ddca] bg-[#faf6ee] px-2 py-0.5 text-[10px] font-medium text-zinc-700">
+                <Building2 className="h-3 w-3" />
+                {selectedTower}
+              </span>
+            </div>
+            <p className="mt-0.5 text-[10px] text-zinc-500">
+              {activeFilterCount > 0
+                ? `${activeFilterCount} active refinements`
+                : "Search first, expand for details"}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {isCompactOpen ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onReset}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#d4b57b]/55 bg-[#f8f1e3] px-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#9b7840] transition hover:bg-[#f3e7d3]"
+                >
+                  Reset
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsCompactOpen(false)}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#e6dccf] bg-white px-2.5 text-[10px] font-semibold text-zinc-700 transition hover:bg-[#faf5ec]"
+                >
+                  <SlidersHorizontal className="h-3 w-3" />
+                  Close filters
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsCompactOpen(true)}
+                className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#e6dccf] bg-white px-2.5 text-[10px] font-semibold text-zinc-700 transition hover:bg-[#faf5ec]"
+              >
+                <SlidersHorizontal className="h-3 w-3" />
+                Filters
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-2.5">
+          {searchControl}
+        </div>
+
+        {activeFilterCount > 0 && !isCompactOpen ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {bhk !== "All" ? <FilterChip label={`${bhk} BHK`} /> : null}
+            {floor !== FLOOR_ALL_VALUE ? (
+              <FilterChip
+                label={
+                  floorOptions.find((option) => option.value === floor)?.label ??
+                  `Floor ${floor}`
+                }
+              />
+            ) : null}
+            {facing !== "All" ? <FilterChip label={facing} /> : null}
+            {status !== "All" ? <FilterChip label={status} /> : null}
+            {minArea > 0 ? <FilterChip label={`${minArea}+ sqft`} /> : null}
+          </div>
+        ) : null}
+
+        {isCompactOpen ? (
+          <div className="mt-2.5 max-h-[31svh] space-y-2.5 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch] sm:max-h-[36svh]">
+            <FilterBlock compact compactDark label="Tower">
+              <FilterPillGroup
+                options={towerOptions}
+                value={selectedTower}
+                onChange={onTowerChange}
+                getLabel={(item) => item.replace("Tower ", "Tower ")}
+                compactDark
+              />
+            </FilterBlock>
+
+            <FilterBlock compact compactDark label="BHK">
+              <FilterPillGroup
+                options={bhkOptions}
+                value={bhk}
+                onChange={onBhkChange}
+                getLabel={(item) => (item === "All" ? "All" : `${item} BHK`)}
+                compactDark
+              />
+            </FilterBlock>
+
+            <FilterBlock compact compactDark label="Floor">
+              <FilterDropdown
+                value={floor}
+                options={floorOptions}
+                onChange={onFloorChange}
+                compactDark
+              />
+            </FilterBlock>
+
+            <FilterBlock compact compactDark label="Facing">
+              <FilterPillGroup
+                options={facingOptions}
+                value={facing}
+                onChange={onFacingChange}
+                compactDark
+              />
+            </FilterBlock>
+
+            <FilterBlock compact compactDark label="Status">
+              <FilterPillGroup
+                options={statusOptions}
+                value={status}
+                onChange={onStatusChange}
+                compactDark
+              />
+            </FilterBlock>
+
+            <FilterBlock compact compactDark label={`Min Area: ${minArea} sqft`}>
+              <div className="">
+                <input
+                  type="range"
+                  min={0}
+                  max={1745}
+                  step={45}
+                  value={minArea}
+                  onChange={(e) => onMinAreaChange(Number(e.target.value))}
+                  className="h-3 w-full cursor-pointer appearance-auto accent-[#ffffff]"
+                  style={{ accentColor: "#fff" }}
+                />
+                <div className="mt-2 flex items-center justify-between text-[9px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                  <span>0 sqft</span>
+                  <span>1745 sqft</span>
+                </div>
+              </div>
+            </FilterBlock>
+          </div>
+        ) : null}
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      className="surface-contain shrink-0 rounded-[22px] border border-white/35 bg-white/58 p-3.5 shadow-[0_18px_50px_rgba(15,23,42,0.09)] backdrop-blur-2xl dark:border-white/10 dark:bg-black/25 dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:rounded-[26px] sm:p-4"
+    >
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="rounded-xl border border-white/55 bg-white/58 p-1.5 text-zinc-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] dark:border-white/10 dark:bg-white/8 dark:text-white">
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold">Filters</h2>
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+              Refine inventory in real time
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1 rounded-full border border-white/45 bg-white/38 px-2.5 py-1 text-[11px] font-medium text-zinc-700 cursor-pointer transition hover:bg-white/62 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back
+          </button>
+
+          <button
+            type="button"
+            onClick={onClosePanel ?? onReset}
+            className="rounded-full border border-white/55 bg-white/65 px-2.5 py-1 cursor-pointer text-[11px] font-medium text-zinc-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition hover:bg-white/82 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
+          >
+            {onClosePanel ? "Close" : "Reset"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsDesktopFilterOpen((value) => !value)}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/55 bg-white/62 text-zinc-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] transition hover:bg-white/84 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
+            aria-label={
+              isDesktopFilterOpen ? "Collapse filters" : "Expand filters"
+            }
+            aria-expanded={isDesktopFilterOpen}
+          >
+            {isDesktopFilterOpen ? (
+              <ChevronUp className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronDown className="h-3.5 w-3.5" />
+            )}
+          </button>
+        </div>
+      </div>
+
+      <div className={compact ? "space-y-3" : "space-y-4"}>
+        <FilterBlock label="Search Unit">
+          {searchControl}
+        </FilterBlock>
+
+        {isDesktopFilterOpen ? (
+          <>
+            <FilterBlock label="Selected Tower">
+              <FilterPillGroup
+                options={towerOptions}
+                value={selectedTower}
+                onChange={onTowerChange}
+                getLabel={(item) => item}
+              />
+            </FilterBlock>
+
+            <FilterBlock label="BHK">
+              <FilterPillGroup
+                options={bhkOptions}
+                value={bhk}
+                onChange={onBhkChange}
+                getLabel={(item) => (item === "All" ? "All" : `${item} BHK`)}
+              />
+            </FilterBlock>
+
+            <FilterBlock label="Floor">
+              <FilterDropdown
+                value={floor}
+                options={floorOptions}
+                onChange={onFloorChange}
+              />
+            </FilterBlock>
+
+            <FilterBlock label="Facing">
+              <FilterPillGroup
+                options={facingOptions}
+                value={facing}
+                onChange={onFacingChange}
+              />
+            </FilterBlock>
+
+            <FilterBlock label="Status">
+              <FilterPillGroup
+                options={statusOptions}
+                value={status}
+                onChange={onStatusChange}
+              />
+            </FilterBlock>
+
+            <FilterBlock label={`Min Area: ${minArea} sqft`}>
+              <div className="">
+                <input
+                  type="range"
+                  min={0}
+                  max={1745}
+                  step={5}
+                  value={minArea}
+                  onChange={(e) => onMinAreaChange(Number(e.target.value))}
+                  className="h-3 w-full cursor-pointer appearance-auto accent-[#ffffff]"
+                  style={{ accentColor: "#fff" }}
+                />
+                <div className="mt-2 flex items-center justify-between text-[9px] font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
+                  <span>0 sqft</span>
+                  <span>1745 sqft</span>
+                </div>
+              </div>
+            </FilterBlock>
+          </>
+        ) : activeFilterCount > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {bhk !== "All" ? <FilterChip label={`${bhk} BHK`} /> : null}
+            {floor !== FLOOR_ALL_VALUE ? (
+              <FilterChip
+                label={
+                  floorOptions.find((option) => option.value === floor)?.label ??
+                  `Floor ${floor}`
+                }
+              />
+            ) : null}
+            {facing !== "All" ? <FilterChip label={facing} /> : null}
+            {status !== "All" ? <FilterChip label={status} /> : null}
+            {minArea > 0 ? <FilterChip label={`${minArea}+ sqft`} /> : null}
+          </div>
+        ) : null}
+      </div>
+    </motion.div>
+  );
+}
+
+function MasterPlanResultsCard({
+  filteredApartments,
+  isInventoryLoading,
+  inventoryError,
+  onApartmentSelect,
+  activeHotspot,
+  selectedApartmentId,
+  compact = false,
+}: {
+  filteredApartments: InventoryApartment[];
+  isInventoryLoading: boolean;
+  inventoryError: string | null;
+  onApartmentSelect: (apartment: InventoryApartment) => void;
+  activeHotspot: MasterPlanHotspotKey;
+  selectedApartmentId: string | null;
+  compact?: boolean;
+}) {
+  const scrollableId = useId();
+  const paginationKey = useMemo(
+    () => filteredApartments.map((apartment) => apartment.id).join("|"),
+    [filteredApartments],
+  );
+  const [pagination, setPagination] = useState({
+    key: "",
+    visibleCount: MATCHING_FLATS_PAGE_SIZE,
+  });
+  const visibleCount =
+    pagination.key === paginationKey
+      ? pagination.visibleCount
+      : MATCHING_FLATS_PAGE_SIZE;
+  const visibleApartments = useMemo(
+    () => filteredApartments.slice(0, visibleCount),
+    [filteredApartments, visibleCount],
+  );
+  const hasMoreApartments = visibleCount < filteredApartments.length;
+
+  const loadMoreApartments = useCallback(() => {
+    setPagination((current) => {
+      const currentVisibleCount =
+        current.key === paginationKey
+          ? current.visibleCount
+          : MATCHING_FLATS_PAGE_SIZE;
+
+      return {
+        key: paginationKey,
+        visibleCount: Math.min(
+          currentVisibleCount + MATCHING_FLATS_PAGE_SIZE,
+          filteredApartments.length,
+        ),
+      };
+    });
+  }, [filteredApartments.length, paginationKey]);
+
+  return (
+    <motion.div
+      className={`surface-contain flex min-h-0 flex-col rounded-[24px] border border-white/30 bg-white/75 shadow-[0_20px_60px_rgba(15,23,42,0.10)] backdrop-blur-2xl dark:border-white/10 dark:bg-black/25 dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:rounded-[30px] ${
+        compact ? "min-h-0 flex-1 overflow-hidden p-2.5" : "flex-1 p-4"
+      }`}
+    >
+      <div className={`flex items-center justify-between ${compact ? "mb-3" : "mb-4"}`}>
+        <div>
+          <h3 className={`${compact ? "text-[0.95rem]" : "text-base"} font-semibold`}>
+            Matching Flats
+          </h3>
+          <p className={`${compact ? "text-[11px]" : "text-xs"} text-zinc-500 dark:text-zinc-400`}>
+            View the Flats matching your requirement
+          </p>
+        </div>
+        <span
+          className={`rounded-full border border-zinc-200 bg-zinc-50 font-medium dark:border-white/10 dark:bg-white/5 ${
+            compact ? "px-2.5 py-0.5 text-[11px]" : "px-3 py-1 text-xs"
+          }`}
+        >
+          {filteredApartments.length} units
+        </span>
+      </div>
+
+      <motion.div
+        variants={staggerWrap}
+        initial="hidden"
+        animate="visible"
+        className={`custom-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain [overflow-anchor:none] [-webkit-overflow-scrolling:touch] touch-pan-y ${
+          compact ? "pr-1" : "pr-2"
+        }`}
+        id={scrollableId}
+        data-scroll-area="results"
+      >
+        <div className={compact ? "space-y-2.5 pb-1" : "space-y-3"}>
+          <AnimatePresence initial={false}>
+            {isInventoryLoading ? (
+              <motion.div
+                key="loading"
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="flex h-[220px] items-center justify-center rounded-[22px] border border-dashed border-zinc-300 bg-zinc-50/70 px-4 text-center dark:border-white/10 dark:bg-white/5"
+              >
+                <div>
+                  <p className="text-sm font-semibold">Loading flats</p>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Pulling the latest tower inventory.
+                  </p>
+                </div>
+              </motion.div>
+            ) : inventoryError ? (
+              <motion.div
+                key="error"
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="flex h-[220px] items-center justify-center rounded-[22px] border border-dashed border-rose-200 bg-rose-50/80 px-4 text-center"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-rose-700">
+                    Inventory could not be loaded
+                  </p>
+                  <p className="mt-1 text-xs text-rose-600">{inventoryError}</p>
+                </div>
+              </motion.div>
+            ) : filteredApartments.length > 0 ? (
+              <InfiniteScroll
+                dataLength={visibleApartments.length}
+                next={loadMoreApartments}
+                hasMore={hasMoreApartments}
+                scrollableTarget={scrollableId}
+                loader={<MatchingFlatsInlineLoader compact={compact} />}
+                className={compact ? "space-y-2.5 pb-1" : "space-y-3"}
+                style={{ overflow: "visible" }}
+              >
+                {visibleApartments.map((apartment) => {
+                  const isViewableAtHotspot =
+                    isInventoryApartmentAllowedAtHotspot(
+                      apartment,
+                      activeHotspot,
+                    );
+
+                  return (
+                    <motion.button
+                      key={apartment.id}
+                      layout="position"
+                      variants={itemAnim}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      onClick={() => {
+                        // if (!isViewableAtHotspot) {
+                        //   return;
+                        // }
+
+                        onApartmentSelect(apartment);
+                      }}
+                      className={`group flex w-full text-left shadow-sm transition dark:to-white/5 ${
+                        apartment.id === selectedApartmentId
+                          ? "border-[#d4b57b]/70 bg-linear-to-br from-[#fff7ea] to-[#f7edd6] shadow-[0_18px_42px_rgba(186,146,79,0.18)] dark:border-[#d4b57b]/35 dark:from-[#3b3223] dark:to-[#211d16]"
+                          : "dark:border-white/10 dark:from-white/10"
+                      } ${
+                        compact
+                          ? "grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 rounded-[16px] border px-3 py-2"
+                          : "items-center justify-between rounded-[22px] border px-4 py-3"
+                      } ${
+                        apartment.id === selectedApartmentId
+                          ? "border-[#e0c493]/70"
+                          : compact
+                            ? "border-zinc-200/60 bg-linear-to-br from-white to-zinc-50"
+                            : "border-zinc-200/50 bg-linear-to-br from-white to-zinc-50"
+                      }
+                          `}
+                    >
+                      <div className="min-w-0 w-full cursor-pointer">
+                        <div className={`flex flex-wrap items-center ${compact ? "gap-1.5" : "gap-2"}`}>
+                          <p
+                            className={`font-semibold text-zinc-900 dark:text-white ${
+                              compact ? "text-[0.95rem]" : "text-sm"
+                            }`}
+                          >
+                            {apartment.title}
+                          </p>
+                          <span
+                            className={`rounded-full font-semibold ${
+                              compact ? "px-1.5 py-0.5 text-[9px]" : "px-2 py-0.5 text-[10px]"
+                            } ${
+                              apartment.status === "Available"
+                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+                                : apartment.status === "Sold"
+                                  ? "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
+                                  : "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                            }`}
+                          >
+                            {apartment.status}
+                          </span>
+                          {/* {!isViewableAtHotspot ? (
+                            <span
+                              className={`rounded-full bg-zinc-200 font-semibold text-zinc-600 dark:bg-white/8 dark:text-zinc-300 ${
+                                compact ? "px-1.5 py-0.5 text-[9px]" : "px-2 py-0.5 text-[10px]"
+                              }`}
+                            >
+                              Not viewable here
+                            </span>
+                          ) : null} */}
+                        </div>
+
+                        <div
+                          className={`mt-2 flex flex-wrap items-center text-zinc-500 dark:text-zinc-400 ${
+                            compact ? "gap-1.5 text-[10px]" : "gap-3 text-xs"
+                          }`}
+                        >
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full bg-zinc-100 dark:bg-white/5 ${
+                              compact ? "px-1.5 py-0.5" : "px-2 py-1"
+                            }`}
+                          >
+                            <Building2 className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+                            {apartment.tower}
+                          </span>
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full bg-zinc-100 dark:bg-white/5 ${
+                              compact ? "px-1.5 py-0.5" : "px-2 py-1"
+                            }`}
+                          >
+                            <BedDouble className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+                            {apartment.bhk} BHK
+                          </span>
+                        </div>
+                      </div>
+
+                      <div
+                        className={`text-zinc-500 dark:text-zinc-400 ${
+                          compact
+                            ? "flex min-w-[88px] flex-col items-end gap-1 text-[10px]"
+                            : "ml-4 shrink-0 text-right text-xs"
+                        }`}
+                      >
+                        <div
+                          className={`inline-flex items-center gap-1 rounded-full bg-zinc-100 dark:bg-white/5 ${
+                            compact ? "px-1.5 py-0.5" : "px-2 py-1"
+                          }`}
+                        >
+                          <MapPin className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+                          {apartment.facing}
+                        </div>
+                        <div className={compact ? "text-right" : ""}>
+                          <p className={`font-medium text-zinc-700 dark:text-zinc-300 ${compact ? "text-[0.9rem]" : ""}`}>
+                            {apartment.areaSqft} sqft
+                          </p>
+                          <p className={`mt-1 ${compact ? "text-[10px]" : "text-[11px]"}`}>
+                            Floor {apartment.floorLabel}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </InfiniteScroll>
+            ) : (
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="flex h-[220px] items-center justify-center rounded-[22px] border border-dashed border-zinc-300 bg-zinc-50/70 px-4 text-center dark:border-white/10 dark:bg-white/5"
+              >
+                <div>
+                  <p className="text-sm font-semibold">No flats found</p>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Try changing the filters.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function MatchingFlatsInlineLoader({ compact = false }: { compact?: boolean }) {
+  return (
+    <div
+      className={`flex items-center justify-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 ${
+        compact ? "py-3" : "py-4"
+      }`}
+    >
+      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-700 dark:border-white/20 dark:border-t-white" />
+      Loading more flats
+    </div>
+  );
+}
+
+function FilterPillGroup<T extends string>({
+  options,
+  value,
+  onChange,
+  getLabel = (item) => item,
+  compactDark = false,
+}: {
+  options: readonly T[];
+  value: T;
+  onChange: (value: T) => void;
+  getLabel?: (value: T) => string;
+  compactDark?: boolean;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((item) => {
+        const isActive = value === item;
+
+        return (
+          <button
+            key={item}
+            type="button"
+            aria-pressed={isActive}
+            onClick={() => onChange(item)}
+            className={`inline-flex min-h-8 items-center justify-center rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] transition sm:text-[11px] ${
+              compactDark
+                ? isActive
+                  ? "border-[#d4b57b]/60 bg-[#f8f1e3] text-[#9b7840] shadow-[0_10px_22px_rgba(200,168,106,0.16)]"
+                  : "border-[#e8ddd0] bg-white text-zinc-500 hover:border-[#dac4a0] hover:bg-[#fcf7ef]"
+                : isActive
+                  ? "border-white/80 bg-white/82 text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_10px_24px_rgba(15,23,42,0.10)] dark:border-white/75 dark:bg-white/82 dark:text-black"
+                  : "border-white/45 bg-white/36 text-zinc-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] hover:border-white/70 hover:bg-white/58 dark:border-white/12 dark:bg-white/6 dark:text-zinc-300 dark:hover:border-white/24 dark:hover:bg-white/10"
+            }`}
+          >
+            {getLabel(item)}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function FilterDropdown({
+  value,
+  options,
+  onChange,
+  compactDark = false,
+}: {
+  value: string;
+  options: FloorFilterOption[];
+  onChange: (value: string) => void;
+  compactDark?: boolean;
+}) {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={`h-9 w-full appearance-none rounded-full border px-3 pr-8 text-[11px] font-semibold outline-none transition ${
+          compactDark
+            ? "border-[#e8ddd0] bg-white text-zinc-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.88),0_10px_22px_rgba(15,23,42,0.05)] focus:border-[#c8a86a] focus:bg-white"
+            : "border-white/55 bg-white/56 text-zinc-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.68),0_8px_18px_rgba(15,23,42,0.05)] focus:border-white/80 focus:bg-white/76 dark:border-white/10 dark:bg-white/7 dark:text-white"
+        }`}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <span
+        className={`pointer-events-none absolute right-3 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rotate-45 border-b border-r ${
+          compactDark ? "border-zinc-500" : "border-zinc-500 dark:border-zinc-300"
+        }`}
+      />
+    </div>
+  );
+}
+
+function FilterBlock({
+  label,
+  children,
+  compact = false,
+  compactDark = false,
+  className = "",
+}: {
+  label: string;
+  children: React.ReactNode;
+  compact?: boolean;
+  compactDark?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={`${compact ? "space-y-1.5" : "space-y-2"} ${className}`}>
+      <label
+        className={`block font-semibold ${
+          compactDark ? "text-zinc-500" : "text-zinc-600 dark:text-zinc-300"
+        } ${
+          compact ? "text-[9px] uppercase tracking-[0.16em]" : "text-xs"
+        }`}
+      >
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function FilterChip({ label }: { label: string }) {
+  return (
+    <span className="rounded-full border border-white/45 bg-white/45 px-2 py-0.5 text-[10px] font-medium text-zinc-600 dark:border-white/10 dark:bg-white/8 dark:text-zinc-200">
+      {label}
+    </span>
+  );
+}

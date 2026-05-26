@@ -1,0 +1,515 @@
+[
+    {
+        "id": "BP_panoPath_Interior_F0000",
+        "x": 1815.692,
+        "y": -8384.682,
+        "z": 10898.0,
+        "pitch": 0.0,
+        "yaw": 180.0,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_Interior_F0000.jpeg",
+        "facing_axis": "-X",
+        "forward_vector": {
+            "x": -1.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.0,
+            "y": -1.0,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_Interior_F0001",
+        "x": 1615.87,
+        "y": -8382.053,
+        "z": 10898.0,
+        "pitch": 0.0,
+        "yaw": 178.2272,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_Interior_F0001.jpeg",
+        "facing_axis": "-X",
+        "forward_vector": {
+            "x": -1.0,
+            "y": 0.031,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": -0.031,
+            "y": -1.0,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": 0.031,
+            "y": 1.0,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_Interior_F0002",
+        "x": 1416.154,
+        "y": -8389.433,
+        "z": 10898.0,
+        "pitch": 0.0,
+        "yaw": -164.3165,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_Interior_F0002.jpeg",
+        "facing_axis": "-X",
+        "forward_vector": {
+            "x": -0.963,
+            "y": -0.27,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.27,
+            "y": -0.963,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": -0.27,
+            "y": 0.963,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_Interior_F0003",
+        "x": 1336.613,
+        "y": -8558.268,
+        "z": 10898.0,
+        "pitch": 0.0,
+        "yaw": -119.7073,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_Interior_F0003.jpeg",
+        "facing_axis": "-Y",
+        "forward_vector": {
+            "x": -0.496,
+            "y": -0.869,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.869,
+            "y": -0.496,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": -0.869,
+            "y": 0.496,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_Interior_F0004",
+        "x": 1152.076,
+        "y": -8621.672,
+        "z": 10898.0,
+        "pitch": 0.0,
+        "yaw": -177.68,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_Interior_F0004.jpeg",
+        "facing_axis": "-X",
+        "forward_vector": {
+            "x": -0.999,
+            "y": -0.04,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.04,
+            "y": -0.999,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": -0.04,
+            "y": 0.999,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_Interior_F0005",
+        "x": 1006.644,
+        "y": -8680.607,
+        "z": 10898.0,
+        "pitch": 0.0,
+        "yaw": -88.6598,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_Interior_F0005.jpeg",
+        "facing_axis": "-Y",
+        "forward_vector": {
+            "x": 0.023,
+            "y": -1.0,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 1.0,
+            "y": 0.023,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": -1.0,
+            "y": -0.023,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_Interior_F0006",
+        "x": 1060.514,
+        "y": -8829.315,
+        "z": 10898.0,
+        "pitch": 0.0,
+        "yaw": 4.5985,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_Interior_F0006.jpeg",
+        "facing_axis": "+X",
+        "forward_vector": {
+            "x": 0.997,
+            "y": 0.08,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": -0.08,
+            "y": 0.997,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": 0.08,
+            "y": -0.997,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_Interior2_F0007",
+        "x": 932.445,
+        "y": -8806.053,
+        "z": 10898.0,
+        "pitch": 0.0,
+        "yaw": -176.5331,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_Interior2_F0007.jpeg",
+        "facing_axis": "-X",
+        "forward_vector": {
+            "x": -0.998,
+            "y": -0.06,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.06,
+            "y": -0.998,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": -0.06,
+            "y": 0.998,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_Interior2_F0008",
+        "x": 771.633,
+        "y": -8862.031,
+        "z": 10898.0,
+        "pitch": 0.0,
+        "yaw": -89.1608,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_Interior2_F0008.jpeg",
+        "facing_axis": "-Y",
+        "forward_vector": {
+            "x": 0.015,
+            "y": -1.0,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 1.0,
+            "y": 0.015,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": -1.0,
+            "y": -0.015,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_Interior3_F0009",
+        "x": 986.73,
+        "y": -8373.945,
+        "z": 10898.0,
+        "pitch": 0.0,
+        "yaw": -0.0,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_Interior3_F0009.jpeg",
+        "facing_axis": "+X",
+        "forward_vector": {
+            "x": 1.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": 0.0,
+            "y": -1.0,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_Interior3_F0010",
+        "x": 1163.798,
+        "y": -8331.92,
+        "z": 10898.0,
+        "pitch": 0.0,
+        "yaw": 83.9168,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_Interior3_F0010.jpeg",
+        "facing_axis": "+Y",
+        "forward_vector": {
+            "x": 0.106,
+            "y": 0.994,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": -0.994,
+            "y": 0.106,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": 0.994,
+            "y": -0.106,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_Interior3_F0011",
+        "x": 1198.113,
+        "y": -8170.85,
+        "z": 10898.0,
+        "pitch": 0.0,
+        "yaw": -3.2366,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_Interior3_F0011.jpeg",
+        "facing_axis": "+X",
+        "forward_vector": {
+            "x": 0.998,
+            "y": -0.056,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.056,
+            "y": 0.998,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": -0.056,
+            "y": -0.998,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_Interior4_F0012",
+        "x": 1075.268,
+        "y": -8154.132,
+        "z": 10898.0,
+        "pitch": 0.0,
+        "yaw": -90.0,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_Interior4_F0012.jpeg",
+        "facing_axis": "-Y",
+        "forward_vector": {
+            "x": 0.0,
+            "y": -1.0,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 1.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": -1.0,
+            "y": 0.0,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_Interior4_F0013",
+        "x": 940.112,
+        "y": -8216.231,
+        "z": 10898.0,
+        "pitch": 0.0,
+        "yaw": 179.9855,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_Interior4_F0013.jpeg",
+        "facing_axis": "-X",
+        "forward_vector": {
+            "x": -1.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.0,
+            "y": -1.0,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_Interior5_F0014",
+        "x": 1488.587,
+        "y": -8987.952,
+        "z": 10898.0,
+        "pitch": 0.0,
+        "yaw": 98.0102,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_Interior5_F0014.jpeg",
+        "facing_axis": "+Y",
+        "forward_vector": {
+            "x": -0.139,
+            "y": 0.99,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": -0.99,
+            "y": -0.139,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": 0.99,
+            "y": 0.139,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_Interior5_F0015",
+        "x": 1454.687,
+        "y": -8791.86,
+        "z": 10898.0,
+        "pitch": 0.0,
+        "yaw": 120.2718,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_Interior5_F0015.jpeg",
+        "facing_axis": "+Y",
+        "forward_vector": {
+            "x": -0.504,
+            "y": 0.864,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": -0.864,
+            "y": -0.504,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": 0.864,
+            "y": 0.504,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_Interior5_F0016",
+        "x": 1321.827,
+        "y": -8773.537,
+        "z": 10898.0,
+        "pitch": 0.0,
+        "yaw": -86.4823,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_Interior5_F0016.jpeg",
+        "facing_axis": "-Y",
+        "forward_vector": {
+            "x": 0.061,
+            "y": -0.998,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.998,
+            "y": 0.061,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": -0.998,
+            "y": -0.061,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_Interior6_F0017",
+        "x": 1487.49,
+        "y": -8277.972,
+        "z": 10898.0,
+        "pitch": 0.0,
+        "yaw": 64.9727,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_Interior6_F0017.jpeg",
+        "facing_axis": "+Y",
+        "forward_vector": {
+            "x": 0.423,
+            "y": 0.906,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": -0.906,
+            "y": 0.423,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": 0.906,
+            "y": -0.423,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_Interior6_F0018",
+        "x": 1544.656,
+        "y": -8088.902,
+        "z": 10898.0,
+        "pitch": 0.0,
+        "yaw": 83.2933,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_Interior6_F0018.jpeg",
+        "facing_axis": "+Y",
+        "forward_vector": {
+            "x": 0.117,
+            "y": 0.993,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": -0.993,
+            "y": 0.117,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": 0.993,
+            "y": -0.117,
+            "z": 0.0
+        }
+    }
+]

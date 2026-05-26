@@ -1,0 +1,623 @@
+[
+    {
+        "id": "BP_panoPath_F0000",
+        "x": 4716.989,
+        "y": -8391.638,
+        "z": 10950.0,
+        "pitch": 0.0,
+        "yaw": -6.3978,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_F0000.jpeg",
+        "facing_axis": "+X",
+        "forward_vector": {
+            "x": 0.994,
+            "y": -0.111,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.111,
+            "y": 0.994,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": -0.111,
+            "y": -0.994,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_F0001",
+        "x": 4915.407,
+        "y": -8414.258,
+        "z": 10950.0,
+        "pitch": 0.0,
+        "yaw": -10.4227,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_F0001.jpeg",
+        "facing_axis": "+X",
+        "forward_vector": {
+            "x": 0.983,
+            "y": -0.181,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.181,
+            "y": 0.983,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": -0.181,
+            "y": -0.983,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_F0002",
+        "x": 5105.375,
+        "y": -8477.453,
+        "z": 10950.0,
+        "pitch": 0.0,
+        "yaw": -18.5002,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_F0002.jpeg",
+        "facing_axis": "+X",
+        "forward_vector": {
+            "x": 0.948,
+            "y": -0.317,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.317,
+            "y": 0.948,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": -0.317,
+            "y": -0.948,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_F0003",
+        "x": 5260.76,
+        "y": -8428.366,
+        "z": 10950.0,
+        "pitch": 0.0,
+        "yaw": 75.9494,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_F0003.jpeg",
+        "facing_axis": "+Y",
+        "forward_vector": {
+            "x": 0.243,
+            "y": 0.97,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": -0.97,
+            "y": 0.243,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": 0.97,
+            "y": -0.243,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_F0004",
+        "x": 5269.804,
+        "y": -8228.437,
+        "z": 10950.0,
+        "pitch": 0.0,
+        "yaw": 96.5514,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_F0004.jpeg",
+        "facing_axis": "+Y",
+        "forward_vector": {
+            "x": -0.114,
+            "y": 0.993,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": -0.993,
+            "y": -0.114,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": 0.993,
+            "y": 0.114,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_F0005",
+        "x": 5129.638,
+        "y": -8141.332,
+        "z": 10950.0,
+        "pitch": 0.0,
+        "yaw": -176.437,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_F0005.jpeg",
+        "facing_axis": "-X",
+        "forward_vector": {
+            "x": -0.998,
+            "y": -0.062,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.062,
+            "y": -0.998,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": -0.062,
+            "y": 0.998,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath_F0006",
+        "x": 5028.318,
+        "y": -8145.119,
+        "z": 10950.0,
+        "pitch": 0.0,
+        "yaw": 176.939,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath_F0006.jpeg",
+        "facing_axis": "-X",
+        "forward_vector": {
+            "x": -0.999,
+            "y": 0.053,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": -0.053,
+            "y": -0.999,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": 0.053,
+            "y": 0.999,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath2_F0007",
+        "x": 5238.978,
+        "y": -8490.335,
+        "z": 10950.0,
+        "pitch": 0.0,
+        "yaw": -0.0,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath2_F0007.jpeg",
+        "facing_axis": "+X",
+        "forward_vector": {
+            "x": 1.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": 0.0,
+            "y": -1.0,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath2_F0008",
+        "x": 5438.226,
+        "y": -8471.67,
+        "z": 10950.0,
+        "pitch": 0.0,
+        "yaw": 0.0073,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath2_F0008.jpeg",
+        "facing_axis": "+X",
+        "forward_vector": {
+            "x": 1.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": 0.0,
+            "y": -1.0,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath2_F0009",
+        "x": 5546.018,
+        "y": -8606.09,
+        "z": 10950.0,
+        "pitch": 0.0,
+        "yaw": -84.0763,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath2_F0009.jpeg",
+        "facing_axis": "-Y",
+        "forward_vector": {
+            "x": 0.103,
+            "y": -0.995,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.995,
+            "y": 0.103,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": -0.995,
+            "y": -0.103,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath2_F0010",
+        "x": 5575.36,
+        "y": -8803.254,
+        "z": 10950.0,
+        "pitch": 0.0,
+        "yaw": -64.0927,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath2_F0010.jpeg",
+        "facing_axis": "-Y",
+        "forward_vector": {
+            "x": 0.437,
+            "y": -0.9,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.9,
+            "y": 0.437,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": -0.9,
+            "y": -0.437,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath2_F0011",
+        "x": 5680.206,
+        "y": -8888.317,
+        "z": 10950.0,
+        "pitch": 0.0,
+        "yaw": -3.4268,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath2_F0011.jpeg",
+        "facing_axis": "+X",
+        "forward_vector": {
+            "x": 0.998,
+            "y": -0.06,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.06,
+            "y": 0.998,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": -0.06,
+            "y": -0.998,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath3_F0012",
+        "x": 5233.235,
+        "y": -8695.066,
+        "z": 10950.0,
+        "pitch": 0.0,
+        "yaw": -90.0,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath3_F0012.jpeg",
+        "facing_axis": "-Y",
+        "forward_vector": {
+            "x": 0.0,
+            "y": -1.0,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 1.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": -1.0,
+            "y": 0.0,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath3_F0013",
+        "x": 5233.235,
+        "y": -8894.961,
+        "z": 10950.0,
+        "pitch": 0.0,
+        "yaw": -90.0,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath3_F0013.jpeg",
+        "facing_axis": "-Y",
+        "forward_vector": {
+            "x": 0.0,
+            "y": -1.0,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 1.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": -1.0,
+            "y": 0.0,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath4_F0014",
+        "x": 5222.029,
+        "y": -8745.635,
+        "z": 10950.0,
+        "pitch": 0.0,
+        "yaw": -169.5589,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath4_F0014.jpeg",
+        "facing_axis": "-X",
+        "forward_vector": {
+            "x": -0.983,
+            "y": -0.181,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.181,
+            "y": -0.983,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": -0.181,
+            "y": 0.983,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath4_F0015",
+        "x": 5035.174,
+        "y": -8801.455,
+        "z": 10950.0,
+        "pitch": 0.0,
+        "yaw": -130.9308,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath4_F0015.jpeg",
+        "facing_axis": "-Y",
+        "forward_vector": {
+            "x": -0.655,
+            "y": -0.756,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.756,
+            "y": -0.655,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": -0.756,
+            "y": 0.655,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath5_F0016",
+        "x": 5602.764,
+        "y": -8810.517,
+        "z": 10950.0,
+        "pitch": 0.0,
+        "yaw": 180.0,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath5_F0016.jpeg",
+        "facing_axis": "-X",
+        "forward_vector": {
+            "x": -1.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.0,
+            "y": -1.0,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath5_F0017",
+        "x": 5402.868,
+        "y": -8810.517,
+        "z": 10950.0,
+        "pitch": 0.0,
+        "yaw": 180.0,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath5_F0017.jpeg",
+        "facing_axis": "-X",
+        "forward_vector": {
+            "x": -1.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.0,
+            "y": -1.0,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath6_F0018",
+        "x": 5206.072,
+        "y": -8167.062,
+        "z": 10950.0,
+        "pitch": 0.0,
+        "yaw": 0.0,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath6_F0018.jpeg",
+        "facing_axis": "+X",
+        "forward_vector": {
+            "x": 1.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": 0.0,
+            "y": -1.0,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath6_F0019",
+        "x": 5405.967,
+        "y": -8167.062,
+        "z": 10950.0,
+        "pitch": 0.0,
+        "yaw": 0.0,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath6_F0019.jpeg",
+        "facing_axis": "+X",
+        "forward_vector": {
+            "x": 1.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": 0.0,
+            "y": -1.0,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath7_F0020",
+        "x": 5559.924,
+        "y": -8463.009,
+        "z": 10950.0,
+        "pitch": 0.0,
+        "yaw": 72.9486,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath7_F0020.jpeg",
+        "facing_axis": "+Y",
+        "forward_vector": {
+            "x": 0.293,
+            "y": 0.956,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": -0.956,
+            "y": 0.293,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": 0.956,
+            "y": -0.293,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath7_F0021",
+        "x": 5588.377,
+        "y": -8265.297,
+        "z": 10950.0,
+        "pitch": 0.0,
+        "yaw": 79.1905,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath7_F0021.jpeg",
+        "facing_axis": "+Y",
+        "forward_vector": {
+            "x": 0.188,
+            "y": 0.982,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": -0.982,
+            "y": 0.188,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": 0.982,
+            "y": -0.188,
+            "z": 0.0
+        }
+    },
+    {
+        "id": "BP_panoPath7_F0022",
+        "x": 5662.275,
+        "y": -8129.307,
+        "z": 10950.0,
+        "pitch": 0.0,
+        "yaw": 40.4488,
+        "roll": 0.0,
+        "frame": 0,
+        "image_filename": "LS_BP_panoPath7_F0022.jpeg",
+        "facing_axis": "+X",
+        "forward_vector": {
+            "x": 0.761,
+            "y": 0.649,
+            "z": 0.0
+        },
+        "right_vector": {
+            "x": -0.649,
+            "y": 0.761,
+            "z": 0.0
+        },
+        "left_vector": {
+            "x": 0.649,
+            "y": -0.761,
+            "z": 0.0
+        }
+    }
+]
