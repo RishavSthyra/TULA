@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import HeroSection from "@/components/sections/HeroSection";
-import TrifectaPreloader from "@/components/ui/Preloader";
+import CinematicIntro from "@/components/ui/CinematicIntro";
 import { scheduleAmenityVideoWarmup } from "@/lib/amenity-video-warmup";
 import {
   getMasterPlanFrameCdnUrl,
@@ -29,6 +29,8 @@ const ENTRY_VIDEO_URL = "videos/Tf Fixed Final_2.mp4";
 const HERO_STAGE_FALLBACK_IMAGE_URL = "images/first_frame_again.png";
 const HERO_POSTER_URL = "images/hero_first_frame.avif";
 const HERO_LOGO_URL = "images/Logo_Trifect_Veranza A_new.png";
+const TEMPORARY_HOME_HERO_IMAGE_URL =
+  "/ChatGPT%20Image%20May%2026%2C%202026%2C%2004_18_02%20PM.png";
 
 function getVideoLoadProgress(video: HTMLVideoElement) {
   const duration = video.duration;
@@ -79,6 +81,7 @@ export default function HomePageClient({
   const heroObjectUrlRef = useRef<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [introComplete, setIntroComplete] = useState(false);
   const [heroReady, setHeroReady] = useState(false);
   const [heroVideoSrc, setHeroVideoSrc] = useState<string | null>(null);
   const [useStaticHeroIntro, setUseStaticHeroIntro] = useState(() =>
@@ -210,6 +213,10 @@ export default function HomePageClient({
 
       return Math.min(targetValue, currentProgress + dampedStep);
     });
+  }, []);
+
+  const handleIntroComplete = useCallback(() => {
+    setIntroComplete(true);
   }, []);
 
   useEffect(() => {
@@ -524,9 +531,15 @@ export default function HomePageClient({
 
   return (
     <>
-      {loading ? <TrifectaPreloader progress={heroReady ? 100 : progress} /> : null}
+      {!introComplete ? (
+        <CinematicIntro
+          progress={heroReady ? 100 : progress}
+          readyToComplete={!loading}
+          onComplete={handleIntroComplete}
+        />
+      ) : null}
       <main
-        aria-hidden={loading}
+        aria-hidden={loading || !introComplete}
         className={`app-screen overflow-hidden bg-neutral-950 text-white transition-opacity duration-300 ${
           loading ? "pointer-events-none opacity-0" : "opacity-100"
         }`}
@@ -538,6 +551,7 @@ export default function HomePageClient({
           heroVideoSrc={heroVideoSrc}
           heroLoopVideoSrc={signedHeroLoopVideoUrl}
           staticHeroImageSrc={signedHeroMobileStaticImageUrl}
+          temporaryStaticHeroImageSrc={TEMPORARY_HOME_HERO_IMAGE_URL}
           useStaticHeroIntro={useStaticHeroIntro}
           playIntroAnimation={!loading}
           onHeroReadyChange={setHeroReady}

@@ -62,6 +62,7 @@ export default function RouteChrome() {
   const [shouldAddCompactDesktopCtasToDock, setShouldAddCompactDesktopCtasToDock] =
     useState(() => shouldUseCompactDesktopCtas(pathname));
   const isAdminRoute = pathname.startsWith("/admin");
+  const isHomeRoute = pathname === "/";
   const isExteriorWalkthroughRoute =
     pathname === "/exterios-walkthrough" ||
     pathname === "/exterior-tour" ||
@@ -77,6 +78,7 @@ export default function RouteChrome() {
     isExteriorWalkthroughRoute ||
     isInteriorWalkthroughRoute;
   const shouldHideDock =
+    isHomeRoute ||
     isDocklessRoute ||
     shouldMergeLinksForRoute ||
     (pathname === "/master-plan" &&
@@ -249,7 +251,7 @@ export default function RouteChrome() {
 
       <QuoteRequestController
         mergeRouteLinks={shouldMergeLinksForRoute}
-        showCta={!isAmenitiesRoute}
+        showCta={!isAmenitiesRoute && !isHomeRoute}
       />
     </>
   );

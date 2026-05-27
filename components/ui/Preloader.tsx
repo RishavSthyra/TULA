@@ -22,6 +22,7 @@ export default function TrifectaPreloader({
 
   return (
     <motion.div
+      data-trifecta-preloader
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}

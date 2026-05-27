@@ -14,9 +14,8 @@ const HOME_CRITICAL_ASSET_KEYS = [
 ] as const;
 
 export const metadata = buildPageMetadata({
-  title: "Home | Trifecta Veranza",
-  description:
-    "Discover Trifecta Veranza through a cinematic home experience with fast entry into the master plan, walkthroughs, and project details.",
+  title: "TULA",
+  description: "TULA",
   keywords: [
     "Trifecta Veranza",
     "luxury apartments",
