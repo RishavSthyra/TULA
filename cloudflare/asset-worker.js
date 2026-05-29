@@ -26,12 +26,18 @@ export default {
 
     const origin = request.headers.get("Origin") || "";
     const referer = request.headers.get("Referer") || "";
+    const hasAllowedOrigin = origin ? isAllowedOrigin(origin) : false;
+    const hasAllowedReferer = referer ? isAllowedReferer(referer) : false;
 
-    if (origin && !isAllowedOrigin(origin)) {
+    if (origin && !hasAllowedOrigin) {
       return new Response("Forbidden: bad origin", { status: 403 });
     }
 
-    if (!referer || !isAllowedReferer(referer)) {
+    if (referer && !hasAllowedReferer) {
+      return new Response("Forbidden: bad referer", { status: 403 });
+    }
+
+    if (!hasAllowedOrigin && !hasAllowedReferer) {
       return new Response("Forbidden: direct access blocked", { status: 403 });
     }
 
@@ -125,11 +131,16 @@ function buildCacheKey(request, key) {
 }
 
 function isAllowedOrigin(origin) {
-  return ALLOWED_SITES.includes(origin);
+  return ALLOWED_SITES.includes(origin) || isPrivateDevOrigin(origin);
 }
 
 function isAllowedReferer(referer) {
-  return ALLOWED_SITES.some((site) => referer.startsWith(site));
+  try {
+    const refererOrigin = new URL(referer).origin;
+    return isAllowedOrigin(refererOrigin);
+  } catch {
+    return false;
+  }
 }
 
 function getCorsOrigin(request) {
@@ -140,13 +151,60 @@ function getCorsOrigin(request) {
   }
 
   const referer = request.headers.get("Referer") || "";
-  const matchedSite = ALLOWED_SITES.find((site) => referer.startsWith(site));
+  try {
+    const refererOrigin = new URL(referer).origin;
 
-  if (matchedSite) {
-    return matchedSite;
+    if (isAllowedOrigin(refererOrigin)) {
+      return refererOrigin;
+    }
+  } catch {
+    // Ignore malformed referers and fall back to the default origin.
   }
 
   return "https://trifecta-veranza.vercel.app";
+}
+
+function isPrivateDevOrigin(origin) {
+  try {
+    const url = new URL(origin);
+
+    if (
+      url.protocol !== "http:" &&
+      url.protocol !== "https:"
+    ) {
+      return false;
+    }
+
+    return (
+      url.hostname === "localhost" ||
+      url.hostname === "127.0.0.1" ||
+      url.hostname === "::1" ||
+      isPrivateIpv4(url.hostname)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isPrivateIpv4(hostname) {
+  const match =
+    /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(hostname);
+
+  if (!match) {
+    return false;
+  }
+
+  const octets = match.slice(1).map(Number);
+
+  if (octets.some((octet) => Number.isNaN(octet) || octet < 0 || octet > 255)) {
+    return false;
+  }
+
+  return (
+    octets[0] === 10 ||
+    (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) ||
+    (octets[0] === 192 && octets[1] === 168)
+  );
 }
 
 function corsHeaders(request) {
