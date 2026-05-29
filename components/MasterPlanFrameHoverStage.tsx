@@ -69,9 +69,13 @@ import type {
   TowerType,
 } from "@/types/inventory";
 import { useSignedAssetUrls } from "@/src/lib/use-signed-assets";
-(BufferGeometry.prototype as { computeBoundsTree?: typeof computeBoundsTree })
+(BufferGeometry.prototype as unknown as {
+  computeBoundsTree?: typeof computeBoundsTree;
+})
   .computeBoundsTree = computeBoundsTree;
-(BufferGeometry.prototype as { disposeBoundsTree?: typeof disposeBoundsTree })
+(BufferGeometry.prototype as unknown as {
+  disposeBoundsTree?: typeof disposeBoundsTree;
+})
   .disposeBoundsTree = disposeBoundsTree;
 Mesh.prototype.raycast = acceleratedRaycast as Mesh["raycast"];
 const MODEL_PATH_A = "/models/forglb.glb";
@@ -5081,4 +5085,3 @@ export default function MasterPlanFrameHoverStage({
     </section>
   );
 }
-

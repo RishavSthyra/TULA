@@ -54,7 +54,8 @@ export default function RouteChrome() {
   const isAreaMapRoute = pathname === "/area-map";
   const isImmersiveRoute =
     pathname === "/tower-hover-test" ||
-    pathname === "/project-layout";
+    pathname === "/project-layout" ||
+    pathname === "/landscape-free-roam";
   const isDocklessRoute = pathname === "/test";
   const shouldMergeLinksForRoute =
     shouldMergeDockIntoCta ||
