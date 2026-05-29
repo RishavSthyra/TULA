@@ -14,6 +14,7 @@ import {
   ArrowUp,
   Check,
   Clipboard,
+  Map as MapIcon,
   Maximize2,
   Menu,
   Minimize2,
@@ -112,6 +113,12 @@ const EXTERIOR_PANO_DEV_TOOL_ENABLED = false;
 const TRACKPAD_PANO_YAW_RADIANS_PER_PIXEL = 0.0032;
 const EMPTY_IMAGE_DATA_URL =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
+const PREMIUM_OLIVE_GRADIENT =
+  "bg-[radial-gradient(circle_at_32%_25%,#69895e_0%,#45603c_58%,#2a452d_100%)]";
+const PREMIUM_PANEL_SURFACE =
+  "border border-[#d7bf80]/80 bg-[linear-gradient(145deg,rgba(250,248,239,0.96)_0%,rgba(238,242,231,0.92)_58%,rgba(250,247,236,0.98)_100%)] text-[#1f3f2b] shadow-[0_26px_70px_rgba(21,47,30,0.24),inset_0_1px_0_rgba(255,255,255,0.94),inset_0_0_0_1px_rgba(255,255,255,0.36)] backdrop-blur-[28px]";
+const PREMIUM_PILL_SURFACE =
+  "border border-[#ded8c9] bg-[#fbfaf4]/94 text-[#456859] shadow-[0_10px_24px_rgba(33,50,35,0.10),inset_0_1px_0_rgba(255,255,255,0.92)]";
 
 const DESKTOP_WARMUP_PROFILE = {
   activeFocusLimit: 320,
@@ -149,18 +156,6 @@ const IOS_WARMUP_PROFILE = {
   neighborSweepConcurrency: 1,
   transitionSpeed: 300,
 };
-
-type SceneTone = "morning" | "golden" | "night";
-
-const SCENE_TONE_OPTIONS: Array<{
-  id: SceneTone;
-  label: string;
-  shortLabel: string;
-}> = [
-  { id: "morning", label: "Morning", shortLabel: "AM" },
-  { id: "golden", label: "Golden Hour", shortLabel: "Gold" },
-  { id: "night", label: "Night", shortLabel: "Night" },
-];
 
 type ExteriorPanoWalkthroughProps = {
   nodes: ExteriorPanoNodeSource[];
@@ -488,7 +483,7 @@ function ArrowButton({
       aria-label={label}
       onClick={onClick}
       disabled={disabled}
-      className="group flex h-10 w-10 touch-manipulation items-center justify-center rounded-[0.95rem] border border-white/12 bg-black/28 text-white shadow-[0_14px_28px_rgba(0,0,0,0.24)] backdrop-blur-2xl transition duration-200 active:scale-95 hover:border-white/24 hover:bg-white/[0.1] sm:h-11 sm:w-11 sm:rounded-[1.05rem] disabled:cursor-not-allowed disabled:opacity-30"
+      className={`group flex h-10 w-10 touch-manipulation items-center justify-center rounded-[1rem] border text-[#355139] transition duration-200 active:scale-95 sm:h-11 sm:w-11 sm:rounded-[1.05rem] disabled:cursor-not-allowed disabled:opacity-30 ${PREMIUM_PILL_SURFACE} hover:border-[#bca56e] hover:bg-[#fffdf7] hover:text-[#23482f]`}
     >
       <Icon className="h-4 w-4 transition duration-200 group-hover:scale-110 sm:h-4.5 sm:w-4.5" />
     </button>
@@ -542,16 +537,16 @@ const AmenityCard = forwardRef<
       onClick={onClick}
       className={`group w-full snap-start snap-always rounded-[1.45rem] border text-left transition duration-200 ${
         isActive
-          ? "border-[#ffcf57]/70 bg-[linear-gradient(135deg,rgba(255,207,87,0.22),rgba(8,10,14,0.82))] shadow-[0_18px_38px_rgba(0,0,0,0.28)]"
-          : "border-white/10 bg-black/28 hover:border-white/22 hover:bg-black/34"
+          ? `${PREMIUM_OLIVE_GRADIENT} border-[#6d8652] text-[#fff7e4] shadow-[0_18px_38px_rgba(33,57,36,0.28),inset_0_1px_0_rgba(255,255,255,0.18)]`
+          : "border-[#e2d8c2] bg-[linear-gradient(180deg,rgba(255,252,246,0.98),rgba(244,238,226,0.95))] text-[#1f3f2b] shadow-[0_14px_28px_rgba(43,52,37,0.08),inset_0_1px_0_rgba(255,255,255,0.95)] hover:border-[#d1be8f] hover:bg-[#fffdf7]"
       }`}
     >
       <div className="flex items-center gap-3 p-2.5">
         <div
           className={`relative h-16 w-[5.4rem] shrink-0 overflow-hidden rounded-[1rem] border sm:h-[5rem] sm:w-[7.1rem] ${
             isActive
-              ? "border-[#ffcf57]/55 bg-[linear-gradient(145deg,rgba(255,223,124,0.22),rgba(255,255,255,0.06))]"
-              : "border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))]"
+              ? "border-[#dccc9d]/55 bg-[rgba(255,249,236,0.12)]"
+              : "border-[#dcca9d]/65 bg-[#ede5d4]"
           }`}
         >
           <Image
@@ -568,11 +563,19 @@ const AmenityCard = forwardRef<
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="pr-2 text-[15px] font-semibold leading-[1.25] text-white sm:text-[17px]">
+              <div
+                className={`pr-2 text-[15px] font-semibold leading-[1.25] sm:text-[17px] ${
+                  isActive ? "text-[#fff6df]" : "text-[#21462d]"
+                }`}
+              >
                 {amenity.name}
               </div>
               {!isCompact ? (
-                <div className="mt-1 text-[13px] leading-5 text-white/46">
+                <div
+                  className={`mt-1 text-[13px] leading-5 ${
+                    isActive ? "text-[#f7efd9]/78" : "text-[#6f7d70]"
+                  }`}
+                >
                   {amenity.summary}
                 </div>
               ) : null}
@@ -590,6 +593,8 @@ function CurrentAmenityPanel({
   nodeIds,
   activeNodeId,
   progressIndex,
+  isMapExpanded,
+  onViewMap,
   className = "",
 }: {
   name: string;
@@ -597,42 +602,78 @@ function CurrentAmenityPanel({
   nodeIds: string[];
   activeNodeId: string;
   progressIndex: number;
+  isMapExpanded: boolean;
+  onViewMap: () => void;
   className?: string;
 }) {
   return (
     <div
-      className={`${uiFont.className} pointer-events-auto overflow-hidden rounded-[1.35rem] border border-white/14 bg-[rgba(18,18,17,0.34)] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_20px_54px_rgba(0,0,0,0.3)] backdrop-blur-[26px] ${className}`}
+      className={`${uiFont.className} pointer-events-auto relative overflow-hidden rounded-[2rem] ${PREMIUM_PANEL_SURFACE} ${className}`}
     >
-      <div className="border-b border-white/10 px-4 py-3">
+      <div className="pointer-events-none absolute inset-[8px] rounded-[1.6rem] border border-[#ead8a4]/60" />
+      <div className="pointer-events-none absolute -right-8 bottom-0 h-44 w-28 opacity-35">
+        <Image
+          src="/flowerUI.png"
+          alt=""
+          fill
+          sizes="160px"
+          className="object-contain object-bottom-right mix-blend-multiply"
+        />
+      </div>
+
+      <div className="relative z-10 px-5 pb-4 pt-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-[9px] font-bold uppercase tracking-[0.28em] text-white/45">
-              Current amenity
+            <div className="text-[10px] font-bold uppercase tracking-[0.32em] text-[#687866]">
+              You are here
             </div>
-            <div className="mt-1 truncate text-base font-semibold leading-none tracking-[0.01em] text-white sm:text-lg">
+            <div
+              className={`${editorialFont.className} mt-2 truncate text-[2.3rem] leading-none text-[#21462d]`}
+            >
               {name}
             </div>
           </div>
-          <div className="shrink-0 rounded-full border border-white/14 bg-white/[0.08] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-white/64">
-            Live view
+          <div
+            className={`shrink-0 rounded-full px-3 py-1 text-[9px] font-bold uppercase tracking-[0.2em] ${PREMIUM_PILL_SURFACE}`}
+          >
+            Live View
           </div>
         </div>
 
+        <div className="mt-4 flex items-center gap-3">
+          <span className="h-px flex-1 bg-[#decfa5]" />
+          <span className="text-[#c4a667]">✦</span>
+          <span className="h-px flex-1 bg-[#decfa5]" />
+        </div>
+
         <p
-          className="mt-2 text-[11px] leading-5 text-white/56 sm:text-xs"
+          className="mt-4 max-w-[14.5rem] text-[14px] leading-7 text-[#657265]"
           style={{
             display: "-webkit-box",
             WebkitBoxOrient: "vertical",
-            WebkitLineClamp: 2,
+            WebkitLineClamp: 3,
             overflow: "hidden",
           }}
         >
           {description}
         </p>
-      </div>
 
-      <div className="px-4 py-3">
-        <div className="flex w-full min-w-0 items-center gap-1 overflow-hidden">
+        <button
+          type="button"
+          onClick={onViewMap}
+          className={`mt-6 inline-flex items-center gap-3 rounded-[1.15rem] px-5 py-3 text-sm font-semibold text-[#fff7e4] shadow-[0_18px_30px_rgba(33,57,36,0.22),inset_0_1px_0_rgba(255,255,255,0.18)] transition hover:scale-[1.01] active:scale-[0.99] ${PREMIUM_OLIVE_GRADIENT}`}
+        >
+          <MapIcon className="h-4 w-4" />
+          {isMapExpanded ? "Hide Map" : "View on Map"}
+        </button>
+
+        <div className="mt-5 flex items-center gap-2">
+          <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${PREMIUM_PILL_SURFACE}`}>
+            Stop {progressIndex + 1} of {nodeIds.length}
+          </span>
+        </div>
+
+        <div className="mt-4 flex w-full min-w-0 items-center gap-1.5 overflow-hidden">
           {nodeIds.map((nodeId, index) => {
             const isCurrent = nodeId === activeNodeId;
             const isVisited = index <= progressIndex;
@@ -642,14 +683,276 @@ function CurrentAmenityPanel({
                 key={`${nodeId}-${index}`}
                 className={`h-1 min-w-0 flex-1 rounded-full transition-colors duration-300 ${
                   isCurrent
-                    ? "bg-[#f6e7a6] shadow-[0_0_10px_rgba(246,231,166,0.35)]"
+                    ? "bg-[#c4a667] shadow-[0_0_10px_rgba(196,166,103,0.35)]"
                     : isVisited
-                      ? "bg-[#f6e7a6]/58"
-                      : "bg-white/16"
+                      ? "bg-[#789169]/72"
+                      : "bg-[#e4dcc9]"
                 }`}
               />
             );
           })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ExteriorMinimapGraphic({
+  signedMinimapImageUrl,
+  isExpanded,
+  minimapZoom,
+  minimapOffset,
+  isMinimapDragging,
+  handleMinimapWheel,
+  handleMinimapPointerDown,
+  handleMinimapPointerMove,
+  handleMinimapPointerUp,
+  minimapTrailPoints,
+  minimapTrailPolyline,
+  minimapDots,
+  activeAmenityId,
+  jumpToAmenity,
+  className,
+}: {
+  signedMinimapImageUrl: string;
+  isExpanded: boolean;
+  minimapZoom: number;
+  minimapOffset: { x: number; y: number };
+  isMinimapDragging: boolean;
+  handleMinimapWheel: (event: ReactWheelEvent<HTMLDivElement>) => void;
+  handleMinimapPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  handleMinimapPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  handleMinimapPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  minimapTrailPoints: Array<{
+    nodeId: string;
+    leftPercent: number;
+    topPercent: number;
+  }>;
+  minimapTrailPolyline: string;
+  minimapDots: Array<ExteriorAmenity & { leftPercent: number; topPercent: number }>;
+  activeAmenityId: string | null;
+  jumpToAmenity: (amenity: ExteriorAmenity) => Promise<boolean>;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`relative overflow-hidden rounded-[1.45rem] border border-[#d7bf80]/75 bg-[#e6decb] shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] transition-[width,height,transform,opacity] duration-300 ${
+        minimapZoom > 1
+          ? isMinimapDragging
+            ? "cursor-grabbing"
+            : "cursor-grab"
+          : "cursor-default"
+      } ${className ?? ""}`}
+      onWheelCapture={handleMinimapWheel}
+      onPointerDown={handleMinimapPointerDown}
+      onPointerMove={handleMinimapPointerMove}
+      onPointerUp={handleMinimapPointerUp}
+      onPointerCancel={handleMinimapPointerUp}
+      style={{ touchAction: "none" }}
+    >
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.4),transparent_36%),linear-gradient(180deg,rgba(255,249,236,0.34),rgba(231,222,205,0.18))]" />
+      <div
+        className="absolute inset-0 transition-transform duration-150 ease-out"
+        style={{
+          transform: `translate(${minimapOffset.x}px, ${minimapOffset.y}px) scale(${minimapZoom})`,
+          transformOrigin: "center center",
+        }}
+      >
+        <div
+          className="absolute left-1/2 top-1/2 w-full -translate-x-1/2 -translate-y-1/2"
+          style={{
+            aspectRatio: `${EXTERIOR_MINIMAP_IMAGE_LAYOUT.width} / ${EXTERIOR_MINIMAP_IMAGE_LAYOUT.height}`,
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={signedMinimapImageUrl}
+            alt="Trifecta amenity minimap"
+            className="h-full w-full brightness-[0.94] contrast-[1.02] saturate-[0.88] sepia-[0.12]"
+            draggable={false}
+          />
+
+          {minimapTrailPoints.length > 1 ? (
+            <svg
+              className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              aria-hidden
+            >
+              <polyline
+                points={minimapTrailPolyline}
+                fill="none"
+                stroke="rgba(63,77,49,0.34)"
+                strokeWidth={isExpanded ? 1.35 : 1.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+              />
+              <polyline
+                points={minimapTrailPolyline}
+                fill="none"
+                stroke="rgba(196,166,103,0.42)"
+                strokeWidth={isExpanded ? 3.6 : 3}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+                style={{ filter: "blur(2px)" }}
+              />
+              <polyline
+                points={minimapTrailPolyline}
+                fill="none"
+                stroke="rgba(103,137,90,0.96)"
+                strokeWidth={isExpanded ? 1.1 : 1.15}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+              />
+            </svg>
+          ) : null}
+
+          {minimapTrailPoints.length > 0 ? (
+            <span
+              className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#f7edd0] bg-[#315238] shadow-[0_0_0_4px_rgba(196,166,103,0.18),0_0_16px_rgba(103,137,90,0.38)]"
+              style={{
+                left: `${minimapTrailPoints[minimapTrailPoints.length - 1].leftPercent * 100}%`,
+                top: `${minimapTrailPoints[minimapTrailPoints.length - 1].topPercent * 100}%`,
+              }}
+            />
+          ) : null}
+
+          {minimapDots.map((amenity) => (
+            <button
+              key={amenity.id}
+              type="button"
+              aria-label={`Go to ${amenity.name}`}
+              title={amenity.name}
+              onClick={() => void jumpToAmenity(amenity)}
+              className={`group absolute -translate-x-1/2 -translate-y-1/2 rounded-full border transition hover:scale-110 ${
+                isExpanded ? "h-3 w-3" : "h-2.5 w-2.5"
+              } ${
+                activeAmenityId === amenity.id
+                  ? "border-[#f3e6be] bg-[#c4a667] shadow-[0_0_0_4px_rgba(196,166,103,0.2),0_0_12px_rgba(196,166,103,0.42)]"
+                  : "border-[#f6efd9] bg-[#315238] shadow-[0_0_8px_rgba(49,82,56,0.3)]"
+              }`}
+              style={{
+                left: `${amenity.leftPercent * 100}%`,
+                top: `${amenity.topPercent * 100}%`,
+              }}
+            >
+              <span
+                aria-hidden
+                className={`pointer-events-none absolute inset-0 rounded-full ${
+                  activeAmenityId === amenity.id
+                    ? "bg-[#e7d39f]/62"
+                    : "bg-[#8aa078]/42"
+                }`}
+                style={{ animation: "walkthroughMinimapPulse 1.8s ease-in-out infinite" }}
+              />
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ExteriorMinimapPanel({
+  isExpanded,
+  onToggle,
+  signedMinimapImageUrl,
+  minimapZoom,
+  minimapOffset,
+  isMinimapDragging,
+  handleMinimapWheel,
+  handleMinimapPointerDown,
+  handleMinimapPointerMove,
+  handleMinimapPointerUp,
+  minimapTrailPoints,
+  minimapTrailPolyline,
+  minimapDots,
+  activeAmenityId,
+  jumpToAmenity,
+  className,
+  mapClassName,
+}: {
+  isExpanded: boolean;
+  onToggle: () => void;
+  signedMinimapImageUrl: string;
+  minimapZoom: number;
+  minimapOffset: { x: number; y: number };
+  isMinimapDragging: boolean;
+  handleMinimapWheel: (event: ReactWheelEvent<HTMLDivElement>) => void;
+  handleMinimapPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  handleMinimapPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  handleMinimapPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  minimapTrailPoints: Array<{
+    nodeId: string;
+    leftPercent: number;
+    topPercent: number;
+  }>;
+  minimapTrailPolyline: string;
+  minimapDots: Array<ExteriorAmenity & { leftPercent: number; topPercent: number }>;
+  activeAmenityId: string | null;
+  jumpToAmenity: (amenity: ExteriorAmenity) => Promise<boolean>;
+  className?: string;
+  mapClassName: string;
+}) {
+  return (
+    <div
+      className={`relative overflow-hidden rounded-[1.85rem] ${PREMIUM_PANEL_SURFACE} ${className ?? ""}`}
+    >
+      <div className="pointer-events-none absolute inset-[8px] rounded-[1.45rem] border border-[#ead8a4]/60" />
+      <div className="relative z-10">
+        <div className={`${uiFont.className} flex items-center justify-between gap-3 px-4 pb-3 pt-4 text-[#1f3f2b]`}>
+          <div className="min-w-0">
+            <div className="truncate text-[10px] font-bold uppercase tracking-[0.26em] text-[#687866]">
+              Amenity Map
+            </div>
+            <div className={`${editorialFont.className} mt-1 text-[1.55rem] leading-none text-[#21462d]`}>
+              Exterior Route
+            </div>
+          </div>
+          <button
+            type="button"
+            aria-label={isExpanded ? "Collapse minimap" : "Expand minimap"}
+            onClick={onToggle}
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#355139] transition hover:border-[#bca56e] hover:text-[#23482f] ${PREMIUM_PILL_SURFACE}`}
+          >
+            {isExpanded ? (
+              <Minimize2 className="h-4 w-4" />
+            ) : (
+              <Maximize2 className="h-4 w-4" />
+            )}
+          </button>
+        </div>
+
+        <div className="px-4 pb-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${PREMIUM_PILL_SURFACE}`}>
+              {isExpanded ? "Click outside to close" : "Tap to expand"}
+            </span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#7a7b67]">
+              Scroll to zoom
+            </span>
+          </div>
+
+          <ExteriorMinimapGraphic
+            signedMinimapImageUrl={signedMinimapImageUrl}
+            isExpanded={isExpanded}
+            minimapZoom={minimapZoom}
+            minimapOffset={minimapOffset}
+            isMinimapDragging={isMinimapDragging}
+            handleMinimapWheel={handleMinimapWheel}
+            handleMinimapPointerDown={handleMinimapPointerDown}
+            handleMinimapPointerMove={handleMinimapPointerMove}
+            handleMinimapPointerUp={handleMinimapPointerUp}
+            minimapTrailPoints={minimapTrailPoints}
+            minimapTrailPolyline={minimapTrailPolyline}
+            minimapDots={minimapDots}
+            activeAmenityId={activeAmenityId}
+            jumpToAmenity={jumpToAmenity}
+            className={mapClassName}
+          />
         </div>
       </div>
     </div>
@@ -685,7 +988,6 @@ export default function ExteriorPanoWalkthrough({
   const [isMobileAmenitiesOpen, setIsMobileAmenitiesOpen] = useState(false);
   const [isTrailPlaying, setIsTrailPlaying] = useState(false);
   const [transitionPulseKey, setTransitionPulseKey] = useState(0);
-  const [sceneTone, setSceneTone] = useState<SceneTone>("morning");
   const [historyDepth, setHistoryDepth] = useState(0);
   const [visitedTrailNodeIds, setVisitedTrailNodeIds] = useState<string[]>([]);
   const [trailSecondsRemaining, setTrailSecondsRemaining] = useState(
@@ -782,10 +1084,6 @@ export default function ExteriorPanoWalkthrough({
   const activeAmenityDescription =
     activeAmenity?.description ??
     "Explore the exterior route through gardens, arrivals, play courts, and community spaces.";
-  const sceneToneIndex = Math.max(
-    0,
-    SCENE_TONE_OPTIONS.findIndex((option) => option.id === sceneTone),
-  );
   const exteriorPreloaderProgress = getExteriorPreloaderProgress(
     loadState,
     Boolean(fallbackPreviewUrl || previewOverlayUrl),
@@ -869,6 +1167,12 @@ export default function ExteriorPanoWalkthrough({
   const minimapTrailPolyline = minimapTrailPoints
     .map((point) => `${point.leftPercent * 100},${point.topPercent * 100}`)
     .join(" ");
+  const toggleMinimapExpanded = useCallback(() => {
+    setIsMinimapExpanded((current) => !current);
+  }, []);
+  const closeMinimapExpanded = useCallback(() => {
+    setIsMinimapExpanded(false);
+  }, []);
 
   const rememberResolvedPano = useCallback((resolved: ResolvedPano) => {
     const cache = cacheRef.current;
@@ -1906,6 +2210,33 @@ export default function ExteriorPanoWalkthrough({
     [],
   );
 
+  useEffect(() => {
+    if (!isMinimapExpanded) {
+      minimapDragRef.current = {
+        pointerId: null,
+        lastX: 0,
+        lastY: 0,
+        dragging: false,
+      };
+      setIsMinimapDragging(false);
+      setMinimapZoom(1);
+      setMinimapOffset({ x: 0, y: 0 });
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsMinimapExpanded(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isMinimapExpanded]);
+
   const navigateTo = useCallback(
     async (direction: NavigationDirection) => {
       if (isTransitioning || navigationLockRef.current) {
@@ -2559,44 +2890,12 @@ export default function ExteriorPanoWalkthrough({
             type="button"
             aria-label="Open amenities menu"
             onClick={() => setIsMobileAmenitiesOpen(true)}
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.2rem] border border-white/10 bg-black/26 text-white shadow-[0_16px_34px_rgba(0,0,0,0.28)] backdrop-blur-2xl transition hover:border-white/20 hover:bg-black/36"
+            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.2rem] text-[#355139] transition hover:border-[#bca56e] hover:bg-[#fffdf7] hover:text-[#23482f] ${PREMIUM_PANEL_SURFACE}`}
           >
             <Menu className="h-5 w-5" />
           </button>
         </div>
 
-        {/* <div
-          className={`${uiFont.className} pointer-events-auto relative grid max-w-[calc(100vw-5rem)] grid-cols-3 overflow-hidden rounded-full border border-white/18 bg-white/[0.08] p-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_16px_38px_rgba(0,0,0,0.26)] backdrop-blur-[28px] sm:text-[11px] sm:tracking-[0.16em]`}
-        >
-          <div
-            className="pointer-events-none absolute bottom-1 top-1 rounded-full border border-white/28 bg-white/[0.16] shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_10px_26px_rgba(0,0,0,0.22)] backdrop-blur-2xl transition-transform duration-300 ease-out"
-            style={{
-              left: "0.25rem",
-              width: "calc((100% - 0.5rem) / 3)",
-              transform: `translateX(${sceneToneIndex * 100}%)`,
-            }}
-          />
-          {SCENE_TONE_OPTIONS.map((option) => {
-            const isActive = sceneTone === option.id;
-
-            return (
-              <button
-                key={option.id}
-                type="button"
-                aria-pressed={isActive}
-                onClick={() => setSceneTone(option.id)}
-                className={`relative z-10 min-w-0 rounded-full px-2 py-1.5 transition sm:px-3 ${
-                  isActive
-                    ? "text-white"
-                    : "text-white/56 hover:text-white/86"
-                }`}
-              >
-                <span className="block truncate sm:hidden">{option.shortLabel}</span>
-                <span className="hidden truncate sm:block">{option.label}</span>
-              </button>
-            );
-          })}
-        </div> */}
       </div>
 
       <div
@@ -2614,7 +2913,7 @@ export default function ExteriorPanoWalkthrough({
         />
 
         <div
-          className={`absolute left-2 top-2 flex w-[calc(100vw-1rem)] max-w-[22.5rem] flex-col gap-5 overflow-hidden rounded-[1.75rem] border border-white/14 bg-[linear-gradient(180deg,rgba(154,165,175,0.16)_0%,rgba(106,118,128,0.12)_100%)] px-4 py-4 text-white shadow-[0_24px_64px_rgba(0,0,0,0.22)] backdrop-blur-[24px] transition duration-300 sm:left-3 sm:top-3 sm:w-[25rem] sm:max-w-none md:left-4 md:top-4 md:w-[26rem] xl:left-8 xl:top-28 xl:max-h-[min(78dvh,52rem)] xl:w-[24rem] xl:rounded-[2rem] xl:border-white/18 xl:bg-[linear-gradient(180deg,rgba(170,180,188,0.18)_0%,rgba(122,136,146,0.12)_100%)] 2xl:left-10 2xl:top-32 2xl:w-[25rem] ${
+          className={`absolute left-2 top-2 flex w-[calc(100vw-1rem)] max-w-[22.5rem] flex-col gap-5 overflow-hidden rounded-[1.9rem] px-4 py-4 shadow-[0_24px_64px_rgba(0,0,0,0.22)] transition duration-300 sm:left-3 sm:top-3 sm:w-[25rem] sm:max-w-none md:left-4 md:top-4 md:w-[26rem] xl:left-8 xl:top-28 xl:max-h-[min(78dvh,52rem)] xl:w-[24rem] 2xl:left-10 2xl:top-32 2xl:w-[25rem] ${PREMIUM_PANEL_SURFACE} ${
             isMobileAmenitiesOpen
               ? "translate-x-0"
               : "-translate-x-[calc(100%+0.5rem)] sm:-translate-x-[calc(100%+0.75rem)] md:-translate-x-[calc(100%+1rem)] xl:-translate-x-[calc(100%+2rem)] 2xl:-translate-x-[calc(100%+2.5rem)]"
@@ -2624,13 +2923,13 @@ export default function ExteriorPanoWalkthrough({
           <div>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className={`${uiFont.className} text-[10px] uppercase tracking-[0.32em] text-white/42`}>
+                <div className={`${uiFont.className} text-[10px] uppercase tracking-[0.32em] text-[#687866]`}>
                   Amenities
                 </div>
-                <div className={`${editorialFont.className} mt-2 text-[2rem] leading-none text-white`}>
+                <div className={`${editorialFont.className} mt-2 text-[2rem] leading-none text-[#21462d]`}>
                   Walkthrough Stops
                 </div>
-                <div className={`${uiFont.className} mt-2 max-w-[14rem] truncate text-xs font-semibold uppercase tracking-[0.18em] text-white/54 xl:hidden`}>
+                <div className={`${uiFont.className} mt-2 max-w-[14rem] truncate text-xs font-semibold uppercase tracking-[0.18em] text-[#7a7b67] xl:hidden`}>
                   {activeAmenity?.name ?? "Exterior Trail"}
                 </div>
               </div>
@@ -2639,13 +2938,13 @@ export default function ExteriorPanoWalkthrough({
                 type="button"
                 aria-label="Close amenities menu"
                 onClick={() => setIsMobileAmenitiesOpen(false)}
-                className="flex h-11 w-11 items-center justify-center rounded-[1rem] border border-white/18 bg-white/10 text-white transition hover:border-white/28 hover:bg-white/14"
+                className={`flex h-11 w-11 items-center justify-center rounded-[1rem] text-[#355139] transition hover:border-[#bca56e] hover:bg-[#fffdf7] hover:text-[#23482f] ${PREMIUM_PILL_SURFACE}`}
               >
                 <X className="h-4.5 w-4.5" />
               </button>
             </div>
 
-            <div className={`${uiFont.className} mt-3 text-sm leading-6 text-white/54`}>
+            <div className={`${uiFont.className} mt-3 text-sm leading-6 text-[#6f7d70]`}>
               Tap any amenity to jump into its exterior panorama.
             </div>
           </div>
@@ -2721,7 +3020,7 @@ export default function ExteriorPanoWalkthrough({
       </div>
 
       <div className="pointer-events-auto absolute right-3 top-1/2 z-20 -translate-y-1/2 sm:right-5">
-        <div className="flex flex-col items-center gap-1.5 rounded-[1.15rem] border border-white/10 bg-black/20 p-2 shadow-[0_16px_38px_rgba(0,0,0,0.28)] backdrop-blur-2xl sm:gap-2 sm:rounded-[1.35rem] sm:p-2.5">
+        <div className={`flex flex-col items-center gap-1.5 rounded-[1.35rem] p-2 sm:gap-2 sm:p-2.5 ${PREMIUM_PANEL_SURFACE}`}>
           <ArrowButton
             icon={ArrowUp}
             label="Move forward"
@@ -2837,20 +3136,22 @@ export default function ExteriorPanoWalkthrough({
           nodeIds={activeAmenityNodeIds}
           activeNodeId={activeNodeId}
           progressIndex={activeAmenityProgressIndex}
+          isMapExpanded={isMinimapExpanded}
+          onViewMap={toggleMinimapExpanded}
         />
       </div>
 
       <div className="pointer-events-none absolute inset-x-0 bottom-3 z-30 hidden justify-end px-3 pl-[clamp(4.5rem,20vw,6.25rem)] xl:flex sm:bottom-4 sm:pl-[6rem] sm:pr-4 md:justify-center md:px-3">
         <div
-          className={`${uiFont.className} pointer-events-auto flex w-[min(34rem,calc(100vw-clamp(5rem,22vw,6.75rem)))] items-center gap-2.5 rounded-full border border-white/16 bg-[rgba(18,18,17,0.34)] px-3 py-2 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_18px_52px_rgba(0,0,0,0.32)] backdrop-blur-[26px] sm:w-[min(34rem,calc(100vw-6rem))] sm:gap-3 sm:px-4 sm:py-2.5 md:w-[min(34rem,calc(100vw-1.5rem))]`}
+          className={`${uiFont.className} pointer-events-auto flex w-[min(34rem,calc(100vw-clamp(5rem,22vw,6.75rem)))] items-center gap-2.5 rounded-full px-3 py-2 text-[#1f3f2b] sm:w-[min(34rem,calc(100vw-6rem))] sm:gap-3 sm:px-4 sm:py-2.5 md:w-[min(34rem,calc(100vw-1.5rem))] ${PREMIUM_PANEL_SURFACE}`}
         >
           <button
             type="button"
             aria-label={isTrailPlaying ? "Pause pano trail" : "Play pano trail"}
             onClick={toggleTrailPlayback}
-            className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/22 bg-white/[0.12] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_10px_24px_rgba(0,0,0,0.24)] backdrop-blur-xl transition hover:border-white/34 hover:bg-white/[0.18] active:scale-95 sm:h-10 sm:w-10"
+            className={`relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-[#fff7e4] shadow-[0_10px_24px_rgba(33,57,36,0.22),inset_0_1px_0_rgba(255,255,255,0.18)] transition hover:brightness-105 active:scale-95 sm:h-10 sm:w-10 ${PREMIUM_OLIVE_GRADIENT}`}
           >
-            <span className="pointer-events-none absolute inset-x-1 top-0 h-1/2 rounded-full bg-[linear-gradient(180deg,rgba(255,255,255,0.28),rgba(255,255,255,0))]" />
+            <span className="pointer-events-none absolute inset-x-1 top-0 h-1/2 rounded-full bg-[linear-gradient(180deg,rgba(255,255,255,0.24),rgba(255,255,255,0))]" />
             {isTrailPlaying ? (
               <Pause className="relative h-4 w-4 stroke-[1.8]" />
             ) : (
@@ -2859,14 +3160,14 @@ export default function ExteriorPanoWalkthrough({
           </button>
 
           <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-[0.24em] text-white/52">
+            <div className="flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-[0.24em] text-[#687866]">
               <span>Trail</span>
-              <span className="shrink-0 tracking-[0.18em] text-white/78">
+              <span className="shrink-0 tracking-[0.18em] text-[#355139]">
                 {sequential.index + 1}/{graph.order.length}
               </span>
             </div>
 
-            <div className="relative mt-2 h-1 overflow-hidden rounded-full bg-white/14 shadow-[inset_0_1px_2px_rgba(0,0,0,0.22)]">
+            <div className="relative mt-2 h-1 overflow-hidden rounded-full bg-[#e4dcc9] shadow-[inset_0_1px_2px_rgba(43,52,37,0.12)]">
               <div
                 ref={trailProgressFillRef}
                 className="absolute inset-y-0 left-0 w-full origin-left rounded-full bg-[linear-gradient(90deg,#f7e8ad_0%,#d7bd6c_52%,#b99a48_100%)] shadow-[0_0_14px_rgba(246,231,166,0.22)] will-change-transform"
@@ -2875,7 +3176,7 @@ export default function ExteriorPanoWalkthrough({
             </div>
           </div>
 
-          <div className="hidden min-w-7 text-right text-[10px] font-bold uppercase tracking-[0.14em] text-white/52 sm:block">
+          <div className="hidden min-w-7 text-right text-[10px] font-bold uppercase tracking-[0.14em] text-[#687866] sm:block">
             {trailSecondsRemaining}s
           </div>
 
@@ -2885,9 +3186,8 @@ export default function ExteriorPanoWalkthrough({
               aria-label="Go back to previous pano"
               onClick={goBackToPreviousNode}
               disabled={isTransitioning || historyDepth === 0}
-              className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/18 bg-white/[0.08] text-white/82 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-xl transition hover:border-white/28 hover:bg-white/[0.14] hover:text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-35 sm:h-10 sm:w-10"
+              className={`relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-[#355139] transition hover:border-[#bca56e] hover:bg-[#fffdf7] hover:text-[#23482f] active:scale-95 disabled:cursor-not-allowed disabled:opacity-35 sm:h-10 sm:w-10 ${PREMIUM_PILL_SURFACE}`}
             >
-              <span className="pointer-events-none absolute inset-x-1 top-0 h-1/2 rounded-full bg-[linear-gradient(180deg,rgba(255,255,255,0.18),rgba(255,255,255,0))]" />
               <SkipBack className="relative h-4 w-4 stroke-[1.8]" />
             </button>
 
@@ -2896,311 +3196,65 @@ export default function ExteriorPanoWalkthrough({
               aria-label="Next pano"
               onClick={skipToNextTrailNode}
               disabled={isTransitioning || !nextTrailNodeId}
-              className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/18 bg-white/[0.08] text-white/82 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-xl transition hover:border-white/28 hover:bg-white/[0.14] hover:text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-35 sm:h-10 sm:w-10"
+              className={`relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-[#355139] transition hover:border-[#bca56e] hover:bg-[#fffdf7] hover:text-[#23482f] active:scale-95 disabled:cursor-not-allowed disabled:opacity-35 sm:h-10 sm:w-10 ${PREMIUM_PILL_SURFACE}`}
             >
-              <span className="pointer-events-none absolute inset-x-1 top-0 h-1/2 rounded-full bg-[linear-gradient(180deg,rgba(255,255,255,0.18),rgba(255,255,255,0))]" />
               <SkipForward className="relative h-4 w-4 stroke-[1.8]" />
             </button>
           </div>
         </div>
       </div>
 
-      <div className="pointer-events-auto absolute bottom-3 right-3 z-30 hidden xl:block">
-        <div className="overflow-hidden rounded-[1.15rem] border border-white/12 bg-black/32 shadow-[0_20px_60px_rgba(0,0,0,0.34)] backdrop-blur-2xl">
-          <div className={`${uiFont.className} flex h-9 items-center justify-between gap-3 border-b border-white/10 px-3 text-white`}>
-            <div className="min-w-0">
-              <div className="truncate text-[10px] font-bold uppercase tracking-[0.22em] text-white/52">
-                Amenity map
-              </div>
-            </div>
-            <button
-              type="button"
-              aria-label={isMinimapExpanded ? "Collapse minimap" : "Expand minimap"}
-              onClick={() => setIsMinimapExpanded((current) => !current)}
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-white/76 transition hover:bg-white/18 hover:text-white"
-            >
-              {isMinimapExpanded ? (
-                <Minimize2 className="h-3.5 w-3.5" />
-              ) : (
-                <Maximize2 className="h-3.5 w-3.5" />
-              )}
-            </button>
-          </div>
-
-          <div
-            className={`relative overflow-hidden transition-[width,height] duration-300 ${
-              isMinimapExpanded
-                ? "h-[230px] w-[405px] max-w-[34vw] 2xl:h-[260px] 2xl:w-[465px]"
-                : "h-[118px] w-[205px] max-w-[18vw] 2xl:h-[132px] 2xl:w-[230px]"
-            } ${
-              minimapZoom > 1
-                ? isMinimapDragging
-                  ? "cursor-grabbing"
-                  : "cursor-grab"
-                : "cursor-default"
-            }`}
-            onWheelCapture={handleMinimapWheel}
-            onPointerDown={handleMinimapPointerDown}
-            onPointerMove={handleMinimapPointerMove}
-            onPointerUp={handleMinimapPointerUp}
-            onPointerCancel={handleMinimapPointerUp}
-            style={{ touchAction: "none" }}
-          >
-            <div
-              className="absolute inset-0 transition-transform duration-150 ease-out"
-              style={{
-                transform: `translate(${minimapOffset.x}px, ${minimapOffset.y}px) scale(${minimapZoom})`,
-                transformOrigin: "center center",
-              }}
-            >
-              <div
-                className="absolute left-1/2 top-1/2 w-full -translate-x-1/2 -translate-y-1/2"
-                style={{
-                  aspectRatio: `${EXTERIOR_MINIMAP_IMAGE_LAYOUT.width} / ${EXTERIOR_MINIMAP_IMAGE_LAYOUT.height}`,
-                }}
-              >
-                <img
-                  src={signedMinimapImageUrl}
-                  alt="Trifecta amenity minimap"
-                  className="h-full w-full brightness-[0.68] contrast-[1.08] saturate-[0.82]"
-                  draggable={false}
-                />
-
-                {minimapTrailPoints.length > 1 ? (
-                  <svg
-                    className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
-                    viewBox="0 0 100 100"
-                    preserveAspectRatio="none"
-                    aria-hidden
-                  >
-                    <polyline
-                      points={minimapTrailPolyline}
-                      fill="none"
-                      stroke="rgba(2,8,23,0.56)"
-                      strokeWidth={isMinimapExpanded ? 1.25 : 1.45}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeDasharray="0.2 1.35"
-                      vectorEffect="non-scaling-stroke"
-                    />
-                    <polyline
-                      points={minimapTrailPolyline}
-                      fill="none"
-                      stroke="rgba(56,189,248,0.68)"
-                      strokeWidth={isMinimapExpanded ? 3.2 : 2.8}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeDasharray="0.2 1.35"
-                      vectorEffect="non-scaling-stroke"
-                      style={{ filter: "blur(2.2px)" }}
-                    />
-                    <polyline
-                      points={minimapTrailPolyline}
-                      fill="none"
-                      stroke="rgba(56,189,248,0.96)"
-                      strokeWidth={isMinimapExpanded ? 1.05 : 1.1}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeDasharray="0.2 1.35"
-                      vectorEffect="non-scaling-stroke"
-                    />
-                  </svg>
-                ) : null}
-
-                {minimapTrailPoints.length > 0 ? (
-                  <span
-                    className="pointer-events-none absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-black/35 bg-[#dff6ff] shadow-[0_0_0_4px_rgba(56,189,248,0.22),0_0_14px_rgba(56,189,248,0.72)]"
-                    style={{
-                      left: `${minimapTrailPoints[minimapTrailPoints.length - 1].leftPercent * 100}%`,
-                      top: `${minimapTrailPoints[minimapTrailPoints.length - 1].topPercent * 100}%`,
-                    }}
-                  />
-                ) : null}
-
-                {minimapDots.map((amenity) => (
-                  <button
-                    key={amenity.id}
-                    type="button"
-                    aria-label={`Go to ${amenity.name}`}
-                    title={amenity.name}
-                    onClick={() => void jumpToAmenity(amenity)}
-                    className={`group absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-black/35 cursor-pointer transition hover:scale-110 ${
-                      isMinimapExpanded ? "h-2 w-2" : "h-1.5 w-1.5"
-                    } ${
-                      activeAmenityId === amenity.id
-                        ? "bg-[#7dd3fc] shadow-[0_0_0_3px_rgba(56,189,248,0.22),0_0_12px_rgba(56,189,248,0.72)]"
-                        : "bg-[#0ea5e9] shadow-[0_0_8px_rgba(14,165,233,0.58)]"
-                    }`}
-                    style={{
-                      left: `${amenity.leftPercent * 100}%`,
-                      top: `${amenity.topPercent * 100}%`,
-                    }}
-                  >
-                    <span
-                      aria-hidden
-                      className={`pointer-events-none absolute inset-0 rounded-full ${
-                        activeAmenityId === amenity.id
-                          ? "bg-[#b9ecff]/58"
-                          : "bg-[#7dd3fc]/44"
-                      }`}
-                      style={{ animation: "walkthroughMinimapPulse 1.8s ease-in-out infinite" }}
-                    />
-                  </button>
-                ))}
-              </div>
-            </div>
+      {isMinimapExpanded ? (
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+          <button
+            type="button"
+            aria-label="Close expanded amenity map"
+            onClick={closeMinimapExpanded}
+            className="absolute inset-0 bg-[rgba(13,20,14,0.44)] backdrop-blur-[8px]"
+          />
+          <div className="relative z-10 w-[min(92vw,72rem)] max-w-[72rem]">
+            <ExteriorMinimapPanel
+              isExpanded
+              onToggle={closeMinimapExpanded}
+              signedMinimapImageUrl={signedMinimapImageUrl}
+              minimapZoom={minimapZoom}
+              minimapOffset={minimapOffset}
+              isMinimapDragging={isMinimapDragging}
+              handleMinimapWheel={handleMinimapWheel}
+              handleMinimapPointerDown={handleMinimapPointerDown}
+              handleMinimapPointerMove={handleMinimapPointerMove}
+              handleMinimapPointerUp={handleMinimapPointerUp}
+              minimapTrailPoints={minimapTrailPoints}
+              minimapTrailPolyline={minimapTrailPolyline}
+              minimapDots={minimapDots}
+              activeAmenityId={activeAmenityId}
+              jumpToAmenity={jumpToAmenity}
+              mapClassName="h-auto w-full"
+            />
           </div>
         </div>
-      </div>
+      ) : null}
 
-      <div className="pointer-events-auto absolute bottom-3 right-3 z-30 block xl:hidden">
-        <div className="overflow-hidden rounded-[1.15rem] border border-white/12 bg-black/32 shadow-[0_20px_60px_rgba(0,0,0,0.34)] backdrop-blur-2xl">
-          <div className={`${uiFont.className} flex h-9 items-center justify-between gap-3 border-b border-white/10 px-3 text-white`}>
-            <div className="min-w-0">
-              <div className="truncate text-[10px] font-bold uppercase tracking-[0.22em] text-white/52">
-                Amenity map
-              </div>
-            </div>
-            <button
-              type="button"
-              aria-label={isMinimapExpanded ? "Collapse minimap" : "Expand minimap"}
-              onClick={() => setIsMinimapExpanded((current) => !current)}
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-white/76 transition hover:bg-white/18 hover:text-white"
-            >
-              {isMinimapExpanded ? (
-                <Minimize2 className="h-3.5 w-3.5" />
-              ) : (
-                <Maximize2 className="h-3.5 w-3.5" />
-              )}
-            </button>
-          </div>
-
-          <div
-            className={`relative overflow-hidden transition-[width,height] duration-300 ${
-              isMinimapExpanded
-                ? "h-[230px] w-[405px] max-w-[80vw] md:h-[260px] md:w-[460px]"
-                : "h-[150px] w-[260px] max-w-[60vw] md:h-[170px] md:w-[300px]"
-            } ${
-              minimapZoom > 1
-                ? isMinimapDragging
-                  ? "cursor-grabbing"
-                  : "cursor-grab"
-                : "cursor-default"
-            }`}
-            onWheelCapture={handleMinimapWheel}
-            onPointerDown={handleMinimapPointerDown}
-            onPointerMove={handleMinimapPointerMove}
-            onPointerUp={handleMinimapPointerUp}
-            onPointerCancel={handleMinimapPointerUp}
-            style={{ touchAction: "none" }}
-          >
-            <div
-              className="absolute inset-0 transition-transform duration-150 ease-out"
-              style={{
-                transform: `translate(${minimapOffset.x}px, ${minimapOffset.y}px) scale(${minimapZoom})`,
-                transformOrigin: "center center",
-              }}
-            >
-              <div
-                className="absolute left-1/2 top-1/2 w-full -translate-x-1/2 -translate-y-1/2"
-                style={{
-                  aspectRatio: `${EXTERIOR_MINIMAP_IMAGE_LAYOUT.width} / ${EXTERIOR_MINIMAP_IMAGE_LAYOUT.height}`,
-                }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={signedMinimapImageUrl}
-                  alt="Trifecta amenity minimap"
-                  className="h-full w-full brightness-[0.68] contrast-[1.08] saturate-[0.82]"
-                  draggable={false}
-                />
-
-                {minimapTrailPoints.length > 1 ? (
-                  <svg
-                    className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
-                    viewBox="0 0 100 100"
-                    preserveAspectRatio="none"
-                    aria-hidden
-                  >
-                    <polyline
-                      points={minimapTrailPolyline}
-                      fill="none"
-                      stroke="rgba(2,8,23,0.56)"
-                      strokeWidth={isMinimapExpanded ? 1.25 : 1.45}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeDasharray="0.2 1.35"
-                      vectorEffect="non-scaling-stroke"
-                    />
-                    <polyline
-                      points={minimapTrailPolyline}
-                      fill="none"
-                      stroke="rgba(56,189,248,0.68)"
-                      strokeWidth={isMinimapExpanded ? 3.2 : 2.8}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeDasharray="0.2 1.35"
-                      vectorEffect="non-scaling-stroke"
-                      style={{ filter: "blur(2.2px)" }}
-                    />
-                    <polyline
-                      points={minimapTrailPolyline}
-                      fill="none"
-                      stroke="rgba(56,189,248,0.96)"
-                      strokeWidth={isMinimapExpanded ? 1.05 : 1.1}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeDasharray="0.2 1.35"
-                      vectorEffect="non-scaling-stroke"
-                    />
-                  </svg>
-                ) : null}
-
-                {minimapTrailPoints.length > 0 ? (
-                  <span
-                    className="pointer-events-none absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-black/35 bg-[#dff6ff] shadow-[0_0_0_4px_rgba(56,189,248,0.22),0_0_14px_rgba(56,189,248,0.72)]"
-                    style={{
-                      left: `${minimapTrailPoints[minimapTrailPoints.length - 1].leftPercent * 100}%`,
-                      top: `${minimapTrailPoints[minimapTrailPoints.length - 1].topPercent * 100}%`,
-                    }}
-                  />
-                ) : null}
-
-                {minimapDots.map((amenity) => (
-                  <button
-                    key={amenity.id}
-                    type="button"
-                    aria-label={`Go to ${amenity.name}`}
-                    title={amenity.name}
-                    onClick={() => void jumpToAmenity(amenity)}
-                    className={`group absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-black/35 cursor-pointer transition hover:scale-110 ${
-                      isMinimapExpanded ? "h-2 w-2" : "h-1.5 w-1.5"
-                    } ${
-                      activeAmenityId === amenity.id
-                        ? "bg-[#7dd3fc] shadow-[0_0_0_3px_rgba(56,189,248,0.22),0_0_12px_rgba(56,189,248,0.72)]"
-                        : "bg-[#0ea5e9] shadow-[0_0_8px_rgba(14,165,233,0.58)]"
-                    }`}
-                    style={{
-                      left: `${amenity.leftPercent * 100}%`,
-                      top: `${amenity.topPercent * 100}%`,
-                    }}
-                  >
-                    <span
-                      aria-hidden
-                      className={`pointer-events-none absolute inset-0 rounded-full ${
-                        activeAmenityId === amenity.id
-                          ? "bg-[#b9ecff]/58"
-                          : "bg-[#7dd3fc]/44"
-                      }`}
-                      style={{ animation: "walkthroughMinimapPulse 1.8s ease-in-out infinite" }}
-                    />
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-        </div>
+      <div className="pointer-events-auto absolute bottom-3 right-3 z-30">
+        <ExteriorMinimapPanel
+          isExpanded={false}
+          onToggle={toggleMinimapExpanded}
+          signedMinimapImageUrl={signedMinimapImageUrl}
+          minimapZoom={minimapZoom}
+          minimapOffset={minimapOffset}
+          isMinimapDragging={isMinimapDragging}
+          handleMinimapWheel={handleMinimapWheel}
+          handleMinimapPointerDown={handleMinimapPointerDown}
+          handleMinimapPointerMove={handleMinimapPointerMove}
+          handleMinimapPointerUp={handleMinimapPointerUp}
+          minimapTrailPoints={minimapTrailPoints}
+          minimapTrailPolyline={minimapTrailPolyline}
+          minimapDots={minimapDots}
+          activeAmenityId={activeAmenityId}
+          jumpToAmenity={jumpToAmenity}
+          className="w-[min(70vw,19rem)] sm:w-[18.5rem] xl:w-[17rem] 2xl:w-[18.5rem]"
+          mapClassName="h-[11rem] w-full sm:h-[12rem] xl:h-[10.5rem] 2xl:h-[11.5rem]"
+        />
       </div>
 
       <style jsx global>{`

@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import QuoteRequestController from "@/components/QuoteRequestController";
 import DesktopSiteRail from "@/components/DesktopSiteRail";
+import MobileSiteNav from "@/components/MobileSiteNav";
 
 function shouldUseMergedChrome() {
   if (typeof window === "undefined") {
@@ -166,9 +167,16 @@ export default function RouteChrome() {
         <DesktopSiteRail className="fixed left-6 top-1/2 z-50 -translate-y-1/2 2xl:left-7" />
       ) : null}
 
+      {!isHomeRoute && !isDocklessRoute ? <MobileSiteNav /> : null}
+
       <QuoteRequestController
-        mergeRouteLinks={shouldMergeLinksForRoute}
-        showCta={!isAmenitiesRoute && !isHomeRoute && !isAreaMapRoute}
+        mergeRouteLinks={!shouldMergeDockIntoCta && shouldMergeLinksForRoute}
+        showCta={
+          !shouldMergeDockIntoCta &&
+          !isAmenitiesRoute &&
+          !isHomeRoute &&
+          !isAreaMapRoute
+        }
       />
     </>
   );
