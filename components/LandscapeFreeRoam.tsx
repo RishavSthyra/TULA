@@ -166,15 +166,6 @@ function LoadingFallback() {
   );
 }
 
-function getLookAngles(from: Vector3, target: Vector3) {
-  const direction = target.clone().sub(from).normalize();
-
-  return {
-    pitch: Math.asin(MathUtils.clamp(direction.y, -1, 1)),
-    yaw: Math.atan2(direction.x, -direction.z),
-  };
-}
-
 function LandscapeModel({
   modelUrl,
   onReady,
@@ -252,9 +243,9 @@ function FreeRoamController({
     camera.position.copy(metrics.startPosition);
     lookAheadRef.current.copy(metrics.startLookAt);
     camera.lookAt(lookAheadRef.current);
-    const nextAngles = getLookAngles(metrics.startPosition, metrics.startLookAt);
-    yawRef.current = nextAngles.yaw;
-    pitchRef.current = nextAngles.pitch;
+    eulerRef.current.setFromQuaternion(camera.quaternion, "YXZ");
+    yawRef.current = eulerRef.current.y;
+    pitchRef.current = eulerRef.current.x;
     camera.near = metrics.near;
     camera.far = metrics.far;
     camera.updateProjectionMatrix();
@@ -868,6 +859,7 @@ export default function LandscapeFreeRoam({
               onClick={() => {
                 if (isTouchDevice) {
                   setIsTouchSessionActive(true);
+                  return;
                 }
 
                 if (document.fullscreenElement || !sectionRef.current) {
