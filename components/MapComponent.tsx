@@ -114,13 +114,13 @@ type ClusterPoiProperties = {
 };
 
 const centerPlace = {
-  name: "Trifecta Veranza.",
-  lng: 77.75138250386782,
-  lat: 12.863519959225334,
+  name: "Whisper of Trees",
+  lng: 77.63036955360322,
+  lat: 13.153818578384746, 
 };
 
 const projectCard = {
-  title: "Trifecta Veranza",
+  title: "Whisper of Trees | TULA",
   description:
     "A premium residential community positioned at the heart of a fast-growing neighborhood, with strong access to workplaces, schools, retail, healthcare, and everyday conveniences.",
   image: "/VeranzaFavicon.svg",

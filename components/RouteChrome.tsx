@@ -1,28 +1,9 @@
 "use client";
 
-import { Download, Phone, Sparkles } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { BiHome } from "react-icons/bi";
-import { FiGrid } from "react-icons/fi";
-import { IoMapOutline } from "react-icons/io5";
-import { RiBuilding2Line } from "react-icons/ri";
+import { useEffect, useState } from "react";
 import QuoteRequestController from "@/components/QuoteRequestController";
-import { Footprints } from 'lucide-react';
-import { FloatingDock } from "@/components/ui/floating-dock";
-
-function isDockRouteActive(pathname: string, href: string) {
-  if (href === "/exterior-walkthrough") {
-    return (
-      pathname === "/exterior-walkthrough" ||
-      pathname === "/exterior-tour" ||
-      pathname === "/exterios-walkthrough" ||
-      pathname === "/walkthrough"
-    );
-  }
-
-  return pathname === href;
-}
+import DesktopSiteRail from "@/components/DesktopSiteRail";
 
 function shouldUseMergedChrome() {
   if (typeof window === "undefined") {
@@ -150,67 +131,6 @@ export default function RouteChrome() {
     };
   }, [pathname]);
 
-  const dockItems = useMemo(() => {
-    const baseItems = [
-      {
-        title: "Home",
-        icon: <BiHome className="h-full w-full" />,
-        href: "/",
-        active: isDockRouteActive(pathname, "/"),
-      },
-      {
-        title: "Project Overview",
-        icon: <FiGrid className="h-full w-full" />,
-        href: "/project-overview",
-        active: isDockRouteActive(pathname, "/project-overview"),
-      },
-      {
-        title: "Master Plan",
-        icon: <RiBuilding2Line className="h-full w-full" />,
-        href: "/master-plan",
-        active: isDockRouteActive(pathname, "/master-plan"),
-      },
-      {
-        title: "Amenities",
-        icon: <Sparkles className="h-full w-full" />,
-        href: "/amenities",
-        active: isDockRouteActive(pathname, "/amenities"),
-      },
-      {
-        title: "Walkthrough",
-        icon: <Footprints className="h-full w-full" />,
-        href: "/exterior-walkthrough",
-        active: isDockRouteActive(pathname, "/exterior-walkthrough"),
-      },
-      {
-        title: "Map",
-        icon: <IoMapOutline className="h-full w-full" />,
-        href: "/area-map",
-        active: isDockRouteActive(pathname, "/area-map"),
-      },
-    ];
-
-    if (!shouldAddCompactDesktopCtasToDock) {
-      return baseItems;
-    }
-
-    return [
-      {
-        title: "Call",
-        icon: <Phone className="h-full w-full" />,
-        href: "tel:+91-8088004411",
-        active: false,
-      },
-      {
-        title: "Brochure",
-        icon: <Download className="h-full w-full" />,
-        href: "/Veranza Floorplan_ E-Brochure_V3_02-03-26 (2).pdf",
-        active: false,
-      },
-      ...baseItems,
-    ];
-  }, [pathname, shouldAddCompactDesktopCtasToDock]);
-
   useEffect(() => {
     if (pathname !== "/master-plan" || typeof document === "undefined") {
       return;
@@ -242,11 +162,7 @@ export default function RouteChrome() {
   return (
     <>
       {!shouldHideDock ? (
-        <FloatingDock
-          items={dockItems}
-          desktopClassName="fixed left-6 top-1/2 z-50 hidden -translate-y-1/2 xl:flex"
-          mobileClassName="hidden"
-        />
+        <DesktopSiteRail className="fixed left-6 top-1/2 z-50 -translate-y-1/2 2xl:left-7" />
       ) : null}
 
       <QuoteRequestController

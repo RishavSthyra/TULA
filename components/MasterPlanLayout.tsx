@@ -10,6 +10,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
 } from "react";
 import InfiniteScroll from "react-infinite-scroll-component";
 import {
@@ -34,6 +35,7 @@ import {
   SlidersHorizontal,
   X,
 } from "lucide-react";
+import { Cormorant_Garamond } from "next/font/google";
 import TowerSelect from "./TowerSelect";
 import { unitPlans } from "@/data/unitPlans";
 import { scheduleAmenityVideoWarmup } from "@/lib/amenity-video-warmup";
@@ -41,7 +43,7 @@ import {
   getNearestMasterPlanHotspot,
   isInventoryApartmentAllowedAtHotspot,
 } from "@/lib/master-plan-hotspots";
-import type { MasterPlanHotspotKey } from "@/lib/master-plan-hotspots";
+import { readJsonResponse } from "@/lib/utils";
 import type { InventoryApartment, TowerType } from "@/types/inventory";
 import { primeSignedAssetUrls } from "@/src/lib/signed-assets";
 import { useSignedAssetUrls } from "@/src/lib/use-signed-assets";
@@ -79,6 +81,11 @@ const HOTSPOT_NAVIGATION_MAX_DURATION_MS = 720;
 const HOTSPOT_NAVIGATION_MS_PER_FRAME = 6.8;
 const smoothEase: Easing = [0.22, 1, 0.36, 1];
 let sharedInventoryRequest: Promise<InventoryApartment[]> | null = null;
+
+const masterPlanSerif = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+});
 
 const panelVariants: Variants = {
   hidden: {
@@ -204,10 +211,10 @@ async function fetchSharedInventory() {
       cache: "no-store",
     })
       .then(async (response) => {
-        const result = (await response.json()) as {
+        const result = await readJsonResponse<{
           apartments?: InventoryApartment[];
           message?: string;
-        };
+        }>(response, "Inventory API");
 
         if (!response.ok || !result.apartments) {
           throw new Error(result.message || "Failed to fetch inventory.");
@@ -435,87 +442,106 @@ function SelectedFlatPlanPanel({
 
   return (
     <div
-      className="pointer-events-auto custom-scrollbar relative max-h-[min(78dvh,42rem)] w-[clamp(17rem,24vw,22.5rem)] overflow-y-auto bg-transparent p-0 text-zinc-900 2xl:w-[24rem]"
+      className="pointer-events-auto custom-scrollbar relative max-h-[min(82dvh,48rem)] w-[clamp(19rem,28vw,27rem)] overflow-y-auto bg-transparent p-0 text-[#1f3f2b] 2xl:w-[29rem]"
       data-scroll-area="flat-plan-panel"
     >
-      <div className="space-y-3">
-        <div className="overflow-hidden rounded-[26px] border border-white/48 bg-white/26 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.58),0_18px_44px_rgba(15,23,42,0.12)] backdrop-blur-[26px] 2xl:rounded-[30px] 2xl:p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[8px] font-semibold uppercase tracking-[0.26em] text-zinc-500">
+      <div className="relative">
+        <div className="pointer-events-none absolute left-0 right-0 top-[16.5rem] z-0 hidden h-16 rounded-b-[4rem] bg-[#1f3f2b]/90 blur-[18px] 2xl:block" />
+
+        <div className="relative z-10 overflow-hidden rounded-[30px] rounded-tr-[56px] border border-[#d7bf80]/80 bg-[linear-gradient(145deg,rgba(250,248,239,0.96)_0%,rgba(238,242,231,0.92)_58%,rgba(250,247,236,0.98)_100%)] pt-5 pb-5 pl-5 pr-8 shadow-[0_26px_70px_rgba(21,47,30,0.24),inset_0_1px_0_rgba(255,255,255,0.94),inset_0_0_0_1px_rgba(255,255,255,0.36)] backdrop-blur-2xl 2xl:rounded-[36px] 2xl:rounded-tr-[68px]">
+          <div className="pointer-events-none absolute inset-[8px] rounded-[24px] rounded-tr-[48px] border border-[#ead8a4]/60 2xl:rounded-[28px] 2xl:rounded-tr-[58px]" />
+          <div className="pointer-events-none absolute -left-10 bottom-4 h-40 w-20 rounded-[50%] border-r border-[#cfad63]/45 opacity-70" />
+          <div className="pointer-events-none absolute -right-6 top-11 h-36 w-24 rounded-[50%] border-l border-[#cfad63]/45 opacity-60" />
+          <div className="pointer-events-none absolute right-0 top-0 z-[1] h-44 w-32 opacity-85 2xl:h-full 2xl:w-full">
+            <NextImage
+              src="/flowerUI.png"
+              alt=""
+              fill
+              // sizes="(min-width: 1536px) 160px, 128px"
+              className="object-contain object-top-right opacity-50"
+            />
+          </div>
+
+          <div className="relative z-10 flex items-start justify-between gap-3">
+            <div className="min-w-0 max-w-[70%]">
+              <p className="text-[9px] font-bold uppercase tracking-[0.36em] text-[#687866]">
                 Floor Plan
               </p>
-              <h3 className="mt-1 text-[1rem] font-semibold leading-tight tracking-[-0.03em] text-zinc-950 2xl:text-[1.15rem]">
+              <h3 className={`${masterPlanSerif.className} mt-2 text-[2rem] font-semibold leading-none text-[#21462d] 2xl:text-[2.55rem]`}>
                 {apartment.title} layout
               </h3>
+              <div className="mt-3 h-px w-16 bg-[#c4a667]" />
             </div>
-            <span className="rounded-full border border-white/60 bg-white/55 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-zinc-600">
+            <span className="rounded-full border border-[#d8bd78]/55 bg-[#f8f4e8]/82 px-4 py-2 text-sm font-bold text-[#58715f] shadow-[0_10px_24px_rgba(33,50,35,0.10),inset_0_1px_0_rgba(255,255,255,0.92)]">
               {apartment.floorLabel || apartment.floor}
             </span>
           </div>
 
-          <div className="relative mt-3 aspect-[4/3] w-full">
+          <div className="relative z-10 mx-auto mt-7 aspect-[4/4.55] w-[78%] max-w-[20rem] 2xl:mt-8 2xl:w-[80%]">
             <NextImage
               src={unitPlan.image2D}
               alt={`${apartment.title} floor plan`}
               fill
-              sizes="(min-width: 1536px) 360px, 320px"
-              className="object-contain mix-blend-multiply drop-shadow-[0_14px_24px_rgba(15,23,42,0.10)]"
+              sizes="(min-width: 1536px) 380px, 320px"
+              className="object-contain mix-blend-multiply drop-shadow-[0_18px_30px_rgba(19,61,40,0.16)]"
             />
           </div>
 
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <div className="rounded-full border border-white/42 bg-white/24 px-2.5 py-1.5 text-[10px] font-semibold text-zinc-700 backdrop-blur-xl">
+          <div className="relative z-10 mt-5 grid grid-cols-2 gap-4">
+            <div className="rounded-full border border-[#d8bd78]/45 bg-[#fbfaf4]/88 px-5 py-3 text-sm font-bold text-[#1f3f2b] shadow-[0_12px_26px_rgba(33,50,35,0.09),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-xl">
               {apartment.bhk} BHK
             </div>
-            <div className="rounded-full border border-white/42 bg-white/24 px-2.5 py-1.5 text-right text-[10px] font-semibold text-zinc-700 backdrop-blur-xl">
+            <div className="rounded-full border border-[#d8bd78]/45 bg-[#fbfaf4]/88 px-5 py-3 text-right text-sm font-bold text-[#1f3f2b] shadow-[0_12px_26px_rgba(33,50,35,0.09),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-xl">
               {apartment.areaSqft} sqft
             </div>
           </div>
         </div>
 
-        <div className="rounded-[26px] border border-white/48 bg-white/26 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.58),0_18px_44px_rgba(15,23,42,0.12)] backdrop-blur-[26px] 2xl:rounded-[30px] 2xl:p-4">
-          <div className="flex items-center justify-between gap-3">
+        <div className="relative z-0 mt-6 overflow-hidden rounded-[30px] rounded-bl-[42px] border border-[#d7bf80]/70 bg-[linear-gradient(180deg,rgba(35,65,42,0.97),rgba(29,55,37,0.99))] px-5 pb-5 pt-6 text-[#f7efd9] shadow-[0_26px_70px_rgba(21,47,30,0.28),inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-2xl 2xl:mt-7 2xl:rounded-[36px] 2xl:rounded-bl-[52px] 2xl:px-6 2xl:pb-6 2xl:pt-7">
+          <div className="pointer-events-none absolute inset-[8px] rounded-[24px] rounded-bl-[34px] border border-[#ead8a4]/22 2xl:rounded-[28px] 2xl:rounded-bl-[42px]" />
+          <div className="pointer-events-none absolute -bottom-10 -left-7 h-48 w-28 rounded-[50%] border-r border-[#cfad63]/45 opacity-70" />
+
+          <div className="relative z-10 flex items-center justify-between gap-3">
             <div>
-              <p className="text-[8px] font-semibold uppercase tracking-[0.26em] text-zinc-500">
+              <p className="text-[9px] font-bold uppercase tracking-[0.34em] text-[#d9c28a]">
                 Spatial Composition
               </p>
-              <h4 className="mt-1 text-sm font-semibold tracking-[-0.03em] text-zinc-950">
+              <h4 className={`${masterPlanSerif.className} mt-2 text-2xl font-semibold leading-none text-[#fff6df]`}>
                 Room Dimensions
               </h4>
             </div>
-            <span className="rounded-full border border-white/42 bg-white/24 px-2 py-1 text-[9px] font-medium text-zinc-500 backdrop-blur-xl">
+            <span className="rounded-full border border-[#d9c28a]/35 bg-white/10 px-4 py-2 text-sm font-semibold text-[#fff6df] backdrop-blur-xl">
               {dimensionItems.length} rooms
             </span>
           </div>
 
-          <div className="mt-3 space-y-2">
+          <div className="relative z-10 mt-5 space-y-0">
             {dimensionItems.length > 0 ? (
               dimensionItems.map((item, index) => (
                 <div
                   key={item.key}
-                  className="flex items-center justify-between gap-3 border-b border-white/45 pb-2 last:border-b-0 last:pb-0"
+                  className="flex items-center justify-between gap-4 border-b border-[#d9c28a]/18 py-3.5 last:border-b-0 last:pb-0"
                 >
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/42 bg-white/22 backdrop-blur-xl">
-                      <Ruler className="h-3.5 w-3.5 text-zinc-600" />
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#d9c28a]/36 bg-white/[0.09] backdrop-blur-xl">
+                      <Ruler className="h-4 w-4 text-[#d9c28a]" />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-[8px] uppercase tracking-[0.2em] text-zinc-400">
+                      <p className="text-[10px] uppercase tracking-[0.28em] text-[#d9c28a]/70">
                         {String(index + 1).padStart(2, "0")}
                       </p>
-                      <p className="truncate text-[11px] font-medium text-zinc-800">
+                      <p className="mt-1 truncate text-sm font-medium text-[#fff6df]">
                         {item.label}
                       </p>
                     </div>
                   </div>
-                  <p className="shrink-0 text-right text-[11px] font-semibold text-zinc-900">
+                  <p className="shrink-0 text-right text-sm font-semibold text-[#f7efd9]">
                     {item.value}
                   </p>
                 </div>
               ))
             ) : (
-              <p className="py-3 text-xs text-zinc-500">
+              <p className="py-3 text-xs text-[#f7efd9]/72">
                 Room dimensions are not available for this apartment yet.
               </p>
             )}
@@ -1841,7 +1867,6 @@ export default function MasterPlanLayout({
                     isInventoryLoading={isInventoryLoading}
                     inventoryError={inventoryError}
                     onApartmentSelect={handleApartmentListSelect}
-                    activeHotspot={activeHotspot}
                     selectedApartmentId={selectedApartmentInventoryId}
                     compact
                   />
@@ -2008,7 +2033,6 @@ export default function MasterPlanLayout({
                           isInventoryLoading={isInventoryLoading}
                           inventoryError={inventoryError}
                           onApartmentSelect={handleApartmentListSelect}
-                          activeHotspot={activeHotspot}
                           selectedApartmentId={selectedApartmentInventoryId}
                         />
                       </>
@@ -2139,7 +2163,6 @@ export default function MasterPlanLayout({
                         isInventoryLoading={isInventoryLoading}
                         inventoryError={inventoryError}
                         onApartmentSelect={handleApartmentListSelect}
-                        activeHotspot={activeHotspot}
                         selectedApartmentId={selectedApartmentInventoryId}
                         compact
                       />
@@ -2324,11 +2347,11 @@ function MasterPlanFiltersCard({
     <div
       className={`group flex items-center gap-2 rounded-full border px-3 py-2 transition ${
         compact
-          ? "border-[#eadfce] bg-white/94 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_12px_26px_rgba(15,23,42,0.08)] focus-within:border-[#c8a86a] focus-within:bg-white"
-          : "border-white/55 bg-white/68 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_10px_24px_rgba(15,23,42,0.06)] focus-within:border-white/80 focus-within:bg-white/82 dark:border-white/10 dark:bg-white/7 dark:focus-within:border-white/24 dark:focus-within:bg-white/12"
+          ? "border-[#e7e4d8] bg-[#f7f6ef] shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_12px_24px_rgba(33,50,35,0.10)] focus-within:border-[#cfd9c6] focus-within:bg-[#fbfaf4]"
+          : "border-[#e7e4d8] bg-[#f7f6ef] shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_12px_24px_rgba(33,50,35,0.10)] focus-within:border-[#cfd9c6] focus-within:bg-[#fbfaf4] dark:border-white/10 dark:bg-white/8 dark:focus-within:border-emerald-200/24"
       }`}
     >
-      <Search className="h-3.5 w-3.5 shrink-0 text-zinc-500 transition group-focus-within:text-zinc-800 dark:text-zinc-400 dark:group-focus-within:text-white" />
+      <Search className="h-3.5 w-3.5 shrink-0 text-[#556f61] transition group-focus-within:text-[#23482f] dark:text-emerald-100/60 dark:group-focus-within:text-white" />
       <input
         value={search}
         onChange={(e) => handleSearchInputChange(e.target.value)}
@@ -2339,8 +2362,8 @@ function MasterPlanFiltersCard({
         placeholder="Search unit number"
         className={`w-full bg-transparent text-xs font-medium outline-none sm:text-[13px] ${
           compact
-            ? "text-zinc-800 placeholder:text-zinc-400"
-            : "text-zinc-800 placeholder:text-zinc-400 dark:text-white"
+            ? "text-[#1f3f2b] placeholder:text-[#718277]"
+            : "text-[#1f3f2b] placeholder:text-[#718277] dark:text-white"
         }`}
       />
     </div>
@@ -2348,12 +2371,13 @@ function MasterPlanFiltersCard({
 
   if (compact) {
     return (
-      <motion.div className="surface-contain shrink-0 rounded-[20px] border border-[#ece3d6] bg-white/94 p-2.5 text-zinc-900 shadow-[0_18px_38px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-2xl sm:rounded-[24px] sm:p-3">
+      <motion.div className="surface-contain shrink-0 rounded-[28px] border border-[#ded8c9] bg-[#f3f2ea]/95 p-3 text-[#1f3f2b] shadow-[0_22px_48px_rgba(25,43,30,0.18),inset_0_1px_0_rgba(255,255,255,0.94)] backdrop-blur-xl sm:rounded-[30px] sm:p-3.5">
+        <LiquidGlassFilterStyles />
         <div className="flex items-start gap-2">
           <button
             type="button"
             onClick={onBack}
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#e6dccf] bg-white text-zinc-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.92)] transition hover:bg-[#faf5ec]"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/55 bg-white/42 text-emerald-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.76)] transition hover:bg-white/62"
             aria-label="Back to tower selection"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
@@ -2361,15 +2385,15 @@ function MasterPlanFiltersCard({
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-xs font-semibold text-zinc-900 sm:text-[13px]">
-                Refine Flats
+              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#58715f]">
+                Filters
               </p>
-              <span className="inline-flex items-center gap-1 rounded-full border border-[#e9ddca] bg-[#faf6ee] px-2 py-0.5 text-[10px] font-medium text-zinc-700">
+              <span className="inline-flex items-center gap-1 rounded-full border border-[#e3dece] bg-[#fbfaf4] px-2 py-0.5 text-[10px] font-medium text-[#456859]">
                 <Building2 className="h-3 w-3" />
                 {selectedTower}
               </span>
             </div>
-            <p className="mt-0.5 text-[10px] text-zinc-500">
+            <p className="mt-0.5 text-[10px] text-[#718277]">
               {activeFilterCount > 0
                 ? `${activeFilterCount} active refinements`
                 : "Search first, expand for details"}
@@ -2382,14 +2406,14 @@ function MasterPlanFiltersCard({
                 <button
                   type="button"
                   onClick={onReset}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#d4b57b]/55 bg-[#f8f1e3] px-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#9b7840] transition hover:bg-[#f3e7d3]"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-full border border-emerald-100/65 bg-white/42 px-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-900 transition hover:bg-white/62"
                 >
                   Reset
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsCompactOpen(false)}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#e6dccf] bg-white px-2.5 text-[10px] font-semibold text-zinc-700 transition hover:bg-[#faf5ec]"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/50 bg-white/36 px-2.5 text-[10px] font-semibold text-emerald-950/78 transition hover:bg-white/58"
                 >
                   <SlidersHorizontal className="h-3 w-3" />
                   Close filters
@@ -2399,7 +2423,7 @@ function MasterPlanFiltersCard({
               <button
                 type="button"
                 onClick={() => setIsCompactOpen(true)}
-                className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#e6dccf] bg-white px-2.5 text-[10px] font-semibold text-zinc-700 transition hover:bg-[#faf5ec]"
+                className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/50 bg-white/36 px-2.5 text-[10px] font-semibold text-emerald-950/78 transition hover:bg-white/58"
               >
                 <SlidersHorizontal className="h-3 w-3" />
                 Filters
@@ -2487,10 +2511,10 @@ function MasterPlanFiltersCard({
                   step={45}
                   value={minArea}
                   onChange={(e) => onMinAreaChange(Number(e.target.value))}
-                  className="h-3 w-full cursor-pointer appearance-auto accent-[#ffffff]"
-                  style={{ accentColor: "#fff" }}
+                  className="h-3 w-full cursor-pointer appearance-auto accent-emerald-950"
+                  style={{ accentColor: "#123b27" }}
                 />
-                <div className="mt-2 flex items-center justify-between text-[9px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                <div className="mt-2 flex items-center justify-between text-[9px] font-semibold uppercase tracking-[0.14em] text-emerald-950/52">
                   <span>0 sqft</span>
                   <span>1745 sqft</span>
                 </div>
@@ -2504,64 +2528,77 @@ function MasterPlanFiltersCard({
 
   return (
     <motion.div
-      className="surface-contain shrink-0 rounded-[22px] border border-white/35 bg-white/58 p-3.5 shadow-[0_18px_50px_rgba(15,23,42,0.09)] backdrop-blur-2xl dark:border-white/10 dark:bg-black/25 dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:rounded-[26px] sm:p-4"
+      className="surface-contain relative shrink-0 overflow-hidden rounded-[42px] rounded-tr-[88px] border border-[#ded8c9] bg-[#f3f2ea]/95 p-5 text-[#1f3f2b] shadow-[0_28px_80px_rgba(25,43,30,0.20),inset_0_1px_0_rgba(255,255,255,0.94)] backdrop-blur-xl dark:border-emerald-100/10 dark:bg-emerald-950/45 dark:text-white dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
     >
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="rounded-xl border border-white/55 bg-white/58 p-1.5 text-zinc-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] dark:border-white/10 dark:bg-white/8 dark:text-white">
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-          </div>
-          <div>
-            <h2 className="text-base font-semibold">Filters</h2>
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-              Refine inventory in real time
-            </p>
-          </div>
+      <LiquidGlassFilterStyles />
+      <div className="pointer-events-none absolute -right-8 bottom-2 h-40 w-40 rounded-full border border-[#d8d0bd]/45 opacity-45" />
+      <NextImage
+        src="/LEAF UI.png"
+        alt=""
+        aria-hidden="true"
+        width={660}
+        height={660}
+        className="pointer-events-none absolute -bottom-16 -right-10 z-0 w-full opacity-45 mix-blend-multiply sm:-bottom-16 sm:-right-12 sm:w-full"
+      />
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-[#58715f]">
+            Filters
+          </p>
+          <h2 className={`${masterPlanSerif.className} mt-1 text-[2rem] font-medium leading-none text-[#21492f]`}>
+            Find Your Residence
+          </h2>
+          <div className="mt-2 h-px w-7 bg-[#c4a667]" />
+          <p className="mt-2 text-[13px] font-medium text-[#718277]">
+            Refined living. Curated for you.
+          </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onBack}
-            className="inline-flex items-center gap-1 rounded-full border border-white/45 bg-white/38 px-2.5 py-1 text-[11px] font-medium text-zinc-700 cursor-pointer transition hover:bg-white/62 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back
-          </button>
+          <div className="hidden sm:flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onBack}
+              className="inline-flex items-center gap-1 rounded-full border border-[#ded8c9] bg-[#fbfaf4] px-3 py-2 text-[11px] font-semibold text-[#456859] shadow-[0_10px_24px_rgba(33,50,35,0.10)] transition hover:bg-white"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back
+            </button>
 
-          <button
-            type="button"
-            onClick={onClosePanel ?? onReset}
-            className="rounded-full border border-white/55 bg-white/65 px-2.5 py-1 cursor-pointer text-[11px] font-medium text-zinc-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition hover:bg-white/82 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
-          >
-            {onClosePanel ? "Close" : "Reset"}
-          </button>
+            <button
+              type="button"
+              onClick={onClosePanel ?? onReset}
+              className="rounded-full border border-[#ded8c9] bg-[#fbfaf4] px-3 py-2 cursor-pointer text-[11px] font-semibold text-[#456859] shadow-[0_10px_24px_rgba(33,50,35,0.10)] transition hover:bg-white"
+            >
+              {onClosePanel ? "Close" : "Reset"}
+            </button>
+          </div>
           <button
             type="button"
             onClick={() => setIsDesktopFilterOpen((value) => !value)}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/55 bg-white/62 text-zinc-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] transition hover:bg-white/84 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#ded8c9] bg-[#fbfaf4] text-[#456859] shadow-[0_12px_24px_rgba(33,50,35,0.14)] transition hover:bg-white"
             aria-label={
               isDesktopFilterOpen ? "Collapse filters" : "Expand filters"
             }
             aria-expanded={isDesktopFilterOpen}
           >
             {isDesktopFilterOpen ? (
-              <ChevronUp className="h-3.5 w-3.5" />
+              <ChevronUp className="h-4 w-4" />
             ) : (
-              <ChevronDown className="h-3.5 w-3.5" />
+              <ChevronDown className="h-4 w-4" />
             )}
           </button>
         </div>
       </div>
 
-      <div className={compact ? "space-y-3" : "space-y-4"}>
+      <div className={`relative z-10 ${compact ? "space-y-3" : "space-y-5"}`}>
         <FilterBlock label="Search Unit">
           {searchControl}
         </FilterBlock>
 
         {isDesktopFilterOpen ? (
           <>
-            <FilterBlock label="Selected Tower">
+            <FilterBlock label="Tower">
               <FilterPillGroup
                 options={towerOptions}
                 value={selectedTower}
@@ -2603,7 +2640,7 @@ function MasterPlanFiltersCard({
               />
             </FilterBlock>
 
-            <FilterBlock label={`Min Area: ${minArea} sqft`}>
+            <FilterBlock label={`Area Range: 0 - 1745 sqft`}>
               <div className="">
                 <input
                   type="range"
@@ -2612,10 +2649,10 @@ function MasterPlanFiltersCard({
                   step={5}
                   value={minArea}
                   onChange={(e) => onMinAreaChange(Number(e.target.value))}
-                  className="h-3 w-full cursor-pointer appearance-auto accent-[#ffffff]"
-                  style={{ accentColor: "#fff" }}
+                  className="h-3 w-full cursor-pointer appearance-auto accent-[#466f46]"
+                  style={{ accentColor: "#466f46" }}
                 />
-                <div className="mt-2 flex items-center justify-between text-[9px] font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
+                <div className="mt-2 flex items-center justify-between text-[9px] font-semibold uppercase tracking-[0.14em] text-[#718277] dark:text-emerald-50/60">
                   <span>0 sqft</span>
                   <span>1745 sqft</span>
                 </div>
@@ -2648,7 +2685,6 @@ function MasterPlanResultsCard({
   isInventoryLoading,
   inventoryError,
   onApartmentSelect,
-  activeHotspot,
   selectedApartmentId,
   compact = false,
 }: {
@@ -2656,7 +2692,6 @@ function MasterPlanResultsCard({
   isInventoryLoading: boolean;
   inventoryError: string | null;
   onApartmentSelect: (apartment: InventoryApartment) => void;
-  activeHotspot: MasterPlanHotspotKey;
   selectedApartmentId: string | null;
   compact?: boolean;
 }) {
@@ -2698,22 +2733,19 @@ function MasterPlanResultsCard({
 
   return (
     <motion.div
-      className={`surface-contain flex min-h-0 flex-col rounded-[24px] border border-white/30 bg-white/75 shadow-[0_20px_60px_rgba(15,23,42,0.10)] backdrop-blur-2xl dark:border-white/10 dark:bg-black/25 dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:rounded-[30px] ${
-        compact ? "min-h-0 flex-1 overflow-hidden p-2.5" : "flex-1 p-4"
+      className={`surface-contain flex min-h-0 flex-col rounded-[30px] border border-[#ded8c9] bg-[#f3f2ea]/95 text-[#1f3f2b] shadow-[0_28px_80px_rgba(25,43,30,0.20),inset_0_1px_0_rgba(255,255,255,0.94)] backdrop-blur-xl dark:border-emerald-100/10 dark:bg-emerald-950/45 dark:text-white dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] ${
+        compact ? "min-h-0 flex-1 overflow-hidden p-3" : "flex-1 p-4"
       }`}
     >
       <div className={`flex items-center justify-between ${compact ? "mb-3" : "mb-4"}`}>
         <div>
-          <h3 className={`${compact ? "text-[0.95rem]" : "text-base"} font-semibold`}>
+          <h3 className={`${masterPlanSerif.className} ${compact ? "text-[1.65rem]" : "text-[1.8rem]"} font-medium leading-none text-[#21492f]`}>
             Matching Flats
           </h3>
-          <p className={`${compact ? "text-[11px]" : "text-xs"} text-zinc-500 dark:text-zinc-400`}>
-            View the Flats matching your requirement
-          </p>
         </div>
         <span
-          className={`rounded-full border border-zinc-200 bg-zinc-50 font-medium dark:border-white/10 dark:bg-white/5 ${
-            compact ? "px-2.5 py-0.5 text-[11px]" : "px-3 py-1 text-xs"
+          className={`rounded-full border border-[#ded8c9] bg-[#fbfaf4] font-semibold text-[#456f49] shadow-[0_10px_22px_rgba(33,50,35,0.10),inset_0_1px_0_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-white/5 dark:text-white ${
+            compact ? "px-3 py-1 text-[11px]" : "px-3 py-1 text-xs"
           }`}
         >
           {filteredApartments.length} units
@@ -2730,7 +2762,7 @@ function MasterPlanResultsCard({
         id={scrollableId}
         data-scroll-area="results"
       >
-        <div className={compact ? "space-y-2.5 pb-1" : "space-y-3"}>
+        <div className={compact ? "space-y-3 pb-1" : "space-y-3"}>
           <AnimatePresence initial={false}>
             {isInventoryLoading ? (
               <motion.div
@@ -2738,11 +2770,11 @@ function MasterPlanResultsCard({
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="flex h-[220px] items-center justify-center rounded-[22px] border border-dashed border-zinc-300 bg-zinc-50/70 px-4 text-center dark:border-white/10 dark:bg-white/5"
+                className="flex h-[220px] items-center justify-center rounded-[22px] border border-dashed border-emerald-100/55 bg-emerald-50/38 px-4 text-center dark:border-white/10 dark:bg-white/5"
               >
                 <div>
                   <p className="text-sm font-semibold">Loading flats</p>
-                  <p className="mt-1 text-xs text-zinc-500">
+                  <p className="mt-1 text-xs text-emerald-950/58">
                     Pulling the latest tower inventory.
                   </p>
                 </div>
@@ -2773,12 +2805,6 @@ function MasterPlanResultsCard({
                 style={{ overflow: "visible" }}
               >
                 {visibleApartments.map((apartment) => {
-                  const isViewableAtHotspot =
-                    isInventoryApartmentAllowedAtHotspot(
-                      apartment,
-                      activeHotspot,
-                    );
-
                   return (
                     <motion.button
                       key={apartment.id}
@@ -2794,41 +2820,34 @@ function MasterPlanResultsCard({
 
                         onApartmentSelect(apartment);
                       }}
-                      className={`group flex w-full text-left shadow-sm transition dark:to-white/5 ${
+                      className={`group relative grid w-full overflow-hidden text-left transition duration-200 hover:-translate-y-0.5 ${
                         apartment.id === selectedApartmentId
-                          ? "border-[#d4b57b]/70 bg-linear-to-br from-[#fff7ea] to-[#f7edd6] shadow-[0_18px_42px_rgba(186,146,79,0.18)] dark:border-[#d4b57b]/35 dark:from-[#3b3223] dark:to-[#211d16]"
-                          : "dark:border-white/10 dark:from-white/10"
+                          ? "border-[#345d3e]/30 bg-[#fbfaf4] shadow-[0_18px_38px_rgba(34,50,35,0.20),inset_0_1px_0_rgba(255,255,255,0.98)]"
+                          : "border-[#ddd8ca] bg-[#fbfaf4] shadow-[0_14px_30px_rgba(34,50,35,0.13),inset_0_1px_0_rgba(255,255,255,0.98)] hover:border-[#c9c0ac] hover:shadow-[0_20px_42px_rgba(34,50,35,0.18),inset_0_1px_0_rgba(255,255,255,0.98)]"
                       } ${
                         compact
-                          ? "grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 rounded-[16px] border px-3 py-2"
-                          : "items-center justify-between rounded-[22px] border px-4 py-3"
-                      } ${
-                        apartment.id === selectedApartmentId
-                          ? "border-[#e0c493]/70"
-                          : compact
-                            ? "border-zinc-200/60 bg-linear-to-br from-white to-zinc-50"
-                            : "border-zinc-200/50 bg-linear-to-br from-white to-zinc-50"
-                      }
-                          `}
+                          ? "grid-cols-[minmax(0,1fr)_5.4rem] items-stretch rounded-[18px] border"
+                          : "grid-cols-[minmax(0,1fr)_6rem] items-stretch rounded-[22px] border"
+                      }`}
                     >
-                      <div className="min-w-0 w-full cursor-pointer">
-                        <div className={`flex flex-wrap items-center ${compact ? "gap-1.5" : "gap-2"}`}>
+                      <div className="min-w-0 w-full cursor-pointer px-4 py-3">
+                        <div className={`flex flex-wrap items-center ${compact ? "gap-2" : "gap-2.5"}`}>
                           <p
-                            className={`font-semibold text-zinc-900 dark:text-white ${
-                              compact ? "text-[0.95rem]" : "text-sm"
+                            className={`${masterPlanSerif.className} font-semibold text-[#21492f] dark:text-white ${
+                              compact ? "text-[1.55rem] leading-none" : "text-[1.45rem] leading-none"
                             }`}
                           >
                             {apartment.title}
                           </p>
                           <span
                             className={`rounded-full font-semibold ${
-                              compact ? "px-1.5 py-0.5 text-[9px]" : "px-2 py-0.5 text-[10px]"
+                              compact ? "px-2 py-0.5 text-[9px]" : "px-2 py-0.5 text-[10px]"
                             } ${
                               apartment.status === "Available"
-                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+                                ? "bg-[#d8f7de] text-[#087144] ring-1 ring-[#b6ecc6]"
                                 : apartment.status === "Sold"
-                                  ? "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
-                                  : "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                                  ? "bg-[#ffe3ea] text-[#bd1748] ring-1 ring-[#ffc7d5]"
+                                  : "bg-[#fff0c9] text-[#92640d] ring-1 ring-[#f4d88d]"
                             }`}
                           >
                             {apartment.status}
@@ -2845,52 +2864,42 @@ function MasterPlanResultsCard({
                         </div>
 
                         <div
-                          className={`mt-2 flex flex-wrap items-center text-zinc-500 dark:text-zinc-400 ${
-                            compact ? "gap-1.5 text-[10px]" : "gap-3 text-xs"
+                          className={`mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-[#617568] dark:text-zinc-400 ${
+                            compact ? "text-[10px]" : "text-xs"
                           }`}
                         >
                           <span
-                            className={`inline-flex items-center gap-1 rounded-full bg-zinc-100 dark:bg-white/5 ${
-                              compact ? "px-1.5 py-0.5" : "px-2 py-1"
-                            }`}
+                            className="inline-flex items-center gap-1.5"
                           >
                             <Building2 className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
                             {apartment.tower}
                           </span>
                           <span
-                            className={`inline-flex items-center gap-1 rounded-full bg-zinc-100 dark:bg-white/5 ${
-                              compact ? "px-1.5 py-0.5" : "px-2 py-1"
-                            }`}
+                            className="inline-flex items-center gap-1.5"
                           >
                             <BedDouble className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
                             {apartment.bhk} BHK
+                          </span>
+                          <span className="inline-flex items-center gap-1.5">
+                            <MapPin className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+                            {apartment.facing}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5">
+                            <Ruler className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+                            Floor {apartment.floorLabel}
                           </span>
                         </div>
                       </div>
 
                       <div
-                        className={`text-zinc-500 dark:text-zinc-400 ${
-                          compact
-                            ? "flex min-w-[88px] flex-col items-end gap-1 text-[10px]"
-                            : "ml-4 shrink-0 text-right text-xs"
-                        }`}
+                        className="flex flex-col items-center justify-center border-l border-[#e2ddcf] bg-[#f6f4eb] px-2 text-center text-[#557568]"
                       >
-                        <div
-                          className={`inline-flex items-center gap-1 rounded-full bg-zinc-100 dark:bg-white/5 ${
-                            compact ? "px-1.5 py-0.5" : "px-2 py-1"
-                          }`}
-                        >
-                          <MapPin className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
-                          {apartment.facing}
-                        </div>
-                        <div className={compact ? "text-right" : ""}>
-                          <p className={`font-medium text-zinc-700 dark:text-zinc-300 ${compact ? "text-[0.9rem]" : ""}`}>
-                            {apartment.areaSqft} sqft
-                          </p>
-                          <p className={`mt-1 ${compact ? "text-[10px]" : "text-[11px]"}`}>
-                            Floor {apartment.floorLabel}
-                          </p>
-                        </div>
+                        <p className={`${masterPlanSerif.className} text-[1.7rem] font-semibold leading-none text-[#456f49]`}>
+                          {apartment.areaSqft}
+                        </p>
+                        <p className="mt-1 text-[8px] font-bold uppercase tracking-[0.32em] text-[#718277]">
+                          Sqft
+                        </p>
                       </div>
                     </motion.button>
                   );
@@ -2902,11 +2911,11 @@ function MasterPlanResultsCard({
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="flex h-[220px] items-center justify-center rounded-[22px] border border-dashed border-zinc-300 bg-zinc-50/70 px-4 text-center dark:border-white/10 dark:bg-white/5"
+                className="flex h-[220px] items-center justify-center rounded-[22px] border border-dashed border-emerald-100/55 bg-emerald-50/38 px-4 text-center dark:border-white/10 dark:bg-white/5"
               >
                 <div>
                   <p className="text-sm font-semibold">No flats found</p>
-                  <p className="mt-1 text-xs text-zinc-500">
+                  <p className="mt-1 text-xs text-emerald-950/58">
                     Try changing the filters.
                   </p>
                 </div>
@@ -2932,6 +2941,155 @@ function MatchingFlatsInlineLoader({ compact = false }: { compact?: boolean }) {
   );
 }
 
+function LiquidGlassFilterStyles() {
+  return (
+    <style jsx global>{`
+      .mp-liquid-switcher {
+        --option-count: 3;
+        --active-index: 0;
+        --switcher-width: 100%;
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(var(--option-count), minmax(0, 1fr));
+        align-items: center;
+        gap: 0;
+        width: min(100%, var(--switcher-width));
+        min-width: 0;
+        min-inline-size: 0;
+        height: 42px;
+        box-sizing: border-box;
+        padding: 5px;
+        margin: 0;
+        border: 0;
+        border-radius: 999px;
+        isolation: isolate;
+        overflow: hidden;
+        background: #fbfaf4;
+        box-shadow:
+          inset 0 0 0 1px rgba(222, 216, 201, 0.95),
+          inset 0 1px 0 rgba(255, 255, 255, 0.95),
+          0 10px 24px rgba(33, 50, 35, 0.12);
+      }
+
+      .mp-liquid-switcher--compact {
+        height: 40px;
+      }
+
+      .mp-liquid-switcher::after {
+        content: "";
+        position: absolute;
+        z-index: 1;
+        left: 5px;
+        top: 5px;
+        width: calc((100% - 10px) / var(--option-count));
+        height: calc(100% - 10px);
+        border-radius: inherit;
+        background: linear-gradient(180deg, #537a54, #335f37);
+        transform: translateX(calc(var(--active-index) * 100%));
+        transform-origin: center;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.24),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.16),
+          0 8px 16px rgba(37, 83, 43, 0.28);
+        transition:
+          transform 420ms cubic-bezier(1, 0, 0.4, 1),
+          background-color 420ms cubic-bezier(1, 0, 0.4, 1),
+          box-shadow 420ms cubic-bezier(1, 0, 0.4, 1);
+        animation: mpLiquidToggle 440ms ease;
+      }
+
+      .mp-liquid-switcher__legend,
+      .mp-liquid-switcher__input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        border: 0;
+        white-space: nowrap;
+        clip-path: inset(100%);
+        clip: rect(0 0 0 0);
+        overflow: hidden;
+      }
+
+      .mp-liquid-switcher__option {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        min-width: 0;
+        height: 100%;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        cursor: pointer;
+        color: #819085;
+        transition:
+          color 160ms ease,
+          transform 200ms cubic-bezier(0.5, 0, 0, 1);
+      }
+
+      .mp-liquid-switcher__option:hover {
+        color: #315f37;
+      }
+
+      .mp-liquid-switcher__option:hover .mp-liquid-switcher__label {
+        transform: scale(1.08);
+      }
+
+      .mp-liquid-switcher__option[data-active="true"] {
+        cursor: auto;
+        color: #fffaf0;
+      }
+
+      .mp-liquid-switcher__option[data-active="true"] .mp-liquid-switcher__label {
+        transform: scale(1);
+      }
+
+      .mp-liquid-switcher__label {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        max-width: 100%;
+        overflow: hidden;
+        padding: 0 8px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 9.5px;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        line-height: 1;
+        transition: transform 200ms cubic-bezier(0.5, 0, 0, 1);
+      }
+
+      .mp-liquid-switcher__icon {
+        width: 12px;
+        height: 12px;
+        flex: 0 0 auto;
+      }
+
+      @media (min-width: 640px) {
+        .mp-liquid-switcher__label {
+          font-size: 10.5px;
+        }
+      }
+
+      @keyframes mpLiquidToggle {
+        0% {
+          scale: 1 1;
+        }
+        50% {
+          scale: 1.06 1;
+        }
+        100% {
+          scale: 1 1;
+        }
+      }
+    `}</style>
+  );
+}
+
 function FilterPillGroup<T extends string>({
   options,
   value,
@@ -2945,32 +3103,50 @@ function FilterPillGroup<T extends string>({
   getLabel?: (value: T) => string;
   compactDark?: boolean;
 }) {
+  const name = useId();
+  const activeIndex = Math.max(0, options.findIndex((item) => item === value));
+  const switcherWidthRem = options.length >= 5 ? 100 : options.length * 6.45;
+  const switcherStyle = {
+    "--option-count": options.length,
+    "--active-index": activeIndex,
+    "--switcher-width":
+      options.length >= 5 ? "100%" : `${switcherWidthRem.toFixed(2)}rem`,
+  } as CSSProperties;
+
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <fieldset
+      className={`mp-liquid-switcher ${compactDark ? "mp-liquid-switcher--compact" : ""}`}
+      style={switcherStyle}
+    >
+      <legend className="mp-liquid-switcher__legend">Choose filter</legend>
       {options.map((item) => {
         const isActive = value === item;
+        const shouldShowTowerIcon = item === "Tower A" || item === "Tower B";
 
         return (
-          <button
+          <label
             key={item}
-            type="button"
-            aria-pressed={isActive}
-            onClick={() => onChange(item)}
-            className={`inline-flex min-h-8 items-center justify-center rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] transition sm:text-[11px] ${
-              compactDark
-                ? isActive
-                  ? "border-[#d4b57b]/60 bg-[#f8f1e3] text-[#9b7840] shadow-[0_10px_22px_rgba(200,168,106,0.16)]"
-                  : "border-[#e8ddd0] bg-white text-zinc-500 hover:border-[#dac4a0] hover:bg-[#fcf7ef]"
-                : isActive
-                  ? "border-white/80 bg-white/82 text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_10px_24px_rgba(15,23,42,0.10)] dark:border-white/75 dark:bg-white/82 dark:text-black"
-                  : "border-white/45 bg-white/36 text-zinc-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] hover:border-white/70 hover:bg-white/58 dark:border-white/12 dark:bg-white/6 dark:text-zinc-300 dark:hover:border-white/24 dark:hover:bg-white/10"
-            }`}
+            className="mp-liquid-switcher__option"
+            data-active={isActive ? "true" : "false"}
           >
-            {getLabel(item)}
-          </button>
+            <input
+              className="mp-liquid-switcher__input"
+              type="radio"
+              name={name}
+              value={item}
+              checked={isActive}
+              onChange={() => onChange(item)}
+            />
+            <span className="mp-liquid-switcher__label">
+              {shouldShowTowerIcon ? (
+                <Building2 className="mp-liquid-switcher__icon" aria-hidden />
+              ) : null}
+              {getLabel(item)}
+            </span>
+          </label>
         );
       })}
-    </div>
+    </fieldset>
   );
 }
 
@@ -2992,8 +3168,8 @@ function FilterDropdown({
         onChange={(event) => onChange(event.target.value)}
         className={`h-9 w-full appearance-none rounded-full border px-3 pr-8 text-[11px] font-semibold outline-none transition ${
           compactDark
-            ? "border-[#e8ddd0] bg-white text-zinc-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.88),0_10px_22px_rgba(15,23,42,0.05)] focus:border-[#c8a86a] focus:bg-white"
-            : "border-white/55 bg-white/56 text-zinc-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.68),0_8px_18px_rgba(15,23,42,0.05)] focus:border-white/80 focus:bg-white/76 dark:border-white/10 dark:bg-white/7 dark:text-white"
+            ? "border-[#ded8c9] bg-[#fbfaf4] text-[#1f3f2b] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_10px_22px_rgba(33,50,35,0.08)] focus:border-[#cfd9c6] focus:bg-white"
+            : "border-[#ded8c9] bg-[#fbfaf4] text-[#1f3f2b] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_10px_22px_rgba(33,50,35,0.08)] focus:border-[#cfd9c6] focus:bg-white dark:border-white/10 dark:bg-white/8 dark:text-white"
         }`}
       >
         {options.map((option) => (
@@ -3004,7 +3180,7 @@ function FilterDropdown({
       </select>
       <span
         className={`pointer-events-none absolute right-3 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rotate-45 border-b border-r ${
-          compactDark ? "border-zinc-500" : "border-zinc-500 dark:border-zinc-300"
+          compactDark ? "border-[#718277]" : "border-[#718277] dark:border-zinc-300"
         }`}
       />
     </div>
@@ -3028,9 +3204,9 @@ function FilterBlock({
     <div className={`${compact ? "space-y-1.5" : "space-y-2"} ${className}`}>
       <label
         className={`block font-semibold ${
-          compactDark ? "text-zinc-500" : "text-zinc-600 dark:text-zinc-300"
+          compactDark ? "text-[#58715f]" : "text-[#58715f] dark:text-zinc-300"
         } ${
-          compact ? "text-[9px] uppercase tracking-[0.16em]" : "text-xs"
+          compact ? "text-[9px] uppercase tracking-[0.18em]" : "text-[10px] uppercase tracking-[0.22em]"
         }`}
       >
         {label}
@@ -3042,7 +3218,7 @@ function FilterBlock({
 
 function FilterChip({ label }: { label: string }) {
   return (
-    <span className="rounded-full border border-white/45 bg-white/45 px-2 py-0.5 text-[10px] font-medium text-zinc-600 dark:border-white/10 dark:bg-white/8 dark:text-zinc-200">
+    <span className="rounded-full border border-[#ded8c9] bg-[#fbfaf4] px-2 py-0.5 text-[10px] font-medium text-[#456859] dark:border-white/10 dark:bg-white/8 dark:text-zinc-200">
       {label}
     </span>
   );

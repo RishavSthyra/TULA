@@ -4,27 +4,16 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { motion, type Variants } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
 import { BsArrowRight } from "react-icons/bs";
 import {
-  HiBuildingOffice2,
-  HiHome,
-  HiMapPin,
-  HiPhone,
-  HiSparkles,
-} from "react-icons/hi2";
-import { Leaf } from "lucide-react";
+  CalendarDays,
+  ChevronDown,
+  Leaf,
+  SunMedium,
+} from "lucide-react";
 import { Cormorant_Garamond } from "next/font/google";
-import { Dock, DockIcon } from "@/components/ui/dock";
-import { buttonVariants } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+import DesktopSiteRail from "@/components/DesktopSiteRail";
+import { TRIFECTA_LEAD_OPEN_EVENT } from "@/lib/trifecta-remote-control";
 
 const heroSerif = Cormorant_Garamond({
   subsets: ["latin"],
@@ -39,14 +28,6 @@ const HERO_LOOP_RESTART_BEFORE_END_SECONDS = 0.5;
 const HERO_LOOP_RESTART_AT_SECONDS = 0.04;
 const HERO_PLAY_RETRY_MS = 450;
 const STATIC_HERO_IMAGE_HOLD_MS = 2000;
-
-const bottomDockItems = [
-  { href: "/", icon: HiHome, label: "Home" },
-  { href: "/project-overview", icon: HiBuildingOffice2, label: "Overview" },
-  { href: "/amenities", icon: HiSparkles, label: "Amenities" },
-  { href: "/area-map", icon: HiMapPin, label: "Location" },
-  { href: "tel:+918088004411", icon: HiPhone, label: "Call" },
-] as const;
 
 type IdleCapableWindow = Window &
   typeof globalThis & {
@@ -124,6 +105,7 @@ export default function HeroSection({
   const [videoReady, setVideoReady] = useState(false);
   const [isHeroVideoPlaying, setIsHeroVideoPlaying] = useState(false);
   const [isHeroLoopVideoVisible, setIsHeroLoopVideoVisible] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState("EN");
   const isEntryVideoVisible = false;
 
   const line1 = "A Quiter,";
@@ -312,6 +294,10 @@ export default function HeroSection({
     scrollLockRef.current = true;
     router.push("/project-overview");
   }, [router]);
+
+  const openBookVisit = useCallback(() => {
+    window.dispatchEvent(new CustomEvent(TRIFECTA_LEAD_OPEN_EVENT));
+  }, []);
 
   useEffect(() => {
     const heroVideo = heroVideoRef.current;
@@ -805,7 +791,7 @@ export default function HeroSection({
           box-sizing: border-box;
           border-radius: 999vw;
           padding: 0.125em;
-          background: linear-gradient(180deg, rgba(7, 24, 8, 0.34), rgba(7, 24, 8, 0.12));
+          background: linear-gradient(180deg, rgba(38, 69, 42, 0.38), rgba(20, 39, 24, 0.14));
           mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
           mask-composite: exclude;
           opacity: 0.9;
@@ -828,16 +814,16 @@ export default function HeroSection({
           border-radius: 999vw;
           background:
             linear-gradient(
-              -75deg,
-              rgba(24, 62, 25, 0.22),
-              rgba(118, 176, 88, 0.28),
-              rgba(9, 34, 17, 0.3)
+              135deg,
+              rgba(55, 87, 50, 0.96),
+              rgba(35, 61, 40, 0.98),
+              rgba(22, 41, 29, 0.98)
             );
           box-shadow:
             inset 0 0.125em 0.125em rgba(0, 0, 0, 0.16),
-            inset 0 -0.125em 0.125em rgba(235, 255, 216, 0.3),
+            inset 0 -0.125em 0.125em rgba(255, 247, 222, 0.16),
             0 0.25em 0.125em -0.125em rgba(0, 0, 0, 0.34),
-            0 0 0.1em 0.18em inset rgba(180, 235, 142, 0.18),
+            0 0 0.1em 0.18em inset rgba(215, 187, 112, 0.18),
             0 14px 34px rgba(0, 0, 0, 0.2);
           -webkit-backdrop-filter: blur(4px) saturate(1.35);
           backdrop-filter: blur(4px) saturate(1.35);
@@ -851,9 +837,9 @@ export default function HeroSection({
           backdrop-filter: blur(0.5px) saturate(1.45);
           box-shadow:
             inset 0 0.125em 0.125em rgba(0, 0, 0, 0.16),
-            inset 0 -0.125em 0.125em rgba(235, 255, 216, 0.48),
+            inset 0 -0.125em 0.125em rgba(255, 247, 222, 0.28),
             0 0.15em 0.05em -0.1em rgba(0, 0, 0, 0.36),
-            0 0 0.05em 0.12em inset rgba(204, 255, 172, 0.3),
+            0 0 0.05em 0.12em inset rgba(237, 214, 152, 0.26),
             0 12px 30px rgba(0, 0, 0, 0.18);
         }
 
@@ -867,7 +853,7 @@ export default function HeroSection({
             linear-gradient(
               var(--hero-liquid-angle-2),
               rgba(255, 255, 255, 0) 0%,
-              rgba(236, 255, 212, 0.34) 40% 50%,
+              rgba(255, 239, 198, 0.22) 40% 50%,
               rgba(255, 255, 255, 0) 55%
             );
           background-size: 200% 200%;
@@ -894,13 +880,13 @@ export default function HeroSection({
           background:
             conic-gradient(
               from var(--hero-liquid-angle-1) at 50% 50%,
-              rgba(5, 39, 11, 0.76),
-              rgba(22, 74, 20, 0) 5% 40%,
-              rgba(214, 255, 178, 0.5) 50%,
-              rgba(22, 74, 20, 0) 60% 95%,
-              rgba(5, 39, 11, 0.76)
+              rgba(95, 76, 28, 0.9),
+              rgba(203, 170, 93, 0) 5% 40%,
+              rgba(242, 220, 164, 0.62) 50%,
+              rgba(203, 170, 93, 0) 60% 95%,
+              rgba(95, 76, 28, 0.9)
             ),
-            linear-gradient(180deg, rgba(222, 255, 194, 0.34), rgba(40, 100, 34, 0.32));
+            linear-gradient(180deg, rgba(241, 221, 173, 0.52), rgba(108, 88, 43, 0.34));
           mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
           mask-composite: exclude;
           pointer-events: none;
@@ -923,7 +909,7 @@ export default function HeroSection({
           font-size: 11px;
           font-weight: 700;
           letter-spacing: 0.2em;
-          color: rgba(239, 255, 225, 0.94);
+          color: rgba(247, 239, 219, 0.96);
           text-shadow: 0 0.25em 0.08em rgba(0, 0, 0, 0.16);
           text-transform: uppercase;
           user-select: none;
@@ -961,7 +947,7 @@ export default function HeroSection({
             0 0 0.1em 0.18em inset rgba(180, 235, 142, 0.14),
             0 14px 34px rgba(0, 0, 0, 0.18);
           -webkit-backdrop-filter: blur(4px) saturate(1.35);
-          backdrop-filter: blur(4px) saturate(1.35);
+          backdrop-filter: blur(0.5px) saturate(1.35);
           transition: all var(--anim-hover-time) var(--anim-hover-ease);
         }
 
@@ -1062,35 +1048,57 @@ export default function HeroSection({
         }
       `}</style>
 
-      {/* <div className="pointer-events-none absolute inset-0 z-[6] bg-[radial-gradient(ellipse_at_74%_36%,transparent_0%,transparent_32%,rgba(5,20,14,0.34)_72%,rgba(2,10,7,0.68)_100%)]" />
-      <div className="pointer-events-none absolute inset-0 z-[7] bg-[linear-gradient(90deg,rgba(4,18,13,0.78)_0%,rgba(7,24,17,0.54)_25%,rgba(8,20,14,0.12)_48%,transparent_72%),linear-gradient(180deg,rgba(4,12,9,0.26)_0%,transparent_34%,rgba(2,8,5,0.68)_100%)]" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[8] h-[42%] bg-[linear-gradient(180deg,transparent_0%,rgba(3,12,8,0.42)_48%,rgba(1,6,4,0.88)_100%)]" /> */}
+      <div className="pointer-events-none absolute inset-0 z-[6] bg-[radial-gradient(ellipse_at_18%_14%,rgba(255,248,230,0.26),transparent_28%),linear-gradient(180deg,rgba(6,17,8,0.08)_0%,rgba(8,18,10,0.12)_38%,rgba(7,15,9,0.38)_100%)]" />
 
-      <div className="absolute left-6 top-6 z-20 opacity-0 sm:left-10 sm:top-9 lg:left-16 lg:top-12">
-        <Link
-          href="/"
-          aria-label="Trifecta Veranza home"
-          className="block w-[88px] opacity-85 drop-shadow-[0_10px_30px_rgba(0,0,0,0.34)] transition-opacity hover:opacity-100 sm:w-[112px] lg:w-[132px]"
-        >
-          <Image
-            src={heroLogoSrc ?? EMPTY_IMAGE_DATA_URL}
-            width={160}
-            height={120}
-            alt="Trifecta Veranza"
-            unoptimized
-            priority
-          />
-        </Link>
+      <DesktopSiteRail className="absolute left-5 top-1/2 z-20 -translate-y-1/2 2xl:left-7" />
+
+      <div className="absolute left-1/2 top-5 z-20 -translate-x-1/2 sm:top-8">
+        <div className="flex items-center rounded-full border border-[#dfcfaa]/70 bg-[linear-gradient(180deg,rgba(251,249,241,0.96),rgba(241,237,226,0.92))] px-3 py-1.5 text-[#4d5f4d] shadow-[0_12px_28px_rgba(30,46,30,0.12),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-md sm:px-4 sm:py-2">
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <SunMedium className="h-[0.85rem] w-[0.85rem] text-[#b29349] sm:h-4 sm:w-4" strokeWidth={1.8} />
+            <span className="text-[0.76rem] font-medium sm:text-[0.88rem]">7:15 AM</span>
+          </div>
+          <span className="mx-3 h-6 w-px bg-[#dbcba7] sm:mx-4 sm:h-7" />
+          <div className="text-[0.76rem] font-semibold sm:text-[0.88rem]">25°C</div>
+          <span className="mx-3 h-6 w-px bg-[#dbcba7] sm:mx-4 sm:h-7" />
+          <label className="relative flex items-center gap-1 text-[0.76rem] font-semibold sm:text-[0.88rem]">
+            <select
+              value={selectedLanguage}
+              onChange={(event) => setSelectedLanguage(event.target.value)}
+              className="appearance-none bg-transparent pr-4 text-[#415541] outline-none"
+              aria-label="Language"
+            >
+              <option value="EN">EN</option>
+              <option value="FR">FR</option>
+              <option value="AR">AR</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-0 h-3.5 w-3.5 text-[#6f7f6b]" strokeWidth={1.8} />
+          </label>
+        </div>
       </div>
 
-      <div className="absolute inset-0 z-10 flex items-center px-6 pb-[calc(env(safe-area-inset-bottom)+6.5rem)] pt-28 sm:px-10 sm:pt-32 lg:px-16 xl:px-20">
+      <div className="absolute right-4 top-5 z-20 sm:right-8 sm:top-8 lg:right-12 xl:right-12 2xl:right-16">
+        <button
+          type="button"
+          onClick={openBookVisit}
+          className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full px-[1px] py-[1px] shadow-[0_16px_34px_rgba(23,43,24,0.18)]"
+        >
+          <span className="absolute inset-0 rounded-full bg-[linear-gradient(135deg,#f1e0ac_0%,#b68f43_44%,#f0ddb2_100%)]" />
+          <span className="relative inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#3f5d38_0%,#24422b_52%,#183224_100%)] px-4 py-2.5 text-[0.82rem] font-semibold text-[#f7f1de] sm:px-5 sm:py-2.5 sm:text-[0.92rem]">
+            <CalendarDays className="h-4 w-4 text-[#e3c57c]" strokeWidth={1.9} />
+            Book a Visit
+          </span>
+        </button>
+      </div>
+
+      <div className="absolute inset-0 z-10 flex items-end justify-end px-6 pb-[calc(env(safe-area-inset-bottom)+2.25rem)] pt-28 sm:px-10 sm:pb-12 sm:pt-32 lg:px-16 xl:px-20 2xl:px-24">
         <motion.div
           variants={contentWrap}
           initial="hidden"
           animate={
             playIntroAnimation ? "show" : "hidden"
           }
-          className="w-full max-w-[min(92vw,46rem)] text-left"
+          className="ml-auto w-full max-w-[min(92vw,42rem)] text-right"
         >
           <motion.div variants={contentItem}>
             <h1
@@ -1108,31 +1116,31 @@ export default function HeroSection({
 
           <motion.div
             variants={contentItem}
-            className="mt-4 flex w-full max-w-[min(100%,38rem)] items-center text-[#adc087]/82"
+            className="mt-4 ml-auto flex w-full max-w-[min(100%,32rem)] items-center text-[#d9c28a]/82"
           >
-            <span className="h-px w-12 bg-[#adc087]/68" />
+            <span className="h-px flex-1 bg-gradient-to-r from-transparent via-[#d9c28a]/32 to-[#d9c28a]/58" />
             <span className="mx-3 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#dff2b8]/20 bg-white/[0.06] backdrop-blur-md">
               <Leaf className="h-4 w-4" strokeWidth={1.4} />
             </span>
-            <span className="h-px flex-1 bg-gradient-to-r from-[#adc087]/58 via-[#adc087]/32 to-transparent" />
+            <span className="h-px w-12 bg-[#d9c28a]/68" />
           </motion.div>
 
           <motion.p
             variants={contentItem}
-            className="mt-4 max-w-[25rem] text-[0.95rem] leading-7 tracking-[0.035em] text-[#eef2e7]/76 sm:text-base"
+            className="mt-4 ml-auto max-w-[26rem] text-[0.95rem] leading-7 tracking-[0.035em] text-[#eef2e7]/78 sm:text-base"
           >
             A quiet address shaped by open sky, layered green, and everyday calm.
           </motion.p>
 
           <motion.div variants={contentItem} className="mt-7">
-            <div className="hero-liquid-wrap">
+            <div className="hero-liquid-wrap ml-auto">
               <button
                 className="hero-liquid-button"
                 onClick={goToProjectOverview}
                 type="button"
               >
                 <span className="hero-liquid-text">
-                  Go To Project
+                  Explore The Project
                   <BsArrowRight className="text-[1.05rem]" aria-hidden />
                 </span>
               </button>
@@ -1141,78 +1149,6 @@ export default function HeroSection({
           </motion.div>
         </motion.div>
       </div>
-
-      <nav
-        aria-label="Primary"
-        className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-50 flex justify-center px-4 sm:bottom-[calc(env(safe-area-inset-bottom)+1.35rem)]"
-      >
-        <TooltipProvider delay={120}>
-          <Dock
-            direction="middle"
-            iconSize={38}
-            iconMagnification={58}
-            iconDistance={130}
-            className="hero-bottom-dock m-0 h-[52px] gap-1.5 rounded-full px-1.5 py-1.5"
-          >
-            {bottomDockItems.slice(0, 2).map(({ href, icon: Icon, label }) => (
-              <DockIcon key={label}>
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                    <Link
-                      href={href}
-                      aria-label={label}
-                      className={cn(
-                        buttonVariants({ variant: "ghost", size: "icon" }),
-                        "hero-bottom-dock-link size-10 rounded-full hover:bg-transparent",
-                      )}
-                    >
-                      <Icon className="hero-bottom-dock-icon" aria-hidden />
-                    </Link>
-                    }
-                  />
-                  <TooltipContent
-                    side="top"
-                    className="rounded-full border border-[#d6ffbe]/15 bg-[#05160c]/80 px-3 py-1.5 text-[10px] font-semibold tracking-[0.08em] text-[#f0ffe6] shadow-[0_12px_30px_rgba(0,0,0,0.28)] backdrop-blur-md"
-                  >
-                    <p>{label}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </DockIcon>
-            ))}
-            <Separator
-              orientation="vertical"
-              className="h-7 bg-gradient-to-b from-transparent via-[#d5ffbc]/22 to-transparent"
-            />
-            {bottomDockItems.slice(2).map(({ href, icon: Icon, label }) => (
-              <DockIcon key={label}>
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                    <Link
-                      href={href}
-                      aria-label={label}
-                      className={cn(
-                        buttonVariants({ variant: "ghost", size: "icon" }),
-                        "hero-bottom-dock-link size-10 rounded-full hover:bg-transparent",
-                      )}
-                    >
-                      <Icon className="hero-bottom-dock-icon" aria-hidden />
-                    </Link>
-                    }
-                  />
-                  <TooltipContent
-                    side="top"
-                    className="rounded-full border border-[#d6ffbe]/15 bg-[#05160c]/80 px-3 py-1.5 text-[10px] font-semibold tracking-[0.08em] text-[#f0ffe6] shadow-[0_12px_30px_rgba(0,0,0,0.28)] backdrop-blur-md"
-                  >
-                    <p>{label}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </DockIcon>
-            ))}
-          </Dock>
-        </TooltipProvider>
-      </nav>
 
       <style jsx>{`
         @media (max-width: 640px) {

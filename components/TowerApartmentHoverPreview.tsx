@@ -20,6 +20,7 @@ import {
   Vector3,
 } from "three";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
+import { readJsonResponse } from "@/lib/utils";
 import type {
   InventoryApartment,
   InventoryStatus,
@@ -645,10 +646,10 @@ export default function TowerApartmentHoverPreview({
           cache: "no-store",
           signal: controller.signal,
         });
-        const result = (await response.json()) as {
+        const result = await readJsonResponse<{
           apartments?: InventoryApartment[];
           message?: string;
-        };
+        }>(response, "Inventory API");
 
         if (!response.ok || !result.apartments) {
           throw new Error(result.message || "Failed to load inventory.");

@@ -30,7 +30,7 @@ const HERO_STAGE_FALLBACK_IMAGE_URL = "images/first_frame_again.png";
 const HERO_POSTER_URL = "images/hero_first_frame.avif";
 const HERO_LOGO_URL = "images/Logo_Trifect_Veranza A_new.png";
 const TEMPORARY_HOME_HERO_IMAGE_URL =
-  "/ChatGPT%20Image%20May%2026%2C%202026%2C%2004_18_02%20PM.png";
+  "/HomeImage First Draft.jpeg";
 
 function getVideoLoadProgress(video: HTMLVideoElement) {
   const duration = video.duration;

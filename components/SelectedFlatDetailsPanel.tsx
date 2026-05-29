@@ -4,7 +4,19 @@ import NextImage from "next/image";
 import { useRouter } from "next/navigation";
 import { forwardRef, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
-import { BedDouble, Building2, Expand, MapPin, Play, Ruler, X } from "lucide-react";
+import {
+  ArrowRight,
+  BedDouble,
+  Building2,
+  Compass,
+  Expand,
+  Layers,
+  MapPin,
+  Play,
+  Ruler,
+  X,
+} from "lucide-react";
+import { Cormorant_Garamond } from "next/font/google";
 import type { InventoryApartment } from "@/types/inventory";
 import { buildWalkthroughHref } from "@/lib/walkthrough";
 
@@ -17,6 +29,11 @@ type SelectedFlatDetailsPanelProps = {
 };
 
 const PANEL_PREVIEW_IMAGE = "/frames_webp_full_q35/frame_00121.webp";
+
+const selectedFlatSerif = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+});
 
 function parseRoomDimensions(roomDimensions: string) {
   return roomDimensions
@@ -47,26 +64,34 @@ function getStatusStyles(status: InventoryApartment["status"]) {
   if (status === "Available") {
     return {
       badgeClassName:
-        "border-emerald-300/45 bg-emerald-100/72 text-emerald-700",
-      dotClassName: "bg-emerald-500",
+        "border-[#6f8f5a]/55 bg-[linear-gradient(135deg,#6d945a_0%,#4d7443_52%,#365834_100%)] text-white shadow-[0_12px_24px_rgba(31,66,35,0.28),inset_0_1px_0_rgba(255,255,255,0.24)]",
+      dotClassName: "bg-white",
     };
   }
 
   if (status === "Reserved") {
     return {
-      badgeClassName: "border-amber-300/45 bg-amber-100/72 text-amber-700",
-      dotClassName: "bg-amber-500",
+      badgeClassName:
+        "border-[#c4a667]/45 bg-[#b89043] text-white shadow-[0_8px_18px_rgba(118,83,22,0.18),inset_0_1px_0_rgba(255,255,255,0.24)]",
+      dotClassName: "bg-white",
     };
   }
 
   return {
-    badgeClassName: "border-rose-300/45 bg-rose-100/72 text-rose-700",
-    dotClassName: "bg-rose-500",
+    badgeClassName:
+      "border-[#b7776b]/45 bg-[#9d5d50] text-white shadow-[0_8px_18px_rgba(99,38,31,0.18),inset_0_1px_0_rgba(255,255,255,0.22)]",
+    dotClassName: "bg-white",
   };
 }
 
 const metaCardClassName =
-  "rounded-[22px] border border-white/55 bg-white/42 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_12px_30px_rgba(15,23,42,0.08)] backdrop-blur-xl";
+  "min-w-0 rounded-[22px] border border-[#d9c99c]/70 bg-[#f8f4e8]/82 px-4 py-4 text-[#1f3f2b] shadow-[0_14px_32px_rgba(39,47,34,0.10),inset_0_1px_0_rgba(255,255,255,0.94)] backdrop-blur-md";
+
+const premiumPanelShellClassName =
+  "relative isolate overflow-hidden border border-[#d8bd78]/70 bg-[linear-gradient(145deg,rgba(250,248,238,0.96)_0%,rgba(240,237,224,0.94)_48%,rgba(249,246,234,0.98)_100%)] text-[#1f3f2b] shadow-[0_30px_80px_rgba(20,36,25,0.24),inset_0_1px_0_rgba(255,255,255,0.96),inset_0_0_0_1px_rgba(255,255,255,0.30)] backdrop-blur-2xl";
+
+const ornamentLineClassName =
+  "pointer-events-none absolute border-[#cfad63]/45 opacity-70";
 
 const SelectedFlatDetailsPanel = forwardRef<
   HTMLDivElement,
@@ -132,14 +157,16 @@ const SelectedFlatDetailsPanel = forwardRef<
       ? "pointer-events-auto w-full self-start"
       : "pointer-events-auto h-full min-h-0 w-full self-stretch";
     const compactPanelClassName = desktopEnhancedCompact
-      ? "custom-scrollbar relative flex max-h-[52vh] min-h-0 flex-col overflow-y-auto overscroll-contain rounded-[20px] border border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(245,247,250,0.54))] text-zinc-900 shadow-[0_24px_70px_rgba(15,23,42,0.16)] backdrop-blur-[28px] [-webkit-overflow-scrolling:touch] touch-pan-y xl:rounded-[24px] 2xl:max-h-[60vh] 2xl:rounded-[30px]"
-      : "custom-scrollbar relative flex h-full max-h-full min-h-0 flex-col overflow-y-auto overscroll-contain rounded-[20px] border border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.76),rgba(245,247,250,0.58))] text-zinc-900 shadow-[0_24px_70px_rgba(15,23,42,0.16)] backdrop-blur-[28px] [-webkit-overflow-scrolling:touch] touch-pan-y sm:rounded-[28px] md:rounded-[30px]";
+      ? `custom-scrollbar flex max-h-[68vh] min-h-0 flex-col overflow-y-auto overscroll-contain rounded-[34px] rounded-tr-[70px] rounded-bl-[26px] ${premiumPanelShellClassName} [-webkit-overflow-scrolling:touch] touch-pan-y 2xl:max-h-[72vh] 2xl:rounded-[38px] 2xl:rounded-tr-[80px]`
+      : `custom-scrollbar flex h-full max-h-full min-h-0 flex-col overflow-y-auto overscroll-contain rounded-[28px] rounded-tr-[56px] rounded-bl-[22px] ${premiumPanelShellClassName} [-webkit-overflow-scrolling:touch] touch-pan-y sm:rounded-[32px] sm:rounded-tr-[64px] md:rounded-[36px] md:rounded-tr-[72px]`;
     const compactContentClassName = desktopEnhancedCompact
-      ? "relative flex min-h-0 flex-col p-3 xl:p-3.5 2xl:p-5"
-      : "relative flex min-h-0 flex-col p-3 sm:p-4 md:p-5";
+      ? "relative flex min-h-0 flex-col p-6 xl:p-6 2xl:p-7"
+      : "relative flex min-h-0 flex-col p-5 sm:p-6 md:p-7";
     const compactHeroTitleClassName = desktopEnhancedCompact
-      ? "mt-0.5 truncate text-[1.2rem] font-semibold leading-none tracking-[-0.06em] text-zinc-950 xl:text-[1.4rem] 2xl:text-[1.9rem]"
-      : "mt-0.5 truncate text-[1.4rem] font-semibold leading-none tracking-[-0.06em] text-zinc-950 sm:mt-1 sm:text-[1.9rem]";
+      ? `${selectedFlatSerif.className} mt-1 truncate text-[3rem] font-medium leading-[0.88] text-[#21462d] xl:text-[3.2rem] 2xl:text-[3.65rem]`
+      : `${selectedFlatSerif.className} mt-1 truncate text-[3.05rem] font-medium leading-[0.88] text-[#21462d] sm:text-[3.45rem]`;
+    const compactPillClassName =
+      "inline-flex h-10 items-center justify-center rounded-full border border-[#d8bd78]/70 bg-[#f8f4e8]/88 px-4 text-xs font-bold text-[#58715f] shadow-[0_12px_28px_rgba(33,50,35,0.10),inset_0_1px_0_rgba(255,255,255,0.95)] transition hover:bg-white";
 
     return (
       <motion.div
@@ -159,146 +186,67 @@ const SelectedFlatDetailsPanel = forwardRef<
         }}
       >
         <div className={compactPanelClassName}>
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.42),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(228,232,238,0.34),transparent_30%)]" />
+          <div className="pointer-events-none absolute inset-[9px] rounded-[22px] rounded-tr-[46px] rounded-bl-[18px] border border-[#ead8a4]/55 sm:rounded-[26px] sm:rounded-tr-[54px] md:rounded-[30px] md:rounded-tr-[62px]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_6%,rgba(255,255,255,0.86),transparent_30%),radial-gradient(circle_at_92%_18%,rgba(236,218,169,0.30),transparent_31%),linear-gradient(180deg,rgba(255,255,255,0.28),rgba(232,236,222,0.20))]" />
+          <div className={`${ornamentLineClassName} -right-5 top-12 h-36 w-24 rounded-[50%] border-l`} />
+          <div className={`${ornamentLineClassName} right-0 top-20 h-24 w-16 rounded-[50%] border-l`} />
+          <div className={`${ornamentLineClassName} -bottom-10 -left-7 h-48 w-28 rounded-[50%] border-r`} />
 
-          <div className={compactContentClassName}>
-            {/* <div className="flex items-center justify-between gap-2 sm:gap-3">
-              <div className="h-9 w-9 shrink-0 opacity-0 sm:h-10 sm:w-10" aria-hidden="true" />
-
-              <div className="min-w-0 flex-1 text-center">
-                <p className="text-[9px] uppercase tracking-[0.28em] text-white/38 sm:text-[10px]">
+          <div className={`${compactContentClassName} relative z-10`}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold uppercase tracking-[0.38em] text-[#697560]">
                   Selected Flat
                 </p>
-                <p className={compactTitleClassName}>
+                <h2 className={compactHeroTitleClassName}>
                   {apartment.title}
+                </h2>
+                <div className="mt-4 h-px w-16 bg-[#c4a667]" />
+                <p className="mt-4 max-w-[18rem] text-sm font-semibold leading-relaxed text-[#687468]">
+                  Open the full apartment walkthrough from this residence.
                 </p>
               </div>
 
-              {!hideCloseButton ? (
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/60 bg-white/54 text-zinc-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] transition hover:bg-white/78 hover:text-zinc-900 sm:h-10 sm:w-10"
-                  aria-label="Close flat details"
-                >
-                  <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                </button>
-              ) : (
-                <span
-                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.22em] sm:px-3 sm:py-2 sm:text-[10px] ${statusStyles.badgeClassName}`}
-                >
-                  <span
-                    className={`inline-flex h-1.5 w-1.5 rounded-full sm:h-2 sm:w-2 ${statusStyles.dotClassName}`}
-                  />
-                  {apartment.status}
-                </span>
-              )}
-            </div> */}
-            {!hideCloseButton && (
-              <button
-                type="button"
-                onClick={onClose}
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/60 bg-white/54 text-zinc-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] transition hover:bg-white/78 hover:text-zinc-900 sm:h-10 sm:w-10"
-                aria-label="Close flat details"
-              >
-                <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </button>
-            )}
-
-            <div className="mt-0 rounded-[18px] border border-white/60 bg-white/45 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_12px_30px_rgba(15,23,42,0.08)] backdrop-blur-xl mt-4 sm:rounded-[24px] sm:p-4">
-              <div className="flex items-end justify-between gap-2 sm:gap-3">
-                <div className="min-w-0">
-                  <p className="text-[9px] uppercase tracking-[0.26em] text-zinc-500 sm:text-[10px]">
-                    Selected Flat
-                  </p>
-                  <p className={compactHeroTitleClassName}>
-                    {apartment.title}
-                  </p>
-                </div>
-                <div className="shrink-0 text-right">
-                  <p className="text-[9px] uppercase tracking-[0.26em] text-zinc-500 sm:text-[10px]">
-                    Floor
-                  </p>
-                  <p className="mt-0.5 text-sm font-medium text-zinc-800 sm:mt-1 sm:text-lg">
-                    {apartment.floorLabel || apartment.floor}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-2.5 flex items-center justify-between gap-2 sm:mt-3 sm:gap-3">
-                <div>
-                  <p className="text-[9px] uppercase tracking-[0.24em] text-zinc-500 sm:text-[10px]">
-                    Walkthrough
-                  </p>
-                  <p className="mt-0.5 text-xs font-medium text-zinc-600 sm:text-sm">
-                    Open the full apartment walkthrough from the button below.
-                  </p>
-                </div>
+              <div className="flex shrink-0 flex-col items-end gap-2">
+                {!hideCloseButton ? (
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className={`${compactPillClassName} w-10 px-0`}
+                    aria-label="Close flat details"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                ) : null}
 
                 <span
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.22em] sm:px-3 sm:py-1.5 sm:text-[10px] ${statusStyles.badgeClassName}`}
+                  className={`inline-flex h-9 items-center gap-2 rounded-full border px-4 text-[10px] font-bold uppercase tracking-[0.2em] ${statusStyles.badgeClassName}`}
                 >
                   <span
-                    className={`inline-flex h-1.5 w-1.5 rounded-full sm:h-2 sm:w-2 ${statusStyles.dotClassName}`}
+                    className={`inline-flex h-1.5 w-1.5 rounded-full ${statusStyles.dotClassName}`}
                   />
                   {apartment.status}
                 </span>
               </div>
             </div>
 
-            {/* {desktopEnhancedCompact ? (
-              <div
-                className="group mt-3 relative shrink-0 overflow-hidden rounded-[18px] border border-white/60 bg-white/35 cursor-pointer shadow-[0_14px_34px_rgba(15,23,42,0.10)] backdrop-blur-xl sm:mt-4 sm:rounded-[24px]"
-                onClick={handleOpenWalkthrough}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    handleOpenWalkthrough();
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="relative aspect-[16/10] w-full">
-                  <NextImage
-                    src={PANEL_PREVIEW_IMAGE}
-                    alt={`${apartment.title} preview`}
-                    fill
-                    sizes="420px"
-                    className="object-cover transition duration-700 group-hover:scale-[1.025]"
-                  />
-
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        handleOpenWalkthrough();
-                      }}
-                      className="flex h-[3rem] w-[3rem] items-center justify-center rounded-full border border-white/65 bg-white/82 shadow-[0_18px_34px_rgba(15,23,42,0.14)] backdrop-blur-md transition duration-300 hover:scale-105 hover:bg-white sm:h-[3.5rem] sm:w-[3.5rem] md:h-[4.2rem] md:w-[4.2rem]"
-                      aria-label="Play preview"
-                    >
-                      <Play className="ml-0.5 h-5 w-5 fill-zinc-900 text-zinc-900 sm:h-5 sm:w-5 md:h-6 md:w-6" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : null} */}
-
-            <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2.5 border-b border-white/45 pb-3 sm:gap-x-4 sm:gap-y-3 sm:pb-4">
+            <div className="mt-8 grid grid-cols-2 gap-3">
               {compactFacts.map((item) => {
                 const Icon = item.icon;
 
                 return (
-                  <div key={item.key} className="flex min-w-0 items-center gap-2 sm:gap-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/55 bg-white/48 sm:h-9 sm:w-9">
-                      <Icon className="h-3.5 w-3.5 text-zinc-600 sm:h-4 sm:w-4" />
+                  <div
+                    key={item.key}
+                    className="flex min-w-0 items-center gap-3 rounded-[22px] border border-[#d8bd78]/60 bg-[#f8f4e8]/78 px-3 py-3.5 shadow-[0_14px_30px_rgba(33,50,35,0.10),inset_0_1px_0_rgba(255,255,255,0.92)] backdrop-blur-md"
+                  >
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#d2b874]/65 bg-[#f0ead9]/82 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+                      <Icon className="h-4 w-4 text-[#a88a45]" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[9px] uppercase tracking-[0.24em] text-zinc-500 sm:text-[10px]">
+                      <p className="text-[8px] font-bold uppercase tracking-[0.26em] text-[#9a8054]">
                         {item.label}
                       </p>
-                      <p className="mt-0.5 truncate text-xs font-medium text-zinc-800 sm:text-sm">
+                      <p className="mt-1 truncate text-xs font-bold text-[#1f3f2b]">
                         {item.value}
                       </p>
                     </div>
@@ -307,31 +255,31 @@ const SelectedFlatDetailsPanel = forwardRef<
               })}
             </div>
 
-            {!desktopEnhancedCompact ? (
-              <div className="mt-3 sm:mt-4">
-                <button
-                  type="button"
-                  onClick={handleOpenWalkthrough}
-                  className="inline-flex w-full items-center justify-center rounded-full border border-[#d4b06a]/65 bg-[linear-gradient(135deg,#f5e4bd_0%,#dfbf7e_44%,#b8863f_100%)] px-3 py-2.5 text-xs font-semibold text-[#2f2009] shadow-[0_16px_34px_rgba(120,84,28,0.22),inset_0_1px_0_rgba(255,248,230,0.72)] transition hover:brightness-[1.03] sm:px-4 sm:py-3 sm:text-sm md:py-3.5"
-                >
-                  Open walkthrough
-                </button>
+            <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-[22px] border border-[#d8bd78]/60 bg-[#f8f4e8]/78 px-5 py-4 shadow-[0_14px_30px_rgba(33,50,35,0.09),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-md">
+              <div className="min-w-0">
+                <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-[#9a8054]">
+                  Floor
+                </p>
+                <p className={`${selectedFlatSerif.className} mt-1 truncate text-3xl font-medium leading-none text-[#21462d]`}>
+                  {apartment.floorLabel || apartment.floor}
+                </p>
               </div>
-            ) : null}
+              <Layers className="h-6 w-6 text-[#a88a45]" />
+            </div>
 
-            {!desktopEnhancedCompact ? (
-              <div className="mt-3 flex flex-col sm:mt-4">
+            {!desktopEnhancedCompact && dimensionItems.length > 0 ? (
+              <div className="mt-5 overflow-hidden rounded-[26px] border border-[#d8bd78]/55 bg-[linear-gradient(180deg,rgba(35,65,42,0.96),rgba(28,54,36,0.98))] px-5 py-4 text-[#f5ecd7] shadow-[0_18px_38px_rgba(25,55,34,0.22),inset_0_1px_0_rgba(255,255,255,0.14)]">
                 <div className="flex items-center justify-between gap-2 sm:gap-3">
                   <div>
-                    <p className="text-[9px] uppercase tracking-[0.26em] text-zinc-500 sm:text-[10px]">
-                      Dimensions
+                    <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-[#d9c28a] sm:text-[10px]">
+                      Spatial Composition
                     </p>
-                    <p className="mt-0.5 text-sm font-semibold tracking-[-0.03em] text-zinc-900 sm:text-base">
+                    <p className={`${selectedFlatSerif.className} mt-1 text-xl font-semibold leading-none text-[#fff6df] sm:text-2xl`}>
                       Room dimensions
                     </p>
                   </div>
 
-                  <div className="rounded-full border border-white/55 bg-white/46 px-2 py-1 text-[10px] font-medium text-zinc-500 sm:px-3 sm:py-1.5 sm:text-[11px]">
+                  <div className="rounded-full border border-[#d9c28a]/35 bg-white/8 px-2 py-1 text-[10px] font-medium text-[#f5ecd7] sm:px-3 sm:py-1.5 sm:text-[11px]">
                     {dimensionItems.length} rooms
                   </div>
                 </div>
@@ -342,51 +290,44 @@ const SelectedFlatDetailsPanel = forwardRef<
                       dimensionItems.map((item, index) => (
                         <div
                           key={item.key}
-                          className="flex items-start justify-between gap-2 border-b border-white/45 pb-2.5 last:border-b-0 last:pb-0 sm:gap-3 sm:pb-3"
+                          className="flex items-start justify-between gap-2 border-b border-[#d9c28a]/18 pb-2.5 last:border-b-0 last:pb-0 sm:gap-3 sm:pb-3"
                         >
                           <div className="flex min-w-0 items-start gap-2 sm:gap-3">
-                            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/55 bg-white/46 sm:h-9 sm:w-9">
-                              <Ruler className="h-3.5 w-3.5 text-zinc-600 sm:h-4 sm:w-4" />
+                            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#d9c28a]/30 bg-white/8 sm:h-9 sm:w-9">
+                              <Ruler className="h-3.5 w-3.5 text-[#d9c28a] sm:h-4 sm:w-4" />
                             </div>
 
                             <div className="min-w-0">
-                              <p className="text-[9px] uppercase tracking-[0.24em] text-zinc-400 sm:text-[10px]">
+                              <p className="text-[9px] uppercase tracking-[0.24em] text-[#d9c28a]/70 sm:text-[10px]">
                                 {String(index + 1).padStart(2, "0")}
                               </p>
-                              <p className="mt-0.5 truncate text-xs font-medium text-zinc-800 sm:text-sm">
+                              <p className="mt-0.5 truncate text-xs font-medium text-[#fff6df] sm:text-sm">
                                 {item.label}
                               </p>
                             </div>
                           </div>
 
-                          <p className="shrink-0 text-right text-xs font-semibold tracking-[0.01em] text-zinc-900 sm:text-sm">
+                          <p className="shrink-0 text-right text-xs font-semibold tracking-[0.01em] text-[#f5ecd7] sm:text-sm">
                             {item.value}
                           </p>
                         </div>
                       ))
-                    ) : (
-                      <div className="py-4 text-xs text-zinc-500 sm:py-6 sm:text-sm">
-                        Room dimensions are not available for this apartment yet.
-                      </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               </div>
             ) : null}
 
-            <div
-              className={`mt-3 border-t border-white/45 px-3 pt-2.5 sm:mt-4 sm:px-4 sm:pt-3 md:px-5 ${
-                desktopEnhancedCompact
-                  ? "pb-0.5"
-                  : "hidden"
-              }`}
-            >
+            <div className="mt-6 pb-0.5">
               <button
                 type="button"
                 onClick={handleOpenWalkthrough}
-                className="inline-flex w-full items-center justify-center rounded-full border border-[#d4b06a]/65 bg-[linear-gradient(135deg,#f5e4bd_0%,#dfbf7e_44%,#b8863f_100%)] px-3 py-2.5 text-xs font-semibold text-[#2f2009] shadow-[0_16px_34px_rgba(120,84,28,0.22),inset_0_1px_0_rgba(255,248,230,0.72)] transition hover:brightness-[1.03] sm:px-4 sm:py-3 sm:text-sm md:py-3.5"
+                className="group grid w-full grid-cols-[1fr_auto] items-center rounded-full border border-[#d8bd78]/80 bg-[linear-gradient(135deg,#25442d_0%,#17321f_100%)] p-1.5 pl-6 text-left text-xs font-bold uppercase tracking-[0.08em] text-[#fff6df] shadow-[0_18px_42px_rgba(20,55,30,0.30),inset_0_1px_0_rgba(255,255,255,0.16)] transition hover:brightness-[1.06] sm:text-sm"
               >
-                Open walkthrough
+                <span>Open Walkthrough</span>
+                <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[#ead39a]/80 bg-[radial-gradient(circle_at_35%_28%,#f3dfaa_0%,#bd9650_58%,#8d6930_100%)] text-white shadow-[0_10px_24px_rgba(76,52,18,0.28),inset_0_1px_0_rgba(255,255,255,0.38)] transition group-hover:translate-x-0.5">
+                  <ArrowRight className="h-5 w-5" />
+                </span>
               </button>
             </div>
           </div>
@@ -412,15 +353,19 @@ const SelectedFlatDetailsPanel = forwardRef<
         event.stopPropagation();
       }}
     >
-      <div className="relative max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-[30px] border border-white/14 bg-[linear-gradient(180deg,rgba(21,24,31,0.95),rgba(27,31,39,0.92))] text-white shadow-[0_28px_90px_rgba(0,0,0,0.38)] backdrop-blur-[26px] custom-scrollbar sm:max-h-[calc(100dvh-2rem)] xl:max-h-[min(78dvh,860px)] xl:overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(246,226,181,0.07),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(168,135,86,0.06),transparent_26%)]" />
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.025),transparent_16%,transparent_82%,rgba(0,0,0,0.10))]" />
+      <div
+        className={`custom-scrollbar max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-[34px] rounded-tr-[72px] rounded-bl-[24px] ${premiumPanelShellClassName} sm:max-h-[calc(100dvh-2rem)] xl:max-h-[min(78dvh,860px)] xl:overflow-hidden`}
+      >
+        <div className="pointer-events-none absolute inset-[10px] rounded-[26px] rounded-tr-[58px] rounded-bl-[18px] border border-[#ead8a4]/55" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_8%_5%,rgba(255,255,255,0.88),transparent_30%),radial-gradient(circle_at_91%_12%,rgba(236,218,169,0.28),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.24),rgba(232,236,222,0.18))]" />
+        <div className={`${ornamentLineClassName} -right-5 top-12 h-40 w-28 rounded-[50%] border-l`} />
+        <div className={`${ornamentLineClassName} -bottom-12 -left-8 h-56 w-36 rounded-[50%] border-r`} />
 
-        <div className="relative p-4 sm:p-5 xl:flex xl:h-full xl:flex-col xl:p-6">
-          <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-4">
+        <div className="relative z-10 p-5 sm:p-6 xl:flex xl:h-full xl:flex-col xl:p-7">
+          <div className="flex items-start justify-between gap-4 border-b border-[#d8bd78]/45 pb-5">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2.5">
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.32em] text-white/60">
+                <span className="rounded-full border border-[#d8bd78]/55 bg-[#f8f4e8]/74 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.32em] text-[#697560]">
                   Signature Residence
                 </span>
                 <span
@@ -435,26 +380,26 @@ const SelectedFlatDetailsPanel = forwardRef<
 
               <div className="mt-3 flex flex-wrap items-end gap-x-5 gap-y-2">
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.28em] text-white/38">
+                  <p className="text-[10px] uppercase tracking-[0.32em] text-[#697560]">
                     Selected Flat
                   </p>
-                  <h3 className="mt-1.5 text-[2rem] font-semibold leading-none tracking-[-0.08em] text-white sm:text-[2.45rem] xl:text-[2.8rem]">
+                  <h3 className={`${selectedFlatSerif.className} mt-1.5 text-[2.6rem] font-medium leading-none text-[#21462d] sm:text-[3.2rem] xl:text-[3.75rem]`}>
                     {apartment.title}
                   </h3>
                 </div>
 
-                <div className="pb-1 text-sm text-white/54 sm:text-base">
+                <div className="pb-1 text-sm text-[#687468] sm:text-base">
                   Floor{" "}
-                  <span className="font-medium text-white/86">
+                  <span className="font-semibold text-[#21462d]">
                     {apartment.floorLabel || apartment.floor}
                   </span>
                 </div>
               </div>
 
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-white/62 sm:text-[15px]">
-                A quieter, more curated apartment brief with live inventory
-                details, dimensional planning data, and a premium preview panel
-                designed to feel spacious without overpowering the master plan.
+              <p className="mt-4 max-w-3xl text-sm font-medium leading-6 text-[#687468] sm:text-[15px]">
+                Open the full apartment walkthrough from this residence, with
+                live inventory details and dimensional planning data in a
+                warm premium presentation.
               </p>
             </div>
 
@@ -462,7 +407,7 @@ const SelectedFlatDetailsPanel = forwardRef<
               <button
                 type="button"
                 onClick={onClose}
-                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/6 text-white/76 transition hover:bg-white/12 hover:text-white"
+                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#d8bd78]/65 bg-[#f8f4e8]/82 text-[#58715f] shadow-[0_12px_28px_rgba(33,50,35,0.10),inset_0_1px_0_rgba(255,255,255,0.95)] transition hover:bg-white"
                 aria-label="Close flat details"
               >
                 <X className="h-4 w-4" />
@@ -474,99 +419,99 @@ const SelectedFlatDetailsPanel = forwardRef<
             <div className="flex min-w-0 flex-col">
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                 <div className={metaCardClassName}>
-                  <p className="text-[10px] uppercase tracking-[0.24em] text-white/38">
+                  <p className="text-[10px] uppercase tracking-[0.24em] text-[#9a8054]">
                     Tower
                   </p>
-                  <div className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-white/92">
-                    <Building2 className="h-4 w-4 text-[#d4c09a]" />
+                  <div className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-[#1f3f2b]">
+                    <Building2 className="h-4 w-4 text-[#a88a45]" />
                     {apartment.tower}
                   </div>
                 </div>
 
                 <div className={metaCardClassName}>
-                  <p className="text-[10px] uppercase tracking-[0.24em] text-white/38">
+                  <p className="text-[10px] uppercase tracking-[0.24em] text-[#9a8054]">
                     Configuration
                   </p>
-                  <div className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-white/92">
-                    <BedDouble className="h-4 w-4 text-[#d4c09a]" />
+                  <div className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-[#1f3f2b]">
+                    <BedDouble className="h-4 w-4 text-[#a88a45]" />
                     {apartment.bhk} BHK
                   </div>
                 </div>
 
                 <div className={metaCardClassName}>
-                  <p className="text-[10px] uppercase tracking-[0.24em] text-white/38">
+                  <p className="text-[10px] uppercase tracking-[0.24em] text-[#9a8054]">
                     Facing
                   </p>
-                  <div className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-white/92">
-                    <MapPin className="h-4 w-4 text-[#d4c09a]" />
+                  <div className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-[#1f3f2b]">
+                    <Compass className="h-4 w-4 text-[#a88a45]" />
                     {apartment.facing}
                   </div>
                 </div>
 
                 <div className={metaCardClassName}>
-                  <p className="text-[10px] uppercase tracking-[0.24em] text-white/38">
+                  <p className="text-[10px] uppercase tracking-[0.24em] text-[#9a8054]">
                     Area
                   </p>
-                  <div className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-white/92">
-                    <Expand className="h-4 w-4 text-[#d4c09a]" />
+                  <div className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-[#1f3f2b]">
+                    <Expand className="h-4 w-4 text-[#a88a45]" />
                     {apartment.areaSqft} sqft
                   </div>
                 </div>
 
                 <div className={metaCardClassName}>
-                  <p className="text-[10px] uppercase tracking-[0.24em] text-white/38">
+                  <p className="text-[10px] uppercase tracking-[0.24em] text-[#9a8054]">
                     Inventory
                   </p>
-                  <div className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-white/92">
+                  <div className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-[#1f3f2b]">
                     <span
-                      className={`inline-flex h-2.5 w-2.5 rounded-full ${statusStyles.dotClassName}`}
+                      className="inline-flex h-2.5 w-2.5 rounded-full bg-[#5f8d57]"
                     />
                     {apartment.status}
                   </div>
                 </div>
               </div>
 
-              <div className="mt-4 overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.025),rgba(255,255,255,0.015))]">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 px-5 py-3.5">
+              <div className="mt-4 overflow-hidden rounded-[28px] border border-[#d8bd78]/55 bg-[linear-gradient(180deg,rgba(35,65,42,0.96),rgba(28,54,36,0.98))] text-[#f5ecd7] shadow-[0_18px_38px_rgba(25,55,34,0.22),inset_0_1px_0_rgba(255,255,255,0.14)]">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#d9c28a]/18 px-5 py-3.5">
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.26em] text-white/38">
-                      Spatial Schedule
+                    <p className="text-[10px] uppercase tracking-[0.28em] text-[#d9c28a]">
+                      Spatial Composition
                     </p>
-                    <h4 className="mt-1.5 text-[1.05rem] font-semibold tracking-[-0.04em] text-white">
+                    <h4 className={`${selectedFlatSerif.className} mt-1.5 text-2xl font-semibold leading-none text-[#fff6df]`}>
                       Room dimensions
                     </h4>
                   </div>
 
-                  <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-white/58">
+                  <div className="rounded-full border border-[#d9c28a]/35 bg-white/8 px-3 py-1.5 text-[11px] font-medium text-[#f5ecd7]">
                     Detailed layout
                   </div>
                 </div>
 
                 {dimensionItems.length > 0 ? (
                   <div className="px-5 py-3 sm:py-4">
-                    <div className="grid gap-x-6 divide-y divide-white/8 sm:grid-cols-2 sm:divide-y-0">
+                    <div className="grid gap-x-6 divide-y divide-[#d9c28a]/18 sm:grid-cols-2 sm:divide-y-0">
                       {dimensionItems.map((item, index) => (
                         <div
                           key={item.key}
-                          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3 sm:border-b sm:border-white/8"
+                          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3 sm:border-b sm:border-[#d9c28a]/18"
                         >
                           <div className="flex min-w-0 items-center gap-3">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5">
-                              <Ruler className="h-4 w-4 text-[#d6c29d]" />
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#d9c28a]/30 bg-white/8">
+                              <Ruler className="h-4 w-4 text-[#d9c28a]" />
                             </div>
 
                             <div className="min-w-0">
-                              <p className="text-[10px] uppercase tracking-[0.24em] text-white/32">
+                              <p className="text-[10px] uppercase tracking-[0.24em] text-[#d9c28a]/70">
                                 {String(index + 1).padStart(2, "0")}
                               </p>
-                              <p className="truncate text-sm font-medium text-white/88">
+                              <p className="truncate text-sm font-medium text-[#fff6df]">
                                 {item.label}
                               </p>
                             </div>
                           </div>
 
                           <div className="text-right">
-                            <p className="text-sm font-semibold tracking-[0.01em] text-[#f2e6cc]">
+                            <p className="text-sm font-semibold tracking-[0.01em] text-[#f5ecd7]">
                               {item.value}
                             </p>
                           </div>
@@ -575,27 +520,27 @@ const SelectedFlatDetailsPanel = forwardRef<
                     </div>
                   </div>
                 ) : (
-                  <div className="px-5 py-6 text-sm text-white/52">
+                  <div className="px-5 py-6 text-sm text-[#f5ecd7]/72">
                     Room dimensions are not available for this apartment yet.
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="min-w-0 xl:border-l xl:border-white/10 xl:pl-5">
-              <div className="overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.018))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-                <div className="border-b border-white/8 px-5 py-4">
-                  <p className="text-[10px] uppercase tracking-[0.26em] text-white/38">
+            <div className="min-w-0 xl:border-l xl:border-[#d8bd78]/45 xl:pl-5">
+              <div className="overflow-hidden rounded-[28px] border border-[#d8bd78]/55 bg-[#f8f4e8]/68 shadow-[0_14px_32px_rgba(39,47,34,0.10),inset_0_1px_0_rgba(255,255,255,0.94)] backdrop-blur-md">
+                <div className="border-b border-[#d8bd78]/40 px-5 py-4">
+                  <p className="text-[10px] uppercase tracking-[0.26em] text-[#9a8054]">
                     Private Preview
                   </p>
-                  <h4 className="mt-1.5 text-lg font-semibold tracking-[-0.04em] text-white">
+                  <h4 className={`${selectedFlatSerif.className} mt-1.5 text-2xl font-semibold leading-none text-[#21462d]`}>
                     Curated walkthrough teaser
                   </h4>
                 </div>
 
                 <div className="p-4">
                   <div
-                    className="group relative overflow-hidden rounded-[22px] border border-white/10 bg-white/[0.03] cursor-pointer"
+                    className="group relative cursor-pointer overflow-hidden rounded-[24px] border border-[#d8bd78]/55 bg-[#f8f4e8]/70"
                     onClick={handleOpenWalkthrough}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
@@ -622,25 +567,25 @@ const SelectedFlatDetailsPanel = forwardRef<
                             event.stopPropagation();
                             handleOpenWalkthrough();
                           }}
-                          className="flex h-[4.75rem] w-[4.75rem] items-center justify-center rounded-full border border-white/65 bg-white/82 shadow-[0_18px_34px_rgba(15,23,42,0.14)] backdrop-blur-md transition duration-300 hover:scale-105 hover:bg-white sm:h-[5.25rem] sm:w-[5.25rem]"
+                          className="flex h-[4.75rem] w-[4.75rem] items-center justify-center rounded-full border border-[#ead39a]/80 bg-[radial-gradient(circle_at_35%_28%,#f3dfaa_0%,#bd9650_58%,#8d6930_100%)] text-white shadow-[0_18px_34px_rgba(76,52,18,0.24)] transition duration-300 hover:scale-105 sm:h-[5.25rem] sm:w-[5.25rem]"
                           aria-label="Play preview"
                         >
-                          <Play className="ml-1 h-7 w-7 fill-zinc-900 text-zinc-900 sm:h-8 sm:w-8" />
+                          <Play className="ml-1 h-7 w-7 fill-white text-white sm:h-8 sm:w-8" />
                         </button>
                       </div>
 
                       <div className="absolute inset-x-0 bottom-0 p-4">
-                        <div className="flex items-end justify-between gap-3 rounded-[18px] border border-white/55 bg-white/70 p-3 backdrop-blur-md">
+                        <div className="flex items-end justify-between gap-3 rounded-[20px] border border-[#d8bd78]/55 bg-[#f8f4e8]/82 p-3 backdrop-blur-md">
                           <div>
-                            <p className="text-[10px] uppercase tracking-[0.24em] text-zinc-500">
+                            <p className="text-[10px] uppercase tracking-[0.24em] text-[#9a8054]">
                               Private View
                             </p>
-                            <p className="mt-1 text-sm font-medium text-zinc-900">
+                            <p className="mt-1 text-sm font-bold text-[#1f3f2b]">
                               Interior walkthrough preview
                             </p>
                           </div>
 
-                          <div className="rounded-full border border-white/60 bg-white/85 px-3 py-1.5 text-[11px] font-medium text-zinc-700">
+                          <div className="rounded-full border border-[#d8bd78]/55 bg-white/55 px-3 py-1.5 text-[11px] font-medium text-[#58715f]">
                             Video preview
                           </div>
                         </div>
@@ -651,18 +596,16 @@ const SelectedFlatDetailsPanel = forwardRef<
               </div>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                <div className="rounded-[22px] border border-white/10 bg-white/[0.04] px-5 py-3.5">
-                  <p className="text-[10px] uppercase tracking-[0.24em] text-white/38">
-                    Residence Note
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-white/68">
-                    Live stock-linked apartment information is presented in a
-                    calmer premium layout so the details feel clear, polished,
-                    and easier to absorb at a glance.
-                  </p>
-                </div>
-
-                
+                <button
+                  type="button"
+                  onClick={handleOpenWalkthrough}
+                  className="group grid w-full grid-cols-[1fr_auto] items-center rounded-full border border-[#d8bd78]/80 bg-[linear-gradient(135deg,#25442d_0%,#17321f_100%)] p-1.5 pl-6 text-left text-sm font-bold uppercase tracking-[0.08em] text-[#fff6df] shadow-[0_18px_42px_rgba(20,55,30,0.30),inset_0_1px_0_rgba(255,255,255,0.16)] transition hover:brightness-[1.06]"
+                >
+                  <span>Open Walkthrough</span>
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[#ead39a]/80 bg-[radial-gradient(circle_at_35%_28%,#f3dfaa_0%,#bd9650_58%,#8d6930_100%)] text-white shadow-[0_10px_24px_rgba(76,52,18,0.28),inset_0_1px_0_rgba(255,255,255,0.38)] transition group-hover:translate-x-0.5">
+                    <ArrowRight className="h-5 w-5" />
+                  </span>
+                </button>
               </div>
             </div>
           </div>

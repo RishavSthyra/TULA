@@ -1,3 +1,5 @@
+import { readJsonResponse } from "@/lib/utils";
+
 const LEGACY_CDN_ORIGIN = "https://cdn.sthyra.com";
 const signedUrlCache = new Map<string, string>();
 const pendingSignedUrlCache = new Map<string, Promise<string>>();
@@ -31,9 +33,9 @@ function normalizeClientR2Key(input: string) {
 }
 
 async function readSignedAssetResponse(response: Response) {
-  const payload = (await response.json().catch(() => null)) as
-    | { error?: string; url?: string; urls?: Record<string, string> }
-    | null;
+  const payload = await readJsonResponse<
+    { error?: string; url?: string; urls?: Record<string, string> } | null
+  >(response, "Signed asset API");
 
   if (!response.ok) {
     throw new Error(payload?.error || "Failed to sign asset.");

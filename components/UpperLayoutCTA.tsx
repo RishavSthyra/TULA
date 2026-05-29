@@ -780,7 +780,7 @@ export default function UpperLayoutCTA({
           transition={spring}
           className={`relative max-w-full overflow-hidden rounded-full border shadow-[0_14px_42px_rgba(0,0,0,0.34)] backdrop-blur-2xl ${
             isDesktopTopRail
-              ? "border-white/12 bg-black/72 px-1.5 py-1.5 shadow-[0_18px_40px_rgba(0,0,0,0.28)]"
+              ? "border-[#dfcfaa]/70 bg-[linear-gradient(180deg,rgba(251,249,241,0.96),rgba(241,237,226,0.92))] px-1.5 py-1.5 text-[#4d5f4d] shadow-[0_14px_32px_rgba(30,46,30,0.14),inset_0_1px_0_rgba(255,255,255,0.95)]"
               : "border-white/18 bg-black/42 px-2 py-2 shadow-[0_14px_42px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.16)] sm:px-2.5 sm:py-2.5"
           } ${
             shouldDockAtBottom
@@ -834,8 +834,8 @@ export default function UpperLayoutCTA({
                           isDesktopTopRail
                             ? `h-8 min-w-8 rounded-[0.9rem] ${
                                 button.isHighlight
-                                  ? "border-white bg-white text-black shadow-[0_8px_18px_rgba(255,255,255,0.12)]"
-                                  : "border-white/14 bg-white/[0.04] hover:border-white/28 hover:bg-white/[0.08]"
+                                  ? "border-[#7b9365]/70 bg-[radial-gradient(circle_at_32%_25%,#69895e_0%,#45603c_58%,#2a452d_100%)] text-white shadow-[0_10px_22px_rgba(33,57,36,0.2),inset_0_1px_0_rgba(255,255,255,0.16)]"
+                                  : "border-[#e0d0ac]/70 bg-[#fbf7ec]/70 text-[#4f6850] hover:border-[#d2be8f] hover:bg-[#f6efde]"
                               } ${shouldExpandDesktopButton ? "w-auto px-3" : "w-8 px-0"}`
                             : `rounded-[1rem] text-[9px] shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] xl:text-[10px] 2xl:rounded-[1.05rem] 2xl:text-xs ${
                                 button.isHighlight
@@ -867,7 +867,7 @@ export default function UpperLayoutCTA({
                         <motion.span
                           className={`flex items-center justify-center ${
                             isDesktopTopRail
-                              ? `${button.isHighlight ? "text-black" : "text-white"} h-3.5 w-3.5`
+                              ? `${button.isHighlight ? "text-white" : "text-[#4f6850]"} h-3.5 w-3.5`
                               : "h-6 w-4 sm:h-7 sm:w-[1.05rem] xl:h-8 xl:w-5 2xl:h-10 2xl:w-6"
                           }`}
                           animate={{ scale: isHovered ? 1.08 : 1 }}
@@ -883,7 +883,9 @@ export default function UpperLayoutCTA({
                               animate={{ width: "auto", opacity: 1, x: 0 }}
                               exit={{ width: 0, opacity: 0, x: -8 }}
                               transition={{ duration: 0.22, ease: "easeOut" }}
-                              className="overflow-hidden text-white text-xs whitespace-nowrap pl-2"
+                              className={`overflow-hidden whitespace-nowrap pl-2 text-xs ${
+                                isDesktopTopRail ? "text-[#4f6850]" : "text-white"
+                              }`}
                             >
                               {button.name}
                             </motion.span>
@@ -904,8 +906,8 @@ export default function UpperLayoutCTA({
                         isDesktopTopRail
                           ? `h-8 min-w-8 rounded-[0.9rem] ${
                               button.isHighlight
-                                ? "border-white bg-white text-black shadow-[0_8px_18px_rgba(255,255,255,0.12)]"
-                                : "border-white/14 bg-white/[0.04] hover:border-white/28 hover:bg-white/[0.08]"
+                                ? "border-[#7b9365]/70 bg-[radial-gradient(circle_at_32%_25%,#69895e_0%,#45603c_58%,#2a452d_100%)] text-white shadow-[0_10px_22px_rgba(33,57,36,0.2),inset_0_1px_0_rgba(255,255,255,0.16)]"
+                                : "border-[#e0d0ac]/70 bg-[#fbf7ec]/70 text-[#4f6850] hover:border-[#d2be8f] hover:bg-[#f6efde]"
                             } ${shouldExpandDesktopButton ? "w-auto px-3" : "w-8 px-0"}`
                           : `rounded-[1rem] text-[9px] shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] xl:text-[10px] 2xl:rounded-[1.05rem] 2xl:text-xs ${
                               button.isHighlight
@@ -937,7 +939,7 @@ export default function UpperLayoutCTA({
                       <motion.span
                         className={`flex items-center justify-center ${
                           isDesktopTopRail
-                            ? `${button.isHighlight ? "text-black" : "text-white"} h-3.5 w-3.5`
+                            ? `${button.isHighlight ? "text-white" : "text-[#4f6850]"} h-3.5 w-3.5`
                             : "h-6 w-4 sm:h-7 sm:w-[1.05rem] xl:h-8 xl:w-5 2xl:h-10 2xl:w-6"
                         }`}
                         animate={{ scale: isHovered ? 1.08 : 1 }}
@@ -953,7 +955,9 @@ export default function UpperLayoutCTA({
                             animate={{ width: "auto", opacity: 1, x: 0 }}
                             exit={{ width: 0, opacity: 0, x: -8 }}
                             transition={{ duration: 0.22, ease: "easeOut" }}
-                            className="overflow-hidden text-white text-xs whitespace-nowrap pl-2"
+                            className={`overflow-hidden whitespace-nowrap pl-2 text-xs ${
+                              isDesktopTopRail ? "text-[#4f6850]" : "text-white"
+                            }`}
                           >
                             {button.name}
                           </motion.span>
