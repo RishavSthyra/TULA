@@ -4,79 +4,93 @@
     "name": "NICE Cricket Arena",
     "category": "park",
     "lng": 77.64841362708708,
-    "lat": 13.161942364746972, 
+    "lat": 13.161942364746972,
     "distanceLabel": "5.2 km",
     "timeLabel": "12 min",
     "rating": 4.4,
     "featured": true,
-    "image": "/RGA.webp"
+    "images": [
+      "/RGA.webp"
+    ]
   },
   {
     "id": 102,
     "name": "Naadaprabhu Cricket Ground",
     "category": "park",
     "lng": 77.64952356898075,
-    "lat": 13.153054544382595, 
+    "lat": 13.153054544382595,
     "distanceLabel": "5.8 km",
     "timeLabel": "15 mins",
     "rating": 4.1,
     "featured": true,
-    "image": "/wipro.webp"
+    "images": [
+      "/wipro.webp"
+    ]
   },
   {
     "id": 103,
     "name": "THE WOODS",
     "category": "park",
     "lng": 77.64891216584442,
-    "lat": 13.139390547234646, 
+    "lat": 13.139390547234646,
     "distanceLabel": "3.7 km",
     "timeLabel": "11 min",
     "rating": 4.2,
-    "image": "/cessna.webp"
+    "images": [
+      "/cessna.webp"
+    ]
   },
   {
     "id": 104,
     "name": "RATHNAMAHAL TECH PARK",
     "category": "IT Company",
     "lng": 77.64865342293805,
-    "lat": 13.135640374417097, 
+    "lat": 13.135640374417097,
     "distanceLabel": "8.3 km",
     "timeLabel": "18 min",
     "rating": 4.1,
-    "image": "/infosys.webp"
+    "images": [
+      "/infosys.webp"
+    ]
   },
   {
     "id": 105,
     "name": "Amazon Office - Sattva Horizon",
     "category": "IT Company",
     "lng": 77.61121305377569,
-    "lat": 13.121470587851489, 
+    "lat": 13.121470587851489,
     "distanceLabel": "5.3 km",
     "timeLabel": "12 min",
     "rating": 4.4,
-    "image": "/greenwood.webp"
+    "images": [
+      "/greenwood.webp"
+    ]
   },
   {
     "id": 106,
     "name": "Infosys Limited",
     "category": "IT Company",
     "lng": 77.60567971672322,
-    "lat": 13.1172353223061, 
+    "lat": 13.1172353223061,
     "distanceLabel": "7.3 km",
     "timeLabel": "14 min",
     "rating": 4.7,
-    "image": "/oakridge.webp"
+    "images": [
+      "/oakridge.webp"
+    ]
   },
   {
     "id": 107,
     "name": "Philips Innovation Campus,Yelahanka",
     "category": "IT Company",
     "lng": 77.60152593838274,
-    "lat": 13.110900156499111, 
+    "lat": 13.110900156499111,
     "distanceLabel": "8.1 km",
     "timeLabel": "17 min",
     "rating": 4.6,
-    "image": "/aizm.webp"
+    "images": [
+      "/aizm.webp"
+    ]
   },
   {
     "id": 108,
@@ -87,18 +101,22 @@
     "distanceLabel": "11.9 km",
     "timeLabel": "18 min",
     "rating": 4.6,
-    "image": "/RGA.webp"
+    "images": [
+      "/RGA.webp"
+    ]
   },
   {
     "id": 109,
     "name": "North Gate Tech Park",
     "category": "IT Company",
     "lng": 77.61725675137997,
-    "lat": 13.115958661391444, 
+    "lat": 13.115958661391444,
     "distanceLabel": "13 km",
     "timeLabel": "6.8 min",
     "rating": 4.7,
-    "image": "/manipal.webp"
+    "images": [
+      "/manipal.webp"
+    ]
   },
   {
     "id": 110,
@@ -109,40 +127,48 @@
     "distanceLabel": "4.6 km",
     "timeLabel": "9 min",
     "rating": 4.6,
-    "image": "/natus.webp"
+    "images": [
+      "/natus.webp"
+    ]
   },
   {
     "id": 111,
     "name": "Collins Aerospace",
     "category": "IT Company",
     "lng": 77.6072856996299,
-    "lat": 13.116724321209192, 
+    "lat": 13.116724321209192,
     "distanceLabel": "6.9 km",
     "timeLabel": "14 min",
     "rating": 4.6,
-    "image": "/sparsh.webp"
+    "images": [
+      "/sparsh.webp"
+    ]
   },
   {
     "id": 112,
     "name": "Brindavan Group of Institutions",
     "category": "school",
     "lng": 77.6205947283966,
-    "lat": 13.125299750332704, 
+    "lat": 13.125299750332704,
     "distanceLabel": "6.3 km",
     "timeLabel": "13 min",
     "rating": 4.6,
-    "image": "/spandana.webp"
+    "images": [
+      "/spandana.webp"
+    ]
   },
   {
     "id": 113,
     "name": "Delhi Public School Bangalore North",
     "category": "school",
     "lng": 77.64109492644398,
-    "lat": 13.117630799336286, 
+    "lat": 13.117630799336286,
     "distanceLabel": "9 km",
     "timeLabel": "30 min",
     "rating": 4.3,
-    "image": "/dmart.webp"
+    "images": [
+      "/dmart.webp"
+    ]
   },
   {
     "id": 114,
@@ -153,29 +179,35 @@
     "distanceLabel": "8 km",
     "timeLabel": "18 min",
     "rating": 4.6,
-    "image": "/natura.webp"
+    "images": [
+      "/natura.webp"
+    ]
   },
   {
     "id": 115,
     "name": "Krishnadevaraya College Of Dental Sciences & Hospital",
     "category": "school",
     "lng": 77.60760115509859,
-    "lat": 13.149883557666934, 
+    "lat": 13.149883557666934,
     "distanceLabel": "4.8 km",
     "timeLabel": "12 min",
-    "rating": 4.0,
-    "image": "/curriouscity.webp"
+    "rating": 4,
+    "images": [
+      "/curriouscity.webp"
+    ]
   },
   {
     "id": 116,
     "name": "The Galleria Mall",
     "category": "mall",
     "lng": 77.59636889297427,
-    "lat": 13.095085550366072, 
+    "lat": 13.095085550366072,
     "distanceLabel": "11.5 km",
     "timeLabel": "20 min",
     "rating": 4.4,
-    "image": "/kidztopia.webp"
+    "images": [
+      "/kidztopia.webp"
+    ]
   },
   {
     "id": 117,
@@ -186,51 +218,61 @@
     "distanceLabel": "12.9 km",
     "timeLabel": "30 min",
     "rating": 4.4,
-    "image": "/metro.webp"
+    "images": [
+      "/metro.webp"
+    ]
   },
   {
     "id": 118,
     "name": "Mahatma Gandhi Botanical Garden GKVK",
     "category": "landmark",
     "lng": 77.57808445286804,
-    "lat": 13.078511909831805, 
+    "lat": 13.078511909831805,
     "distanceLabel": "13.9 km",
     "timeLabel": "35 min",
     "rating": 4.5,
-    "image": "/dmbus.webp"
+    "images": [
+      "/dmbus.webp"
+    ]
   },
   {
     "id": 119,
     "name": "D-Mart Yelahanka",
     "category": "mall",
     "lng": 77.58594589334606,
-    "lat": 13.100384431335538, 
+    "lat": 13.100384431335538,
     "distanceLabel": "12.7 km",
     "timeLabel": "25 min",
     "rating": 4.4,
-    "image": "/sobbs.webp"
+    "images": [
+      "/sobbs.webp"
+    ]
   },
   {
     "id": 120,
     "name": "SNITCH - Chikkajala, Bengaluru",
     "category": "mall",
-    "lng":  77.630107582106,
+    "lng": 77.630107582106,
     "lat": 13.16427342982948,
     "distanceLabel": "5.3 km",
     "timeLabel": "12 min",
-    "rating": 5.0,
-    "image": "/karmelaram.webp"
+    "rating": 5,
+    "images": [
+      "/Snitch-1.jpg","/Snitch-2.webp","/Snitch-3.webp"
+    ]
   },
   {
     "id": 121,
     "name": "Purva Aerocity",
     "category": "IT Company",
-    "lng":  77.62733713650881,
-    "lat": 13.167460255765018, 
+    "lng": 77.62733713650881,
+    "lat": 13.167460255765018,
     "distanceLabel": "3.2 km",
     "timeLabel": "8 min",
-    "rating": 5.0,
-    "image": "/karmelaram.webp"
+    "rating": 5,
+    "images": [
+      "/karmelaram.webp"
+    ]
   },
   {
     "id": 122,
@@ -241,17 +283,21 @@
     "distanceLabel": "5.2 km",
     "timeLabel": "12 min",
     "rating": 4.3,
-    "image": "/karmelaram.webp"
+    "images": [
+      "/karmelaram.webp"
+    ]
   },
   {
     "id": 123,
     "name": "Sparsh Hospital Yelahanka",
     "category": "hospital",
     "lng": 77.59893746964057,
-    "lat": 13.095526886785416, 
+    "lat": 13.095526886785416,
     "distanceLabel": "8.3 km",
     "timeLabel": "17 min",
     "rating": 4.3,
-    "image": "/karmelaram.webp"
+    "images": [
+      "/karmelaram.webp"
+    ]
   }
 ]

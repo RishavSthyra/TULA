@@ -1,12 +1,12 @@
 "use client";
 
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { Cormorant_Garamond } from "next/font/google";
 import pLimit from "p-limit";
 import poidata from "@/data/poi.json";
 import { Map as MapView,
   MapMarker,
   MarkerContent,
-  MarkerPopup,
   MarkerTooltip,
   MapControls,
   MapClusterLayer,
@@ -26,50 +26,28 @@ import {
   BusFront,
   Landmark,
   Search,
-  MapPinned,
   X,
-  Layers,
+  Map as MapIcon,
+  SlidersHorizontal,
+  LocateFixed,
+  Clock3,
+  Star,
+  Navigation,
+  Heart,
+  Share2,
+  ParkingCircle,
+  Coffee,
+  Accessibility,
+  WalletCards,
+  Droplets,
 } from "lucide-react";
-import {
-  MdKeyboardArrowLeft,
-  MdOutlineMap,
-  MdOutlinePublic,
-  MdOutlineTerrain,
-} from "react-icons/md";
 
-const styles = {
-  default: undefined,
-  openstreetmap: "https://tiles.openfreemap.org/styles/bright",
-  openstreetmap3d: "https://tiles.openfreemap.org/styles/liberty",
-};
+const MAP_STYLE = "https://tiles.openfreemap.org/styles/bright";
 
-type StyleKey = keyof typeof styles;
-
-const styleOptions: Array<{
-  key: StyleKey;
-  label: string;
-  shortLabel: string;
-  icon: typeof MdOutlineMap;
-}> = [
-  {
-    key: "default",
-    label: "Default Carto",
-    shortLabel: "Carto",
-    icon: MdOutlineMap,
-  },
-  {
-    key: "openstreetmap",
-    label: "OpenStreetMap",
-    shortLabel: "OSM",
-    icon: MdOutlinePublic,
-  },
-  {
-    key: "openstreetmap3d",
-    label: "OpenStreetMap 3D",
-    shortLabel: "3D",
-    icon: MdOutlineTerrain,
-  },
-];
+const displaySerif = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["500", "600"],
+});
 
 type RouteData = {
   id: number;
@@ -104,6 +82,7 @@ export type Poi = {
   timeLabel: string;
   rating?: number;
   featured?: boolean;
+  images?: string[];
   image?: string;
 };
 
@@ -113,17 +92,13 @@ type ClusterPoiProperties = {
   category: PoiCategory;
 };
 
+type DistanceFilter = "5km" | "10km" | "all";
+type SortMode = "popularity" | "nearest" | "rating";
+
 const centerPlace = {
   name: "Whisper of Trees",
   lng: 77.63036955360322,
   lat: 13.153818578384746, 
-};
-
-const projectCard = {
-  title: "Whisper of Trees | TULA",
-  description:
-    "A premium residential community positioned at the heart of a fast-growing neighborhood, with strong access to workplaces, schools, retail, healthcare, and everyday conveniences.",
-  image: "/VeranzaFavicon.svg",
 };
 
 const pois : Poi[] = poidata as Poi[];
@@ -147,6 +122,12 @@ const POI_CLUSTER_RADIUS = 58;
 const ROUTE_ANIMATION_DURATION = 2600;
 const ROUTE_ANIMATION_WINDOW_SIZE = 30;
 const provisionalRouteCache = new Map<number, RouteData>();
+const PREMIUM_OLIVE_GRADIENT =
+  "bg-[radial-gradient(circle_at_32%_25%,#69895e_0%,#45603c_58%,#2a452d_100%)]";
+const PREMIUM_OLIVE_BUTTON =
+  "bg-[radial-gradient(circle_at_32%_25%,#69895e_0%,#45603c_58%,#2a452d_100%)]";
+const PREMIUM_PANEL =
+  "border border-[#dfcfac]/80 bg-[linear-gradient(180deg,rgba(255,252,245,0.96)_0%,rgba(245,239,228,0.9)_100%)] shadow-[0_20px_46px_rgba(43,52,37,0.08),inset_0_1px_0_rgba(255,255,255,0.96)]";
 
 type IdleWindow = Window &
   typeof globalThis & {
@@ -611,97 +592,17 @@ const categoryMeta: Record<
   },
 };
 
-const CategoryBadge = memo(function CategoryBadge({
-  category,
-  selected = false,
-  size = "md",
-}: {
-  category: PoiCategory;
-  selected?: boolean;
-  size?: "sm" | "md";
-}) {
-  const meta = categoryMeta[category];
-  const Icon = meta.icon;
-
-  const sizeClass = size === "sm" ? "h-9 w-9" : "h-11 w-11";
-
-  const iconSizeClass = size === "sm" ? "size-4" : "size-5";
-
-  return (
-    <div className="relative flex items-center justify-center">
-      <div
-        className={`absolute inset-0 rounded-full blur-md transition-all duration-300 ${meta.glow} ${
-          selected ? "scale-125 opacity-80" : "opacity-40"
-        }`}
-      />
-      <div
-        className={`relative flex items-center justify-center rounded-full shadow-2xl  transition-all duration-300 ${sizeClass} ${meta.badgeBg} ${
-          selected ? "scale-100" : "group-hover:scale-100"
-        }`}
-      >
-        <Icon
-          className={`${iconSizeClass} ${meta.badgeIcon}`}
-          // strokeWidth={2.2}
-        />
-      </div>
-    </div>
-  );
-});
-
-const CategoryFilterChip = memo(function CategoryFilterChip({
-  active,
-  category,
-  onClick,
-}: {
-  active: boolean;
-  category: PoiCategory;
-  onClick: (category: PoiCategory) => void;
-}) {
-  const meta = categoryMeta[category];
-  const Icon = meta.icon;
-
-  return (
-    <button
-      type="button"
-      onClick={() => onClick(category)}
-      className={`flex min-h-12 items-center gap-2 rounded-2xl border px-2.5 py-2 text-left transition-all [@media(max-height:850px)]:min-h-10 [@media(max-height:850px)]:gap-1.5 [@media(max-height:850px)]:px-2 [@media(max-height:850px)]:py-1.5 ${
-        active
-          ? `${meta.panelClass} shadow-sm`
-          : "border-slate-200 bg-white/70 hover:bg-slate-50"
-      }`}
-    >
-      <div
-        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border [@media(max-height:850px)]:h-7 [@media(max-height:850px)]:w-7 ${
-          active ? "border-white/70 bg-white/70" : "border-slate-200 bg-slate-50"
-        }`}
-      >
-        <Icon
-          className={`size-4 ${
-            active ? meta.color : "text-slate-500"
-          }`}
-        />
-      </div>
-      <div>
-        <p className="text-xs font-medium text-slate-900">
-          {meta.label}
-        </p>
-      </div>
-    </button>
-  );
-});
-
 const PoiMarker = memo(function PoiMarker({
   poi,
   isSelected,
   onMarkerClick,
-  onViewRoute,
 }: {
   poi: Poi;
   isSelected: boolean;
   onMarkerClick: (poi: Poi) => void;
-  onViewRoute: (poi: Poi) => void;
 }) {
   const meta = categoryMeta[poi.category];
+  const Icon = meta.icon;
 
   return (
     <MapMarker longitude={poi.lng} latitude={poi.lat}>
@@ -709,86 +610,24 @@ const PoiMarker = memo(function PoiMarker({
         <button
           type="button"
           onClick={() => onMarkerClick(poi)}
-          className="group relative"
+          className="group relative flex items-center justify-center"
+          aria-label={poi.name}
         >
-          <CategoryBadge
-            category={poi.category}
-            selected={isSelected}
-            size="md"
-          />
+          <span
+            className={`relative flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(229,219,190,0.82)] shadow-[0_8px_18px_rgba(47,73,50,0.18)] transition ${PREMIUM_OLIVE_GRADIENT} ${
+              isSelected ? "scale-110 ring-4 ring-[#c4d8b7]/70" : ""
+            }`}
+          >
+            <Icon className="size-4 text-white" />
+          </span>
         </button>
       </MarkerContent>
-
-      <MarkerTooltip>{poi.name}</MarkerTooltip>
-
-      <MarkerPopup className="bg-transparent shadow-none border-none">
-        <div className="w-70 overflow-hidden rounded-2xl border border-slate-200 bg-white  shadow-[0_18px_40px_rgba(15,23,42,0.18)]">
-          {poi.image ? (
-            <div className="h-36 w-full overflow-hidden bg-slate-100">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={poi.image}
-                alt={poi.name}
-                className="h-full w-full object-cover"
-              />
-            </div>
-          ) : (
-            <div className="flex h-36 w-full items-center justify-center bg-slate-100 text-sm text-slate-400">
-              No image
-            </div>
-          )}
-
-          <div className="space-y-3 p-4">
-            <div>
-              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
-                {meta.label}
-              </p>
-              <h3 className="mt-1 text-base font-semibold text-slate-900">
-                {poi.name}
-              </h3>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
-              {poi.rating && (
-                <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 font-medium text-amber-700">
-                  ★ {poi.rating.toFixed(1)}
-                </span>
-              )}
-
-              <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1">
-                {poi.distanceLabel}
-              </span>
-
-              <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1">
-                {poi.timeLabel}
-              </span>
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => onViewRoute(poi)}
-                className="flex-1 rounded-xl cursor-pointer bg-slate-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
-              >
-                View Route
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  window.open(
-                    `https://www.google.com/maps/search/?api=1&query=${poi.lat},${poi.lng}`,
-                    "_blank",
-                  )
-                }
-                className="rounded-xl cursor-pointer border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-              >
-                Open
-              </button>
-            </div>
-          </div>
-        </div>
-      </MarkerPopup>
+      <MarkerTooltip
+        offset={10}
+        className="rounded-full border border-[#e4d8b7] bg-[#fffaf0] px-3 py-1 text-[0.68rem] font-semibold text-[#31482d] shadow-[0_10px_24px_rgba(43,52,37,0.12)]"
+      >
+        {poi.name}
+      </MarkerTooltip>
     </MapMarker>
   );
 });
@@ -937,6 +776,132 @@ function UserLocationAccuracyLayer({
   return null;
 }
 
+const nearbyAmenities = [
+  { label: "Parking", distance: "200 m", icon: ParkingCircle, color: "text-[#51663f]", bg: "bg-[#eef1e5]" },
+  { label: "Cafes", distance: "150 m", icon: Coffee, color: "text-[#8c6f2a]", bg: "bg-[#f6f0df]" },
+  { label: "Restroom", distance: "180 m", icon: Accessibility, color: "text-[#51663f]", bg: "bg-[#eef1e5]" },
+  { label: "ATM", distance: "220 m", icon: WalletCards, color: "text-[#6f6040]", bg: "bg-[#f4eddc]" },
+  { label: "Water", distance: "120 m", icon: Droplets, color: "text-[#51663f]", bg: "bg-[#eef1e5]" },
+];
+
+const placeDescriptions: Partial<Record<PoiCategory, string>> = {
+  park:
+    "A peaceful green escape with open spaces, landscaped surroundings, and room to unwind close to home.",
+  mall:
+    "A convenient retail destination with dining, essentials, and everyday shopping within easy reach.",
+  school:
+    "A well-connected education destination for families looking at practical daily access.",
+  hospital:
+    "A nearby healthcare stop with dependable access for regular and urgent needs.",
+  landmark:
+    "A recognizable neighborhood reference point that adds orientation and local character.",
+  "IT Company":
+    "A major workplace hub close to the project, useful for commute planning and daily convenience.",
+  bus_stop:
+    "A transit point that improves local connectivity for short everyday trips.",
+};
+
+function getPoiImages(poi: Poi | null) {
+  const images = poi?.images?.filter(Boolean) ?? [];
+
+  if (images.length > 0) {
+    return images;
+  }
+
+  return poi?.image ? [poi.image] : ["/RGA.webp"];
+}
+
+function getPoiImage(poi: Poi | null) {
+  return getPoiImages(poi)[0] ?? "/RGA.webp";
+}
+
+function getDisplayRoute(route: RouteData | null | undefined, poi: Poi | null) {
+  return {
+    distance: route ? formatDistance(route.distance) : poi?.distanceLabel ?? "3.7 km",
+    duration: route ? formatDuration(route.duration) : poi?.timeLabel ?? "6 min",
+  };
+}
+
+function getPoiDistanceMeters(poi: Poi, route: RouteData | null | undefined) {
+  return route?.distance ?? parseDistanceLabel(poi.distanceLabel);
+}
+
+function isPopularPoi(poi: Poi) {
+  return Boolean(poi.featured) || (poi.rating ?? 0) >= 4.4;
+}
+
+function isPoiOpenNow(poi: Poi, now = new Date()) {
+  const hour = now.getHours() + now.getMinutes() / 60;
+  const day = now.getDay();
+  const isWeekend = day === 0 || day === 6;
+
+  switch (poi.category) {
+    case "hospital":
+    case "bus_stop":
+      return true;
+    case "park":
+      return hour >= 5.5 && hour <= 20;
+    case "mall":
+      return hour >= 10 && hour <= 22.5;
+    case "school":
+      return !isWeekend && hour >= 8 && hour <= 17.5;
+    case "landmark":
+      return hour >= 9 && hour <= 18.5;
+    case "IT Company":
+      return !isWeekend && hour >= 8.5 && hour <= 20;
+    default:
+      return true;
+  }
+}
+
+function MetricPill({
+  icon: Icon,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+}) {
+  return (
+    <span className="inline-flex h-8 items-center gap-2 rounded-full border border-[#e8e0d2] bg-[#fffdf7]/88 px-3 text-[0.78rem] font-medium text-[#3e4b3d] shadow-[inset_0_1px_0_rgba(255,255,255,0.88)]">
+      <Icon className="size-3.5 text-[#38583b]" />
+      {children}
+    </span>
+  );
+}
+
+function PremiumSelect({
+  value,
+  onChange,
+  options,
+  icon: Icon,
+  ariaLabel,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: Array<{ value: string; label: string }>;
+  icon: React.ComponentType<{ className?: string }>;
+  ariaLabel: string;
+}) {
+  return (
+    <div className="relative">
+      <Icon className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[#55684a]" />
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        aria-label={ariaLabel}
+        className="h-12 w-full appearance-none rounded-full border border-[#e2d8c4] bg-[linear-gradient(180deg,rgba(255,253,248,0.98),rgba(247,242,233,0.96))] pl-10 pr-10 text-xs font-medium text-[#304238] shadow-[0_10px_22px_rgba(43,52,37,0.06),inset_0_1px_0_rgba(255,255,255,0.92)] outline-none transition focus:border-[#cbbd8c]"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-[#55684a]" />
+    </div>
+  );
+}
+
 
 export function CustomStyleExample() {
   const mapRef = useRef<MapRef>(null);
@@ -949,28 +914,28 @@ export function CustomStyleExample() {
   const routeCacheRef = useRef<Record<string, RouteData>>({});
   const routeCacheWriteChainRef = useRef<Promise<void>>(Promise.resolve());
 
-  const [style, setStyle] = useState<StyleKey>("default");
   const [routes, setRoutes] = useState<RouteData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUserRouteLoading, setIsUserRouteLoading] = useState(false);
   const [selectedPoiId, setSelectedPoiId] = useState<number | null>(null);
+  const [activePoiImage, setActivePoiImage] = useState<{
+    poiId: number;
+    image: string;
+  } | null>(null);
   const [routePoiId, setRoutePoiId] = useState<number | null>(null);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [userRoute, setUserRoute] = useState<RouteData | null>(null);
-  const [isFilterOpen, setIsFilterOpen] = useState(true);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
-  const [isDesktopCategoriesOpen, setIsDesktopCategoriesOpen] = useState(true);
   const [currentZoom, setCurrentZoom] = useState(15);
-  const [viewport, setViewport] = useState({ width: 0, height: 0 });
 
   const [selectedCategories, setSelectedCategories] = useState<PoiCategory[]>(
     DEFAULT_SELECTED_CATEGORIES,
   );
-
+  const [distanceFilter, setDistanceFilter] = useState<DistanceFilter>("5km");
+  const [sortMode, setSortMode] = useState<SortMode>("popularity");
+  const [openNowOnly, setOpenNowOnly] = useState(false);
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
-  const selectedStyle = styles[style];
-  const is3D = style === "openstreetmap3d";
   const poiIndexes = useMemo(() => {
     const byCategory = new Map<PoiCategory, Poi[]>(
       CATEGORY_ORDER.map((category) => [
@@ -1018,29 +983,6 @@ export function CustomStyleExample() {
       .catch(() => undefined);
 
     return routeCacheWriteChainRef.current;
-  }, []);
-
-  useEffect(() => {
-    mapRef.current?.easeTo?.({
-      pitch: is3D ? 55 : 0,
-      duration: 500,
-    });
-  }, [is3D]);
-
-  useEffect(() => {
-    const updateViewport = () => {
-      setViewport({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-    };
-
-    updateViewport();
-    window.addEventListener("resize", updateViewport);
-
-    return () => {
-      window.removeEventListener("resize", updateViewport);
-    };
   }, []);
 
   useEffect(() => {
@@ -1136,6 +1078,11 @@ export function CustomStyleExample() {
     };
   }, [enqueueRouteCacheSave]);
 
+  const routeLookup = useMemo(
+    () => new Map(routes.map((route) => [route.id, route] as const)),
+    [routes],
+  );
+
   const filteredPois = useMemo(() => {
     const q = deferredSearch.trim().toLowerCase();
     const selectedCategorySet = new Set(selectedCategories);
@@ -1160,7 +1107,41 @@ export function CustomStyleExample() {
     });
   }, [deferredSearch, poiIndexes.byCategory, selectedCategories]);
 
-  const visiblePois = filteredPois;
+  const visiblePois = useMemo(() => {
+    const thresholdMeters =
+      distanceFilter === "5km" ? 5000 : distanceFilter === "10km" ? 10000 : Number.POSITIVE_INFINITY;
+
+    const nextPois = filteredPois.filter((poi) => {
+      if (openNowOnly && !isPoiOpenNow(poi)) {
+        return false;
+      }
+
+      return getPoiDistanceMeters(poi, routeLookup.get(poi.id)) <= thresholdMeters;
+    });
+
+    nextPois.sort((left, right) => {
+      if (sortMode === "nearest") {
+        return (
+          getPoiDistanceMeters(left, routeLookup.get(left.id)) -
+          getPoiDistanceMeters(right, routeLookup.get(right.id))
+        );
+      }
+
+      if (sortMode === "rating") {
+        return (right.rating ?? 0) - (left.rating ?? 0);
+      }
+
+      const popularDelta = Number(isPopularPoi(right)) - Number(isPopularPoi(left));
+      if (popularDelta !== 0) {
+        return popularDelta;
+      }
+
+      return (right.rating ?? 0) - (left.rating ?? 0);
+    });
+
+    return nextPois;
+  }, [distanceFilter, filteredPois, openNowOnly, routeLookup, sortMode]);
+
   const clusterData = useMemo<
     GeoJSON.FeatureCollection<GeoJSON.Point, ClusterPoiProperties>
   >(
@@ -1179,11 +1160,6 @@ export function CustomStyleExample() {
     }),
     [poiIndexes.clusterFeatureById, visiblePois],
   );
-  const routeLookup = useMemo(
-    () => new Map(routes.map((route) => [route.id, route] as const)),
-    [routes],
-  );
-
   const clearPoiSelection = useCallback(() => {
     setRoutePoiId(null);
     setSelectedPoiId(null);
@@ -1225,7 +1201,6 @@ export function CustomStyleExample() {
   }, []);
 
   const handleFilteredPoiSelection = useCallback((poi: Poi) => {
-    setIsFilterOpen(false);
     setIsMobileFiltersOpen(false);
     handlePoiMarkerClick(poi);
   }, [handlePoiMarkerClick]);
@@ -1240,6 +1215,9 @@ export function CustomStyleExample() {
     setIsUserRouteLoading(false);
     setSearch("");
     setSelectedCategories(DEFAULT_SELECTED_CATEGORIES);
+    setDistanceFilter("5km");
+    setSortMode("popularity");
+    setOpenNowOnly(false);
     mapRef.current?.flyTo?.({
       center: [centerPlace.lng, centerPlace.lat],
       zoom: 15,
@@ -1372,6 +1350,7 @@ export function CustomStyleExample() {
 
   
   const selectedPoi =
+    visiblePois.find((poi) => poi.id === selectedPoiId) ??
     filteredPois.find((poi) => poi.id === selectedPoiId) ??
     pois.find((poi) => poi.id === selectedPoiId) ??
     null;
@@ -1409,14 +1388,33 @@ export function CustomStyleExample() {
   }, [userRoute, userRouteProgress]);
 
   const activeRouteColor = selectedPoi
-    ? categoryMeta[selectedPoi.category].routeColor
-    : "#22d3ee";
-  const userRouteColor = "#0f766e";
+    ? "#5d7a44"
+    : "#5d7a44";
+  const userRouteColor = "#4d6a3d";
   const showClusters = currentZoom < POI_CLUSTER_SWITCH_ZOOM;
-  const showFloatingStyleControl =
-    viewport.width > 0 &&
-    (viewport.width < 1536 || viewport.height <= 850) &&
-    !isMobileFiltersOpen;
+  const selectedDisplayPoi = selectedPoi ?? visiblePois[0] ?? pois[0] ?? null;
+  const selectedPoiImages = getPoiImages(selectedDisplayPoi);
+  const defaultSelectedPoiImage = selectedPoiImages[0] ?? "/RGA.webp";
+  const selectedMainImage =
+    selectedDisplayPoi &&
+    activePoiImage?.poiId === selectedDisplayPoi.id &&
+    selectedPoiImages.includes(activePoiImage.image)
+      ? activePoiImage.image
+      : defaultSelectedPoiImage;
+  const selectedMeta = selectedDisplayPoi
+    ? categoryMeta[selectedDisplayPoi.category]
+    : categoryMeta.park;
+  const SelectedIcon = selectedMeta.icon;
+  const selectedRouteMetrics = getDisplayRoute(
+    selectedDisplayPoi ? routeLookup.get(selectedDisplayPoi.id) : null,
+    selectedDisplayPoi,
+  );
+  const listedPois = visiblePois;
+  const selectedIsPopular = selectedDisplayPoi ? isPopularPoi(selectedDisplayPoi) : false;
+  const detailDescription =
+    (selectedDisplayPoi && placeDescriptions[selectedDisplayPoi.category]) ??
+    "A convenient nearby destination selected from the project neighborhood map.";
+
   const handleViewportChange = useCallback((viewport: { zoom: number }) => {
     const nextZoom = viewport.zoom;
 
@@ -1438,768 +1436,498 @@ export function CustomStyleExample() {
     }
   }, [stopAllRouteAnimations]);
 
+  useEffect(() => {
+    const resizeMap = () => {
+      mapRef.current?.resize();
+    };
+
+    resizeMap();
+    window.addEventListener("resize", resizeMap);
+
+    const frameId = window.requestAnimationFrame(resizeMap);
+
+    return () => {
+      window.removeEventListener("resize", resizeMap);
+      window.cancelAnimationFrame(frameId);
+    };
+  }, []);
+
   return (
-    <div className="relative h-dvh w-full overflow-hidden bg-slate-100">
-      <MapView
-        ref={mapRef}
-        center={[centerPlace.lng, centerPlace.lat]}
-        zoom={15}
-        fadeDuration={0}
-        onViewportChange={handleViewportChange}
-        styles={
-          selectedStyle
-            ? { light: selectedStyle, dark: selectedStyle }
-            : undefined
-        }
-      >
-        <MapControls
-          position="bottom-right"
-          showZoom
-          showCompass
-          showLocate
-          showFullscreen
-          onLocate={handleUserLocate}
-        />
+    <main className="relative min-h-dvh w-full max-w-[100vw] overflow-x-hidden bg-[#f3efe6] text-[#263b2b] xl:h-dvh xl:overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_76%_4%,rgba(255,255,255,0.92)_0%,rgba(255,255,255,0.38)_34%,transparent_58%),linear-gradient(135deg,#f8f4eb_0%,#eee7da_100%)]" />
+      <div className="pointer-events-none absolute inset-0 opacity-[0.26] [background-image:linear-gradient(rgba(92,112,78,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(92,112,78,0.06)_1px,transparent_1px)] [background-size:42px_42px]" />
 
-        <MapClickClearRoute
-          onClear={clearActiveRoute}
-          suppressRef={suppressNextMapClearRef}
-        />
+      <section className="relative z-10 flex min-h-dvh w-full max-w-full flex-col gap-5 overflow-x-hidden px-4 py-5 sm:px-6 xl:h-dvh xl:pl-[9.25rem] xl:pr-8 2xl:pl-[9.55rem] 2xl:pr-10">
+        <header className="grid w-full min-w-0 shrink-0 gap-4 lg:grid-cols-[minmax(21rem,40rem)_1fr_auto] lg:items-end 2xl:grid-cols-[minmax(30rem,41rem)_1fr_auto]">
+          <div>
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[#445a43]">
+              Discover Nearby
+            </p>
+            <h1 className={`${displaySerif.className} mt-2 text-[2.2rem] font-semibold leading-none text-[#315238] sm:text-[3rem] 2xl:text-[3.35rem]`}>
+              Explore Places
+            </h1>
+            <p className="mt-3 max-w-[22rem] text-sm leading-6 text-[#72796e]">
+              Find famous places and everyday essentials around you.
+            </p>
+          </div>
 
-        {userLocation ? (
-          <UserLocationAccuracyLayer location={userLocation} />
-        ) : null}
-        {userRoute && (
-          <>
-            <MapRoute
-              id="user-route-outline"
-              coordinates={userRoute.coordinates}
-              color="#ffffff"
-              width={3}
-              opacity={0.6}
+          <div className="relative lg:mb-2">
+            <Search className="pointer-events-none absolute left-5 top-1/2 size-5 -translate-y-1/2 text-[#304638]" />
+            <input
+              value={search}
+              onChange={(e) => applySearchInput(e.target.value)}
+              placeholder="Search places, companies, schools..."
+              className="h-14 w-full rounded-full border border-[#e1d8c8] bg-[#fffdf8]/88 pl-14 pr-12 text-sm text-[#263b2b] shadow-[0_12px_34px_rgba(39,52,38,0.09),inset_0_1px_0_rgba(255,255,255,0.96)] outline-none placeholder:text-[#8a8d84] focus:border-[#b9c9ae]"
             />
+            {search ? (
+              <button
+                type="button"
+                onClick={clearSearchInput}
+                className="absolute right-4 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-[#697465] transition hover:bg-[#f3eddf]"
+                aria-label="Clear search"
+              >
+                <X className="size-4" />
+              </button>
+            ) : null}
+          </div>
 
-            <MapRoute
-              id="user-route-base"
-              coordinates={userRoute.coordinates}
-              color={userRouteColor}
-              width={6}
-              opacity={0.18}
-            />
-          </>
-        )}
-
-        {userAnimatedCoordinates.length > 1 && (
-          <MapRoute
-            id="user-route-animated"
-            coordinates={userAnimatedCoordinates}
-            color={userRouteColor}
-            width={5}
-            opacity={1}
-          />
-        )}
-        {activeRoute && (
-          <>
-            <MapRoute
-              id="poi-route-outline"
-              coordinates={activeRoute.coordinates}
-              color="#ffffff"
-              width={3}
-              opacity={0.55}
-            />
-
-            <MapRoute
-              id="poi-route-base"
-              coordinates={activeRoute.coordinates}
-              color={activeRouteColor}
-              width={6}
-              opacity={0.16}
-            />
-          </>
-        )}
-
-        {animatedCoordinates.length > 1 && (
-          <MapRoute
-            id="poi-route-animated"
-            coordinates={animatedCoordinates}
-            color={activeRouteColor}
-            width={5}
-            opacity={1}
-          />
-        )}
-
-        {showClusters ? (
-          <MapClusterLayer<ClusterPoiProperties>
-            data={clusterData}
-            clusterRadius={POI_CLUSTER_RADIUS}
-            clusterMaxZoom={POI_CLUSTER_MAX_ZOOM}
-            clusterColors={["#0f766e", "#0ea5e9", "#1d4ed8"]}
-            clusterThresholds={[12, 28]}
-            pointColor="#0891b2"
-            onPointClick={handleClusterPointClick}
-          />
-        ) : null}
-
-        <MapMarker longitude={centerPlace.lng} latitude={centerPlace.lat}>
-          <MarkerContent>
+          <div className="flex items-center gap-3 lg:mb-2 lg:justify-end">
             <button
               type="button"
-              onClick={clearActiveRoute}
-              className="relative flex items-center justify-center"
+              onClick={resetFilters}
+              className="flex size-14 items-center justify-center rounded-full border border-[#e3dacb] bg-[#fffdf8]/90 text-[#304638] shadow-[0_12px_28px_rgba(39,52,38,0.1)] transition hover:bg-white"
+              aria-label="Reset nearby filters"
             >
-              {/* <div className="absolute size-12 animate-ping rounded-full bg-cyan-400/20" /> */}
-              {/* <div className="absolute size-8 rounded-full bg-cyan-400/15 blur-md" /> */}
-              {/* <FaMapMarkerAlt className="size-8 text-red-600 opacity-90 drop-shadow-[0_8px_16px_rgba(34,211,238,0.22)]" /> */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={projectCard.image} alt={projectCard.title} />
+              <SlidersHorizontal className="size-5" />
             </button>
-          </MarkerContent>
+            <button
+              type="button"
+              onClick={() =>
+                window.open(
+                  `https://www.google.com/maps/search/?api=1&query=${centerPlace.lat},${centerPlace.lng}`,
+                  "_blank",
+                )
+              }
+              className="inline-flex h-14 items-center gap-3 rounded-full border border-[#e3dacb] bg-[#fffdf8]/90 px-6 text-sm font-semibold text-[#304638] shadow-[0_12px_28px_rgba(39,52,38,0.1)] transition hover:bg-white"
+            >
+              <MapIcon className="size-5" />
+              View on Map
+            </button>
+          </div>
+        </header>
 
-          <MarkerTooltip>{centerPlace.name}</MarkerTooltip>
-
-          <MarkerPopup className="bg-transparent border-none shadow-none">
-            <div className="w-70 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.18)]">
-              <div className="h-36 w-full overflow-hidden bg-slate-100">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={projectCard.image}
-                  alt={projectCard.title}
-                  className="h-full w-full object-cover"
-                />
+        <div className="grid w-full min-w-0 max-w-full gap-5 pb-6 xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:pb-0">
+          <aside className="order-2 flex min-w-0 max-w-full flex-col gap-4 xl:order-1 xl:min-h-0">
+            <section className={`rounded-[1.55rem] p-4 backdrop-blur-xl 2xl:p-5 ${PREMIUM_PANEL}`}>
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-[0.82rem] font-semibold uppercase tracking-[0.16em] text-[#374c3a]">
+                  Categories
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategories(DEFAULT_SELECTED_CATEGORIES)}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-[#40543f]"
+                >
+                  View All
+                  <ChevronDown className="-rotate-90 size-4" />
+                </button>
               </div>
-
-              <div className="space-y-3 p-4">
-                <div>
-                  <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
-                    Project Spotlight
-                  </p>
-                  <h3 className="mt-1 text-base font-semibold text-slate-900">
-                    {projectCard.title}
-                  </h3>
-                </div>
-
-                <p className="text-sm leading-6 text-slate-600">
-                  {projectCard.description}
-                </p>
-
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      mapRef.current?.flyTo?.({
-                        center: [centerPlace.lng, centerPlace.lat],
-                        zoom: 15,
-                        duration: 1200,
-                      })
-                    }
-                    className="flex-1 rounded-xl cursor-pointer bg-slate-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
-                  >
-                    View Project
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      window.open(
-                        `https://www.google.com/maps/search/?api=1&query=${centerPlace.lat},${centerPlace.lng}`,
-                        "_blank",
-                      )
-                    }
-                    className="rounded-xl cursor-pointer border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                  >
-                    Open
-                  </button>
-                </div>
-              </div>
-            </div>
-          </MarkerPopup>
-        </MapMarker>
-
-        {userLocation ? (
-          <MapMarker
-            longitude={userLocation.longitude}
-            latitude={userLocation.latitude}
-          >
-            <MarkerContent>
-              <div className="relative flex items-center justify-center">
-                <div className="absolute size-8 animate-ping rounded-full bg-teal-500/20" />
-                <div className="absolute size-6 rounded-full bg-teal-500/20 blur-md" />
-                <div className="relative size-4 rounded-full border-2 border-white bg-teal-600 shadow-[0_0_0_6px_rgba(15,118,110,0.18)]" />
-              </div>
-            </MarkerContent>
-
-            <MarkerTooltip>Your Location</MarkerTooltip>
-
-            <MarkerPopup>
-              <div className="space-y-2">
-                <p className="font-medium text-slate-900">Your Location</p>
-                <p className="text-xs text-slate-600">
-                  {userLocation.latitude.toFixed(6)},{" "}
-                  {userLocation.longitude.toFixed(6)}
-                </p>
-                <p className="text-xs text-slate-600">
-                  Accuracy radius:{" "}
-                  {Math.round(Math.max(userLocation.accuracy ?? 0, 35))} m
-                </p>
-                <p className="text-xs text-slate-600">
-                  Route shown to Trifecta Veranza
-                </p>
-              </div>
-            </MarkerPopup>
-          </MapMarker>
-        ) : null}
-
-        {!showClusters
-          ? visiblePois.map((poi) => (
-              <PoiMarker
-                key={poi.id}
-                poi={poi}
-                isSelected={selectedPoiId === poi.id}
-                onMarkerClick={handlePoiMarkerClick}
-                onViewRoute={handleViewRoute}
-              />
-            ))
-          : null}
-      </MapView>
-
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.22),transparent_30%),linear-gradient(to_bottom,rgba(255,255,255,0.02),rgba(255,255,255,0.06))]" />
-
-      <>
-        {isMobileFiltersOpen ? (
-          <button
-            type="button"
-            onClick={() => setIsMobileFiltersOpen(false)}
-            className="absolute inset-0 z-30 bg-slate-900/10 backdrop-blur-[1px] xl:hidden"
-            aria-label="Close nearby filters"
-          />
-        ) : null}
-
-        {/* Mobile / Tablet open button */}
-        <div
-          className={`absolute right-4 top-4 z-30 xl:hidden ${
-            isMobileFiltersOpen ? "pointer-events-none opacity-0" : "opacity-100"
-          }`}
-        >
-          <button
-            type="button"
-            onClick={() => setIsMobileFiltersOpen(true)}
-            className="flex items-center gap-2 rounded-full border border-white/70 bg-white/90 px-4 py-3 text-sm font-medium text-slate-900 shadow-[0_10px_30px_rgba(15,23,42,0.18)] backdrop-blur-xl transition hover:bg-white"
-          >
-            <Layers className="size-4" />
-            Filters
-          </button>
-        </div>
-
-        {showFloatingStyleControl ? (
-          <div className="absolute left-4 top-4 z-30">
-            <div className="rounded-[24px] border border-white/65 bg-white/28 px-3 py-2.5 text-slate-900 shadow-[0_14px_32px_rgba(15,23,42,0.14)] backdrop-blur-xl">
-              <div className="flex items-start gap-2.5">
-                {styleOptions.map((option) => {
-                  const isActive = style === option.key;
-                  const Icon = option.icon;
+              <div
+                className="flex w-full gap-2 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:grid xl:overflow-visible xl:pb-0"
+                style={{ gridTemplateColumns: `repeat(${CATEGORY_ORDER.length}, minmax(0, 1fr))` }}
+              >
+                {CATEGORY_ORDER.map((category) => {
+                  const Icon = categoryMeta[category].icon;
+                  const active = selectedCategories.includes(category);
 
                   return (
                     <button
-                      key={option.key}
+                      key={category}
                       type="button"
-                      onClick={() => setStyle(option.key)}
-                      aria-label={`Switch map style to ${option.label}`}
-                      title={option.label}
-                      className="group flex flex-col items-center gap-1.5"
+                      onClick={() => toggleCategory(category)}
+                      className={`flex h-[5rem] w-[5rem] shrink-0 flex-col items-center justify-center rounded-[1.15rem] border text-center shadow-[0_10px_22px_rgba(43,52,37,0.06)] transition xl:w-full ${
+                        active
+                          ? `${PREMIUM_OLIVE_GRADIENT} border-[#5f7544] ring-1 ring-[#d8ca9c]`
+                          : "border-[#e8dfd0] bg-[#fffdf8]/92 hover:border-[#cfc7b8]"
+                      }`}
                     >
-                      <span
-                        className={`flex h-11 w-11 items-center justify-center rounded-full border text-slate-800 shadow-[0_10px_24px_rgba(15,23,42,0.12)] backdrop-blur-xl transition-all duration-200 ${
-                          isActive
-                            ? "border-cyan-300 bg-white/92 text-cyan-700 ring-2 ring-cyan-200/80"
-                            : "border-white/70 bg-white/58 hover:bg-white/78"
-                        }`}
-                      >
-                        <Icon className="size-5" />
+                      <span className={`mb-2 flex size-8 items-center justify-center rounded-full border shadow-[inset_0_1px_0_rgba(255,255,255,0.95)] ${
+                        active
+                          ? "border-[#dccc9d] bg-[rgba(255,249,236,0.14)]"
+                          : "border-[#e2d7ba] bg-[linear-gradient(180deg,rgba(253,251,245,0.98),rgba(245,238,222,0.92))]"
+                      }`}>
+                        <Icon className={`size-4.5 ${active ? "text-[#f6edd7]" : "text-[#50653e]"}`} />
                       </span>
-                      <span
-                        className={`text-[10px] font-medium tracking-[0.01em] transition-colors ${
-                          isActive ? "text-slate-900" : "text-slate-600"
-                        }`}
-                      >
-                        {option.shortLabel}
+                      <span className={`max-w-full px-1 text-[0.67rem] font-semibold leading-tight ${active ? "text-[#f6edd7]" : "text-[#26362a]"}`}>
+                        {categoryMeta[category].label}
                       </span>
                     </button>
                   );
                 })}
               </div>
-            </div>
-          </div>
-        ) : null}
+            </section>
 
-        {/* Desktop side panel */}
-        <div
-          className={`absolute bottom-3 right-3 top-3 z-20 hidden max-w-[calc(100vw-1.5rem)] transition-all duration-500 xl:block 2xl:bottom-4 2xl:right-4 2xl:top-4 ${
-            isFilterOpen
-              ? "w-85 lg:w-92.5 translate-x-0"
-              : "w-85 lg:w-92.5 translate-x-[calc(100%+10px)]"
-          }`}
-        >
-          <div className="relative h-full min-h-0">
-            {/* Left bulge handle */}
-            <button
-              type="button"
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-              className={`absolute left-0 top-1/2 z-30 flex h-auto py-5  w-auto pl-3 pr-2 cursor-pointer -translate-x-full 
-              -translate-y-1/2 items-center justify-center rounded-l-full border ${isFilterOpen ? "border-white/70 bg-white/80 text-slate-700 hover:bg-black hover:shadow-2xl hover:text-slate-100" : "border-white/70 bg-neutral-900 text-slate-100 "}  backdrop-blur-xl transition hover:scale-105 `}
-              aria-label={isFilterOpen ? "Close filters" : "Open filters"}
-            >
-              <div className="flex flex-row items-center gap-1">
-                {/* <Layers className="size-4" /> */}
-                <MdKeyboardArrowLeft className="text-2xl" />
+            <section className={`rounded-[1.55rem] p-4 backdrop-blur-xl ${PREMIUM_PANEL}`}>
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-[0.82rem] font-semibold uppercase tracking-[0.16em] text-[#374c3a]">
+                  Quick Filters
+                </h2>
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="text-xs font-semibold text-[#536150]"
+                >
+                  Clear All
+                </button>
               </div>
-            </button>
+              <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-3">
+                <PremiumSelect
+                  value={distanceFilter}
+                  onChange={(value) => setDistanceFilter(value as DistanceFilter)}
+                  ariaLabel="Filter nearby places by distance"
+                  icon={LocateFixed}
+                  options={[
+                    { value: "5km", label: "Within 5 km" },
+                    { value: "10km", label: "Within 10 km" },
+                    { value: "all", label: "All Distances" },
+                  ]}
+                />
+                <PremiumSelect
+                  value={sortMode}
+                  onChange={(value) => setSortMode(value as SortMode)}
+                  ariaLabel="Sort nearby places"
+                  icon={ChevronUp}
+                  options={[
+                    { value: "popularity", label: "Sort by: Popularity" },
+                    { value: "nearest", label: "Sort by: Nearby" },
+                    { value: "rating", label: "Sort by: Rating" },
+                  ]}
+                />
+                <button
+                  type="button"
+                  onClick={() => setOpenNowOnly((current) => !current)}
+                  className="flex h-12 items-center justify-between rounded-full border border-[#e7dece] bg-[#fffdf8]/88 px-4 text-xs font-medium text-[#304238] shadow-[inset_0_1px_0_rgba(255,255,255,0.86)]"
+                >
+                  <span className="inline-flex items-center gap-3">
+                    <Clock3 className="size-4" />
+                    Open Now
+                  </span>
+                  <span className={`h-5 w-9 rounded-full p-0.5 transition ${openNowOnly ? PREMIUM_OLIVE_BUTTON : "bg-[#d7d6d1]"}`}>
+                    <span className={`block size-4 rounded-full bg-white shadow transition ${openNowOnly ? "translate-x-4" : ""}`} />
+                  </span>
+                </button>
+              </div>
+            </section>
 
-            <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[30px] border border-white/60 bg-white/72 text-slate-900 shadow-[0_10px_34px_rgba(15,23,42,0.14)] backdrop-blur-2xl">
-              <div className="shrink-0 border-b border-slate-200/80 p-4 [@media(max-height:850px)]:p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.28em] text-slate-500 [@media(max-height:850px)]:text-[10px]">
-                      Nearby Filters
-                    </p>
-                    <h3 className="mt-1 text-xl font-semibold text-slate-900 [@media(max-height:850px)]:text-lg">
-                      Famous Places
-                    </h3>
-                  </div>
+            <section className={`rounded-[1.55rem] p-4 backdrop-blur-xl xl:min-h-0 xl:flex-1 ${PREMIUM_PANEL}`}>
+              <div className="mb-4">
+                <h2 className="text-[0.82rem] font-semibold uppercase tracking-[0.16em] text-[#374c3a]">
+                  Popular Nearby
+                </h2>
+                <span className="mt-3 block h-px w-8 bg-[#38583b]" />
+              </div>
+              <div className="space-y-3 pr-1 xl:h-[calc(100%-2.8rem)] xl:overflow-y-auto">
+                {listedPois.map((poi) => {
+                  const meta = categoryMeta[poi.category];
+                  const Icon = meta.icon;
+                  const linkedRoute = routeLookup.get(poi.id);
+                  const metrics = getDisplayRoute(linkedRoute, poi);
+                  const isSelected = selectedDisplayPoi?.id === poi.id;
+                  const isPopular = isPopularPoi(poi);
 
-                  <button
-                    type="button"
-                    onClick={() => setIsFilterOpen(false)}
-                    className="rounded-xl border border-slate-200 bg-white/80 p-2 text-slate-500 transition hover:bg-slate-50 hover:text-slate-800 [@media(max-height:850px)]:p-1.5"
-                  >
-                    <X className="size-4" />
-                  </button>
-                </div>
-
-                <div className="relative mt-4 [@media(max-height:850px)]:mt-3">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    value={search}
-                    onChange={(e) => applySearchInput(e.target.value)}
-                    placeholder="Search places, companies, schools..."
-                    className="h-11 w-full rounded-2xl border border-slate-200 bg-white/85 pl-10 pr-10 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-cyan-300 [@media(max-height:850px)]:h-9"
-                  />
-                  {search && (
+                  return (
                     <button
+                      key={poi.id}
                       type="button"
-                      onClick={clearSearchInput}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-700"
+                      onClick={() => handleFilteredPoiSelection(poi)}
+                      className={`group grid w-full grid-cols-[5.5rem_minmax(0,1fr)_2.25rem] items-center gap-3 rounded-[1.35rem] border bg-[linear-gradient(180deg,rgba(255,252,246,0.98),rgba(246,240,230,0.94))] p-3 text-left shadow-[0_14px_28px_rgba(43,52,37,0.06),inset_0_1px_0_rgba(255,255,255,0.92)] transition sm:grid-cols-[8.2rem_1fr_auto] sm:gap-4 sm:rounded-[1.55rem] sm:p-4 ${
+                        isSelected
+                          ? "border-[#96b184] ring-1 ring-[#d8ca9d]"
+                          : "border-[#eadfcb] hover:border-[#d9caac]"
+                      }`}
                     >
-                      <X className="size-4" />
+                      <div className="relative h-[4.8rem] overflow-hidden rounded-[1rem] border border-[#dcca9d]/60 bg-[#e9e1d3] shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] sm:h-[5rem] sm:rounded-[1.1rem]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={getPoiImage(poi)} alt={poi.name} className="h-full w-full object-cover" />
+                        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,248,235,0.18),transparent_45%,rgba(42,69,45,0.12)_100%)]" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className={`flex size-9 shrink-0 items-center justify-center rounded-full border border-[#d8cda8] text-white shadow-[0_8px_18px_rgba(33,57,36,0.16)] ${PREMIUM_OLIVE_GRADIENT}`}>
+                            <Icon className="size-4" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate text-[1.02rem] font-semibold text-[#213528]">
+                              {poi.name}
+                            </p>
+                            <p className="mt-0.5 text-xs text-[#6f766a]">{meta.label}</p>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <span className="rounded-full border border-[#eee3d0] bg-white/86 px-2.5 py-1 text-[0.68rem] text-[#405040] shadow-[inset_0_1px_0_rgba(255,255,255,0.94)]">{metrics.distance}</span>
+                          <span className="rounded-full border border-[#eee3d0] bg-white/86 px-2.5 py-1 text-[0.68rem] text-[#405040] shadow-[inset_0_1px_0_rgba(255,255,255,0.94)]">{metrics.duration}</span>
+                          {poi.rating ? (
+                            <span className="rounded-full border border-[#eee3d0] bg-white/86 px-2.5 py-1 text-[0.68rem] text-[#405040] shadow-[inset_0_1px_0_rgba(255,255,255,0.94)]">{poi.rating.toFixed(1)} ★</span>
+                          ) : null}
+                        </div>
+                      </div>
+                        <div className="flex items-center gap-2 sm:gap-3">
+                        {isPopular ? (
+                          <span className="hidden rounded-full border border-[#cfddb9] bg-[#fbfff8] px-3 py-1 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-[#4f8654] sm:inline-flex">
+                            Popular
+                          </span>
+                        ) : null}
+                        <span className="flex size-9 items-center justify-center rounded-full border border-[#e7dcc7] bg-white/82 text-[#415343] transition group-hover:border-[#d4c49f]">
+                          <ChevronDown className="-rotate-90 size-5" />
+                        </span>
+                      </div>
                     </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="shrink-0 border-b border-slate-200/80 p-4 [@media(max-height:850px)]:p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-medium text-slate-800 [@media(max-height:850px)]:text-xs">
-                    Categories
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setIsDesktopCategoriesOpen((currentValue) => !currentValue)
-                    }
-                    className="inline-flex h-8 items-center gap-1 rounded-full border border-slate-200 bg-white/75 px-2.5 text-xs font-medium text-slate-600 transition hover:bg-white"
-                    aria-expanded={isDesktopCategoriesOpen}
-                    aria-label={
-                      isDesktopCategoriesOpen
-                        ? "Collapse categories"
-                        : "Expand categories"
-                    }
-                  >
-                    {isDesktopCategoriesOpen ? (
-                      <ChevronUp className="size-3.5" />
-                    ) : (
-                      <ChevronDown className="size-3.5" />
-                    )}
-                    {isDesktopCategoriesOpen ? "Hide" : "Show"}
-                  </button>
-                </div>
-
-                {isDesktopCategoriesOpen ? (
-                  <div className="mt-3 grid grid-cols-2 gap-1.5 [@media(max-height:850px)]:mt-2">
-                    {CATEGORY_ORDER.map(
-                      (category) => {
-                        const active = selectedCategories.includes(category);
-
-                        return (
-                          <CategoryFilterChip
-                            key={category}
-                            active={active}
-                            category={category}
-                            onClick={toggleCategory}
-                          />
-                        );
-                      },
-                    )}
-                  </div>
-                ) : selectedCategories.length > 0 ? (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {selectedCategories.map((category) => (
-                      <span
-                        key={category}
-                        className="rounded-full border border-slate-200 bg-white/65 px-2 py-1 text-[10px] font-medium text-slate-600"
-                      >
-                        {categoryMeta[category].label}
-                      </span>
-                    ))}
+                  );
+                })}
+                {!visiblePois.length ? (
+                  <div className="rounded-2xl border border-[#e8dfd0] bg-white/70 p-6 text-center text-sm text-[#73796f]">
+                    No places match your current filters.
                   </div>
                 ) : null}
               </div>
+            </section>
+          </aside>
 
-              <div className="min-h-0 flex-1 overflow-hidden p-4 pb-2 [@media(max-height:850px)]:p-3 [@media(max-height:850px)]:pb-2">
-                <div className="mb-3 flex shrink-0 items-center justify-between">
-                  <p className="text-sm font-medium text-slate-800">
-                    Featured & Nearby
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      mapRef.current?.flyTo?.({
-                        center: [centerPlace.lng, centerPlace.lat],
-                        zoom: 15,
-                        duration: 1200,
-                      })
-                    }
-                    className="rounded-xl border border-slate-200 bg-white/80 px-3 py-1.5 text-xs text-slate-700 transition hover:bg-slate-50"
-                  >
-                    Recenter
-                  </button>
-                </div>
+          <section className="order-1 grid min-w-0 max-w-full gap-5 xl:order-2 xl:min-h-0 xl:grid-rows-[minmax(20rem,0.95fr)_auto_auto]">
+            <div className={`relative h-[22rem] w-full min-w-0 max-w-full overflow-hidden rounded-[1.55rem] bg-[#ede6d8] sm:h-[26rem] lg:h-[30rem] xl:h-auto xl:min-h-0 ${PREMIUM_PANEL}`}>
+              <div className="pointer-events-none absolute inset-0 z-10 rounded-[1.55rem] shadow-[inset_0_0_0_1px_rgba(245,235,212,0.9),inset_0_0_90px_rgba(244,236,223,0.78)]" />
+              <div className="pointer-events-none absolute inset-0 z-10 rounded-[1.55rem] bg-[radial-gradient(circle_at_center,transparent_58%,rgba(244,236,223,0.72)_100%)]" />
+              <MapView
+                ref={mapRef}
+                center={[centerPlace.lng, centerPlace.lat]}
+                zoom={15}
+                theme="light"
+                fadeDuration={0}
+                cooperativeGestures
+                className="h-full w-full min-w-0 max-w-full"
+                onViewportChange={handleViewportChange}
+                styles={{ light: MAP_STYLE, dark: MAP_STYLE }}
+              >
+                <MapControls
+                  position="bottom-right"
+                  showZoom
+                  showCompass
+                  showLocate
+                  onLocate={handleUserLocate}
+                />
+                <MapClickClearRoute onClear={clearActiveRoute} suppressRef={suppressNextMapClearRef} />
+                {userLocation ? <UserLocationAccuracyLayer location={userLocation} /> : null}
+                {userRoute ? (
+                  <>
+                    <MapRoute id="user-route-outline" coordinates={userRoute.coordinates} color="#ffffff" width={3} opacity={0.6} />
+                    <MapRoute id="user-route-base" coordinates={userRoute.coordinates} color={userRouteColor} width={6} opacity={0.18} />
+                  </>
+                ) : null}
+                {userAnimatedCoordinates.length > 1 ? (
+                  <MapRoute id="user-route-animated" coordinates={userAnimatedCoordinates} color={userRouteColor} width={5} opacity={1} />
+                ) : null}
+                {activeRoute ? (
+                  <>
+                    <MapRoute id="poi-route-outline" coordinates={activeRoute.coordinates} color="#ffffff" width={3} opacity={0.55} />
+                    <MapRoute id="poi-route-base" coordinates={activeRoute.coordinates} color={activeRouteColor} width={6} opacity={0.16} />
+                  </>
+                ) : null}
+                {animatedCoordinates.length > 1 ? (
+                  <MapRoute id="poi-route-animated" coordinates={animatedCoordinates} color={activeRouteColor} width={5} opacity={1} />
+                ) : null}
+                {showClusters ? (
+                  <MapClusterLayer<ClusterPoiProperties>
+                    data={clusterData}
+                    clusterRadius={POI_CLUSTER_RADIUS}
+                    clusterMaxZoom={POI_CLUSTER_MAX_ZOOM}
+                    clusterColors={["#7a8f5a", "#5d7445", "#455933"]}
+                    clusterThresholds={[12, 28]}
+                    pointColor="#5d7445"
+                    onPointClick={handleClusterPointClick}
+                  />
+                ) : null}
+                <MapMarker longitude={centerPlace.lng} latitude={centerPlace.lat}>
+                  <MarkerContent>
+                    <button
+                      type="button"
+                      onClick={clearActiveRoute}
+                      className="relative flex items-center justify-center"
+                      aria-label={centerPlace.name}
+                    >
+                      <span className="absolute size-16 rounded-full bg-[#6f925f]/20" />
+                      <span className="absolute size-10 rounded-full bg-[#6f925f]/30 blur-md" />
+                      <span className="relative size-7 rounded-full border-[6px] border-white bg-[#315238] shadow-[0_0_0_12px_rgba(103,137,90,0.18)]" />
+                    </button>
+                  </MarkerContent>
+                </MapMarker>
+                {userLocation ? (
+                  <MapMarker longitude={userLocation.longitude} latitude={userLocation.latitude}>
+                    <MarkerContent>
+                      <div className="relative flex items-center justify-center">
+                        <div className="absolute size-8 animate-ping rounded-full bg-[#315238]/20" />
+                        <div className="relative size-4 rounded-full border-2 border-white bg-[#315238] shadow-[0_0_0_6px_rgba(49,82,56,0.18)]" />
+                      </div>
+                    </MarkerContent>
+                  </MapMarker>
+                ) : null}
+                {!showClusters
+                  ? visiblePois.map((poi) => (
+                      <PoiMarker
+                        key={poi.id}
+                        poi={poi}
+                        isSelected={selectedDisplayPoi?.id === poi.id}
+                        onMarkerClick={handlePoiMarkerClick}
+                      />
+                    ))
+                  : null}
+              </MapView>
+            </div>
 
-                <div className="h-[calc(100%-3rem)] min-h-0 space-y-2 overflow-y-auto pr-1">
-                  {visiblePois.map(
-                    (poi) => {
-                      const meta = categoryMeta[poi.category];
-                      const isSelected = selectedPoi?.id === poi.id;
-                      const linkedRoute = routeLookup.get(poi.id);
+            <div className="grid min-w-0 max-w-full gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <article className="h-full min-w-0 max-w-full overflow-hidden rounded-[1.55rem]">
+                <div className="grid h-full min-h-[20rem] grid-rows-[minmax(0,1fr)_4.25rem] gap-3 overflow-hidden sm:min-h-[15.5rem] sm:grid-cols-[minmax(0,1fr)_4.4rem] sm:grid-rows-none">
+                  <div className="relative min-h-0 overflow-hidden rounded-[1.25rem] bg-[#e9e1d3]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={selectedMainImage}
+                      alt={selectedDisplayPoi?.name ?? "Selected place"}
+                      className="h-full w-full object-cover"
+                    />
+                    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,248,235,0.18),transparent_45%,rgba(42,69,45,0.12)_100%)]" />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/LEAF UI.png"
+                      alt=""
+                      className="pointer-events-none absolute -left-5 bottom-0 h-28 w-auto opacity-[0.18] mix-blend-multiply"
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-4 top-4 z-20 flex size-11 items-center justify-center rounded-full bg-[#fffdf8]/88 text-[#425143] shadow-[0_10px_22px_rgba(43,52,37,0.12)]"
+                      aria-label="Close selected place"
+                    >
+                      <X className="size-5" />
+                    </button>
+                  </div>
+                  <div className="flex min-h-0 gap-2 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-col sm:overflow-x-hidden sm:overflow-y-auto sm:pb-0">
+                    {selectedPoiImages.map((image, index) => {
+                      const isActive = image === selectedMainImage;
 
                       return (
                         <button
-                          key={poi.id}
+                          key={`${image}-${index}`}
                           type="button"
-                          onClick={() => handleFilteredPoiSelection(poi)}
-                          className={`w-full rounded-3xl border p-4 text-left transition-all [@media(max-height:850px)]:rounded-2xl [@media(max-height:850px)]:p-3 ${
-                            isSelected
-                              ? "border-cyan-300 bg-cyan-50 shadow-sm"
-                              : "border-slate-200 bg-white/75 hover:bg-slate-50"
+                          onClick={() =>
+                            selectedDisplayPoi &&
+                            setActivePoiImage({
+                              poiId: selectedDisplayPoi.id,
+                              image,
+                            })
+                          }
+                          className={`relative aspect-square h-full shrink-0 overflow-hidden rounded-[0.9rem] border bg-[#e9e1d3] shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] transition sm:h-auto sm:w-full ${
+                            isActive
+                              ? "border-[#5d7445] ring-2 ring-[#c7d7b8]"
+                              : "border-[#dcca9d]/70 hover:border-[#9fb587]"
                           }`}
+                          aria-label={`View image ${index + 1} for ${selectedDisplayPoi?.name ?? "selected place"}`}
                         >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex gap-3">
-                              <CategoryBadge
-                                category={poi.category}
-                                selected={isSelected}
-                                size="sm"
-                              />
-
-                              <div>
-                                <p className="text-sm font-semibold text-slate-900">
-                                  {poi.name}
-                                </p>
-                                <p className="mt-1 text-xs text-slate-500">
-                                  {meta.label}
-                                </p>
-                              </div>
-                            </div>
-
-                            {poi.featured && (
-                              <span className="rounded-full border border-cyan-200 bg-cyan-50 px-2 py-1 text-[10px] uppercase tracking-wide text-cyan-700">
-                                Popular
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-600">
-                            <span className="rounded-full bg-slate-100 px-2 py-1">
-                              {linkedRoute
-                                ? formatDistance(linkedRoute.distance)
-                                : poi.distanceLabel}
-                            </span>
-                            <span className="rounded-full bg-slate-100 px-2 py-1">
-                              {linkedRoute
-                                ? formatDuration(linkedRoute.duration)
-                                : poi.timeLabel}
-                            </span>
-                            {poi.rating && (
-                              <span className="rounded-full bg-slate-100 px-2 py-1">
-                                {poi.rating.toFixed(1)} ★
-                              </span>
-                            )}
-                          </div>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={image}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
                         </button>
                       );
-                    },
-                  )}
-
-                  {!filteredPois.length && (
-                    <div className="rounded-3xl border border-slate-200 bg-white/75 p-6 text-center text-sm text-slate-500">
-                      No places match your current filters.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="shrink-0 border-t border-slate-200/80 p-4 [@media(max-height:850px)]:p-3">
-                <div className="mb-2 grid grid-cols-2 gap-2 [@media(max-height:850px)]:mb-1.5">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      mapRef.current?.flyTo?.({
-                        center: [centerPlace.lng, centerPlace.lat],
-                        zoom: 15,
-                        duration: 1200,
-                      })
-                    }
-                    className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800 transition hover:bg-slate-50 [@media(max-height:850px)]:py-2 [@media(max-height:850px)]:text-xs"
-                  >
-                    <MapPinned className="size-4" />
-                    Project
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={resetFilters}
-                    className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800 transition hover:bg-slate-50 [@media(max-height:850px)]:py-2 [@media(max-height:850px)]:text-xs"
-                  >
-                    <X className="size-4" />
-                    Reset
-                  </button>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-white/70 p-3 [@media(max-height:850px)]:hidden">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">
-                    Map Style
-                  </p>
-                  <select
-                    value={style}
-                    onChange={(e) => setStyle(e.target.value as StyleKey)}
-                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none [@media(max-height:850px)]:py-1.5 [@media(max-height:850px)]:text-xs"
-                  >
-                    <option value="default">Default (Carto)</option>
-                    <option value="openstreetmap">OpenStreetMap</option>
-                    <option value="openstreetmap3d">OpenStreetMap 3D</option>
-                  </select>
-                </div>
-
-                <div className="mt-3 rounded-2xl border border-slate-200 bg-white/70 p-3 [@media(max-height:850px)]:hidden">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">
-                    Route Mode
-                  </p>
-                  <p className="mt-1 text-sm text-slate-700 [@media(max-height:850px)]:text-xs">
-                    Click any POI to show an animated route from the project
-                    center.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile / Tablet bottom sheet */}
-        <div
-          className={`absolute inset-x-3 bottom-3 z-40 rounded-[30px] border border-white/60 bg-white/92 shadow-[0_-16px_40px_rgba(15,23,42,0.2)] backdrop-blur-2xl transition-all duration-500 xl:hidden ${
-            isMobileFiltersOpen
-              ? "pointer-events-auto translate-y-0 opacity-100"
-              : "pointer-events-none translate-y-[calc(100%+1rem)] opacity-0"
-          }`}
-        >
-          <div className="flex items-center justify-between border-b border-slate-200/80 px-4 py-3">
-            <div className="flex items-center gap-3">
-              <div className="h-1.5 w-14 rounded-full bg-slate-300" />
-              <div>
-                <p className="text-sm font-semibold text-slate-900">
-                  Nearby Filters
-                </p>
-                <p className="text-xs text-slate-500">
-                  Browse places from the bottom sheet
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsMobileFiltersOpen(false)}
-              className="absolute right-4 rounded-xl border border-slate-200 bg-white/80 p-2 text-slate-500"
-            >
-              <X className="size-4" />
-            </button>
-          </div>
-
-          <div className="max-h-[calc(100dvh-5rem)] overflow-y-auto p-4">
-            <div className="mb-4">
-              <p className="text-xs uppercase tracking-[0.28em] text-slate-500">
-                Nearby Filters
-              </p>
-              <h3 className="mt-1 text-xl font-semibold text-slate-900">
-                Famous Places
-              </h3>
-
-              <div className="relative mt-4">
-                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  value={search}
-                  onChange={(e) => applySearchInput(e.target.value)}
-                  placeholder="Search places, companies, schools..."
-                  className="h-11 w-full rounded-2xl border border-slate-200 bg-white/85 pl-10 pr-10 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-cyan-300"
-                />
-                {search && (
-                  <button
-                    type="button"
-                    onClick={clearSearchInput}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  >
-                    <X className="size-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <p className="mb-3 text-sm font-medium text-slate-800">
-                Categories
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                {CATEGORY_ORDER.map(
-                  (category) => {
-                    const active = selectedCategories.includes(category);
-
-                    return (
-                      <CategoryFilterChip
-                        key={category}
-                        active={active}
-                        category={category}
-                        onClick={toggleCategory}
-                      />
-                    );
-                  },
-                )}
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm font-medium text-slate-800">
-                  Filtered Locations
-                </p>
-                <span className="rounded-full border border-slate-200 bg-white/80 px-2.5 py-1 text-[11px] font-medium text-slate-600">
-                  {filteredPois.length} spots
-                </span>
-              </div>
-
-              <div className="max-h-[28vh] space-y-2 overflow-y-auto pr-1">
-                {visiblePois
-                  .slice(0, 8)
-                  .map((poi) => {
-                    const meta = categoryMeta[poi.category];
-                    const isSelected = selectedPoi?.id === poi.id;
-                    const linkedRoute = routeLookup.get(poi.id);
-
-                    return (
-                      <button
-                        key={poi.id}
-                        type="button"
-                        onClick={() => handleFilteredPoiSelection(poi)}
-                        className={`w-full rounded-2xl border p-3 text-left transition-all ${
-                          isSelected
-                            ? "border-cyan-300 bg-cyan-50 shadow-sm"
-                            : "border-slate-200 bg-white/75 hover:bg-slate-50"
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <CategoryBadge
-                            category={poi.category}
-                            selected={isSelected}
-                            size="sm"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold text-slate-900">
-                              {poi.name}
-                            </p>
-                            <p className="mt-1 text-xs text-slate-500">
-                              {meta.label}
-                            </p>
-                            <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-600">
-                              <span className="rounded-full bg-slate-100 px-2 py-1">
-                                {linkedRoute
-                                  ? formatDistance(linkedRoute.distance)
-                                  : poi.distanceLabel}
-                              </span>
-                              <span className="rounded-full bg-slate-100 px-2 py-1">
-                                {linkedRoute
-                                  ? formatDuration(linkedRoute.duration)
-                                  : poi.timeLabel}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-
-                {!filteredPois.length && (
-                  <div className="rounded-2xl border border-slate-200 bg-white/75 p-4 text-center text-sm text-slate-500">
-                    No places match your current filters.
+                    })}
                   </div>
-                )}
+                </div>
+              </article>
+
+              <article className={`relative overflow-hidden rounded-[1.55rem] p-5 2xl:p-6 ${PREMIUM_PANEL}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/LEAF UI.png"
+                  alt=""
+                  className="pointer-events-none absolute -right-6 top-0 h-36 w-auto opacity-[0.15] mix-blend-multiply"
+                />
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex gap-4">
+                    <span className={`flex size-12 shrink-0 items-center justify-center rounded-full border border-[#d8cda8] text-white shadow-[0_10px_20px_rgba(43,52,37,0.14)] ${PREMIUM_OLIVE_GRADIENT}`}>
+                      <SelectedIcon className="size-6" />
+                    </span>
+                    <div>
+                      <h2 className={`${displaySerif.className} text-2xl font-semibold leading-tight text-[#263b2b] 2xl:text-3xl`}>
+                        {selectedDisplayPoi?.name ?? "Explore Nearby"}
+                      </h2>
+                      <p className="mt-1 text-sm text-[#777b73]">{selectedMeta.label}</p>
+                    </div>
+                  </div>
+                  {selectedIsPopular ? (
+                    <span className="rounded-full border border-[#b9d5ba] bg-[#f9fff7] px-4 py-1.5 text-[0.68rem] font-bold uppercase tracking-[0.05em] text-[#2f9a5c]">
+                      Popular
+                    </span>
+                  ) : null}
+                </div>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <MetricPill icon={LocateFixed}>{selectedRouteMetrics.distance}</MetricPill>
+                  <MetricPill icon={Clock3}>{selectedRouteMetrics.duration}</MetricPill>
+                  <MetricPill icon={Star}>{selectedDisplayPoi?.rating?.toFixed(1) ?? "4.4"}</MetricPill>
+                </div>
+                <p className="mt-5 max-w-[42rem] text-sm leading-6 text-[#757b72]">
+                  {detailDescription}
+                </p>
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  <button
+                    type="button"
+                    onClick={() => selectedDisplayPoi && handleViewRoute(selectedDisplayPoi)}
+                    className={`inline-flex h-12 items-center justify-center gap-2 rounded-full px-4 text-xs font-semibold text-white shadow-[0_10px_20px_rgba(50,79,45,0.24)] ${PREMIUM_OLIVE_BUTTON}`}
+                  >
+                    <Navigation className="size-4" />
+                    Get Directions
+                  </button>
+                  <button className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#e6ddce] bg-[#fffdf8] px-4 text-xs font-semibold text-[#405040]">
+                    <Heart className="size-4" />
+                    Save
+                  </button>
+                  <button className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#e6ddce] bg-[#fffdf8] px-4 text-xs font-semibold text-[#405040]">
+                    <Share2 className="size-4" />
+                    Share
+                  </button>
+                </div>
+              </article>
+            </div>
+
+            <section className={`rounded-[1.55rem] p-5 ${PREMIUM_PANEL}`}>
+              <h2 className="mb-5 text-[0.78rem] font-semibold uppercase tracking-[0.16em] text-[#405040]">
+                Nearby at this location
+              </h2>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+                {nearbyAmenities.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div key={item.label} className="flex items-center gap-3">
+                      <span className={`flex size-11 shrink-0 items-center justify-center rounded-full ${item.bg}`}>
+                        <Icon className={`size-5 ${item.color}`} />
+                      </span>
+                      <div>
+                        <p className="text-xs font-semibold text-[#303d33]">{item.label}</p>
+                        <p className="mt-1 text-xs text-[#777b73]">{item.distance}</p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
-
-            <div className="mb-4 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() =>
-                  mapRef.current?.flyTo?.({
-                    center: [centerPlace.lng, centerPlace.lat],
-                    zoom: 15,
-                    duration: 1200,
-                  })
-                }
-                className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800"
-              >
-                <MapPinned className="size-4" />
-                Project
-              </button>
-
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800"
-              >
-                <X className="size-4" />
-                Reset
-              </button>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-white/70 p-3">
-              <p className="text-xs uppercase tracking-wide text-slate-500">
-                Map Style
-              </p>
-              <select
-                value={style}
-                onChange={(e) => setStyle(e.target.value as StyleKey)}
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none"
-              >
-                <option value="default">Default (Carto)</option>
-                <option value="openstreetmap">OpenStreetMap</option>
-                <option value="openstreetmap3d">OpenStreetMap 3D</option>
-              </select>
-            </div>
-          </div>
+            </section>
+          </section>
         </div>
-      </>
+      </section>
 
       {(isLoading || isUserRouteLoading) && (
         <div className="pointer-events-none absolute inset-x-0 top-4 z-30 flex justify-center px-4">
-          <div className="rounded-full border border-white/70 bg-white/88 px-5 py-3 text-slate-900 shadow-xl backdrop-blur-2xl">
+          <div className="rounded-full border border-[#e3dacb] bg-[#fffdf8]/92 px-5 py-3 text-[#263b2b] shadow-xl backdrop-blur-2xl">
             <div className="flex items-center gap-3">
-              <Loader2 className="size-5 animate-spin text-cyan-600" />
-              <span className="text-sm text-slate-700">
+              <Loader2 className="size-5 animate-spin text-[#41683f]" />
+              <span className="text-sm text-[#596659]">
                 {isUserRouteLoading
                   ? "Tracing your route to Trifecta Veranza..."
                   : "Loading Trifecta Veranza Map..."}
@@ -2208,6 +1936,6 @@ export function CustomStyleExample() {
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 }

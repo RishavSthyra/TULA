@@ -50,6 +50,7 @@ export default function RouteChrome() {
     pathname === "/exterior-walkthrough";
   const isInteriorWalkthroughRoute = pathname === "/walkthrough";
   const isAmenitiesRoute = pathname === "/amenities";
+  const isAreaMapRoute = pathname === "/area-map";
   const isImmersiveRoute =
     pathname === "/tower-hover-test" ||
     pathname === "/project-layout";
@@ -167,7 +168,7 @@ export default function RouteChrome() {
 
       <QuoteRequestController
         mergeRouteLinks={shouldMergeLinksForRoute}
-        showCta={!isAmenitiesRoute && !isHomeRoute}
+        showCta={!isAmenitiesRoute && !isHomeRoute && !isAreaMapRoute}
       />
     </>
   );
