@@ -111,6 +111,7 @@ const DEFAULT_SELECTED_CATEGORIES: PoiCategory[] = [
   "landmark",
   "IT Company",
 ];
+
 const CATEGORY_ORDER = DEFAULT_SELECTED_CATEGORIES;
 const ROUTE_CACHE_KEY = "veranza-poi-routes-v1";
 const ROUTE_REQUEST_TIMEOUT = 12000;

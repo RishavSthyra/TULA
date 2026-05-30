@@ -9,6 +9,7 @@ import {
   Building2,
   FileDown,
   Heart,
+  Footprints,
   Home,
   MapPin,
   Menu,
@@ -17,19 +18,21 @@ import {
   UserRound,
   X,
 } from "lucide-react";
+import {
+  type SiteNavHref,
+  isSiteNavItemActive,
+  siteNavItems,
+} from "@/lib/site-navigation";
 import { TRIFECTA_LEAD_OPEN_EVENT } from "@/lib/trifecta-remote-control";
 
-const navItems = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/project-overview", label: "Overview", icon: Building2 },
-  { href: "/area-map", label: "Location", icon: MapPin },
-  { href: "/amenities", label: "Amenities", icon: Heart },
-  { href: "/master-plan", label: "Master Plan", icon: UserRound },
-] as const;
-
-function isActiveRoute(pathname: string, href: string) {
-  return pathname === href;
-}
+const navItemIcons: Record<SiteNavHref, typeof Home> = {
+  "/": Home,
+  "/project-overview": Building2,
+  "/area-map": MapPin,
+  "/amenities": Heart,
+  "/master-plan": UserRound,
+  "/exterior-walkthrough": Footprints,
+} as const;
 
 export default function MobileSiteNav() {
   const pathname = usePathname();
@@ -283,14 +286,15 @@ export default function MobileSiteNav() {
             </button>
 
             <div className="relative z-10 overflow-hidden rounded-[1.65rem] border border-[#e3d5ba]/90 bg-[#fffdf8]/52">
-              {navItems.map(({ href, label, icon: Icon }, index) => {
-                const isActive = isActiveRoute(pathname, href);
-                const isLastItem = index === navItems.length - 1;
+              {siteNavItems.map((item, index) => {
+                const Icon = navItemIcons[item.href];
+                const isActive = isSiteNavItemActive(pathname, item);
+                const isLastItem = index === siteNavItems.length - 1;
 
                 return (
                   <Link
-                    key={href}
-                    href={href}
+                    key={item.href}
+                    href={item.href}
                     onClick={closeMenu}
                     ref={(node) => {
                       navItemRefs.current[index] = node;
@@ -316,7 +320,7 @@ export default function MobileSiteNav() {
                       >
                         <Icon className="size-4.5" />
                       </span>
-                      <span className="truncate">{label}</span>
+                      <span className="truncate">{item.label}</span>
                     </span>
                     <Send
                       className={`size-4.5 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5 ${

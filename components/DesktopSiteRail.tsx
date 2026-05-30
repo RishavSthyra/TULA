@@ -5,6 +5,7 @@ import { Cormorant_Garamond } from "next/font/google";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Building2,
+  Footprints,
   Heart,
   House,
   Leaf,
@@ -12,6 +13,11 @@ import {
   SlidersHorizontal,
   UserRound,
 } from "lucide-react";
+import {
+  type SiteNavHref,
+  isSiteNavItemActive,
+  siteNavItems,
+} from "@/lib/site-navigation";
 import { cn } from "@/lib/utils";
 
 const railSerif = Cormorant_Garamond({
@@ -20,21 +26,14 @@ const railSerif = Cormorant_Garamond({
   style: ["normal"],
 });
 
-function isRailRouteActive(pathname: string, href: string) {
-  if (href === "/master-plan") {
-    return pathname === "/master-plan";
-  }
-
-  return pathname === href;
-}
-
-const railItems = [
-  { icon: House, href: "/", label: "Home" },
-  { icon: Building2, href: "/project-overview", label: "Overview" },
-  { icon: MapPin, href: "/area-map", label: "Location" },
-  { icon: Heart, href: "/amenities", label: "Amenities" },
-  { icon: UserRound, href: "/master-plan", label: "Master Plan" },
-] as const;
+const railItemIcons: Record<SiteNavHref, typeof House> = {
+  "/": House,
+  "/project-overview": Building2,
+  "/area-map": MapPin,
+  "/amenities": Heart,
+  "/master-plan": UserRound,
+  "/exterior-walkthrough": Footprints,
+} as const;
 
 type DesktopSiteRailProps = {
   className?: string;
@@ -70,20 +69,21 @@ export default function DesktopSiteRail({
       </div>
 
       <div className="relative z-10 mt-7 flex flex-col items-center gap-5 2xl:gap-[1.15rem]">
-        {railItems.map(({ icon: Icon, href, label }) => {
-          const isActive = isRailRouteActive(pathname, href);
+        {siteNavItems.map((item) => {
+          const Icon = railItemIcons[item.href];
+          const isActive = isSiteNavItemActive(pathname, item);
 
           return (
-            <div key={label} className="group relative flex items-center">
+            <div key={item.label} className="group relative flex items-center">
               <button
                 type="button"
-                onClick={() => router.push(href)}
+                onClick={() => router.push(item.href)}
                 className={
                   isActive
                     ? "flex h-[2.55rem] w-[2.55rem] items-center justify-center rounded-full border border-[#7b9365]/70 bg-[radial-gradient(circle_at_32%_25%,#69895e_0%,#45603c_58%,#2a452d_100%)] text-white shadow-[0_10px_22px_rgba(33,57,36,0.2),inset_0_1px_0_rgba(255,255,255,0.18)] 2xl:h-[2.8rem] 2xl:w-[2.8rem]"
                     : "flex h-[2rem] w-[2rem] items-center justify-center rounded-full text-[#4f6850] transition hover:bg-[#f5efdf] hover:text-[#24402c] 2xl:h-[2.1rem] 2xl:w-[2.1rem]"
                 }
-                aria-label={label}
+                aria-label={item.label}
               >
                 <Icon
                   className={
@@ -95,7 +95,7 @@ export default function DesktopSiteRail({
                 />
               </button>
               <div className="pointer-events-none absolute left-[calc(100%+0.8rem)] top-1/2 z-20 -translate-y-1/2 whitespace-nowrap rounded-full border border-[#dfcfaa]/75 bg-[linear-gradient(180deg,rgba(251,249,241,0.97),rgba(241,237,226,0.94))] px-3 py-1.5 text-[0.66rem] font-semibold tracking-[0.12em] text-[#4a5d47] opacity-0 shadow-[0_14px_28px_rgba(30,46,30,0.12),inset_0_1px_0_rgba(255,255,255,0.95)] transition duration-200 group-hover:translate-y-[-50%] group-hover:opacity-100">
-                {label}
+                {item.label}
               </div>
             </div>
           );

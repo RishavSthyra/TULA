@@ -3,14 +3,10 @@ import ExteriorPanoWalkthrough from "@/components/tour/ExteriorPanoWalkthrough";
 import { buildPageMetadata } from "@/lib/metadata";
 import {
   getAssetWorkerDomain,
-  signR2AssetKeys,
   signR2AssetKey,
 } from "@/lib/server/r2-signed-assets";
 import type { ExteriorPanoNodeSource } from "@/lib/exterior-tour/types";
-import {
-  EXTERIOR_MINIMAP_IMAGE_URL,
-  exteriorAmenities,
-} from "@/data/exteriorAmenities";
+import { exteriorAmenities } from "@/data/exteriorAmenities";
 
 function isIgnoredExteriorPano(node: ExteriorPanoNodeSource) {
   return (
@@ -61,10 +57,9 @@ function ExteriorWalkthroughHead() {
 }
 
 export default function ExteriorTourPage() {
-  const signedExteriorMenuAssets = signR2AssetKeys([
-    EXTERIOR_MINIMAP_IMAGE_URL,
-    ...exteriorAmenities.map((amenity) => amenity.image),
-  ]);
+  const signedExteriorMenuAssets = Object.fromEntries(
+    exteriorAmenities.map((amenity) => [amenity.image, signR2AssetKey(amenity.image)]),
+  );
 
   return (
     <main className="relative h-[100svh] min-h-[100svh] w-full overflow-hidden bg-[#040608]">

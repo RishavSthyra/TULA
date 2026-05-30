@@ -870,8 +870,8 @@ export const EXTERIOR_MINIMAP_BOUNDS = {
 } as const;
 
 export const EXTERIOR_MINIMAP_IMAGE_LAYOUT = {
-  width: 2879,
-  height: 1680,
+  width: 1920,
+  height: 1080,
 } as const;
 
 export const exteriorAmenities: ExteriorAmenity[] = amenityDefinitions.map(

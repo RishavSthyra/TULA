@@ -7,7 +7,6 @@ import Image from "next/image";
 import { BsArrowRight } from "react-icons/bs";
 import {
   CalendarDays,
-  ChevronDown,
   Leaf,
   SunMedium,
 } from "lucide-react";
@@ -28,6 +27,10 @@ const HERO_LOOP_RESTART_BEFORE_END_SECONDS = 0.5;
 const HERO_LOOP_RESTART_AT_SECONDS = 0.04;
 const HERO_PLAY_RETRY_MS = 450;
 const STATIC_HERO_IMAGE_HOLD_MS = 2000;
+const PROJECT_LATITUDE = 13.153818578384746;
+const PROJECT_LONGITUDE = 77.63036955360322;
+const PROJECT_WEATHER_API_URL = `https://api.open-meteo.com/v1/forecast?latitude=${PROJECT_LATITUDE}&longitude=${PROJECT_LONGITUDE}&current=temperature_2m,relative_humidity_2m,wind_speed_10m`;
+const PROJECT_AIR_QUALITY_API_URL = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${PROJECT_LATITUDE}&longitude=${PROJECT_LONGITUDE}&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,us_aqi`;
 
 type IdleCapableWindow = Window &
   typeof globalThis & {
@@ -39,6 +42,25 @@ type IdleCapableWindow = Window &
   };
 
 type TimeoutHandle = ReturnType<typeof globalThis.setTimeout>;
+
+type OpenMeteoWeatherResponse = {
+  current?: {
+    temperature_2m?: number;
+  };
+};
+
+type OpenMeteoAirQualityResponse = {
+  current?: {
+    us_aqi?: number;
+  };
+};
+
+function formatViewerLocalTime(date: Date) {
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
 
 type HeroSectionProps = {
   heroLogoSrc?: string | null;
@@ -105,7 +127,9 @@ export default function HeroSection({
   const [videoReady, setVideoReady] = useState(false);
   const [isHeroVideoPlaying, setIsHeroVideoPlaying] = useState(false);
   const [isHeroLoopVideoVisible, setIsHeroLoopVideoVisible] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState("EN");
+  const [viewerLocalTime, setViewerLocalTime] = useState("--:--");
+  const [projectTemperature, setProjectTemperature] = useState("--°C");
+  const [projectAqi, setProjectAqi] = useState("AQI --");
   const isEntryVideoVisible = false;
 
   const line1 = "A Quiter,";
@@ -297,6 +321,72 @@ export default function HeroSection({
 
   const openBookVisit = useCallback(() => {
     window.dispatchEvent(new CustomEvent(TRIFECTA_LEAD_OPEN_EVENT));
+  }, []);
+
+  useEffect(() => {
+    const syncViewerTime = () => {
+      setViewerLocalTime(formatViewerLocalTime(new Date()));
+    };
+
+    syncViewerTime();
+    const intervalId = window.setInterval(syncViewerTime, 30_000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const fetchProjectConditions = async () => {
+      try {
+        const [weatherResponse, airQualityResponse] = await Promise.all([
+          fetch(PROJECT_WEATHER_API_URL),
+          fetch(PROJECT_AIR_QUALITY_API_URL),
+        ]);
+
+        if (!weatherResponse.ok || !airQualityResponse.ok) {
+          throw new Error("Unable to load project conditions.");
+        }
+
+        const weatherData =
+          (await weatherResponse.json()) as OpenMeteoWeatherResponse;
+        const airQualityData =
+          (await airQualityResponse.json()) as OpenMeteoAirQualityResponse;
+
+        if (isCancelled) {
+          return;
+        }
+
+        const temperatureValue = weatherData.current?.temperature_2m;
+        const aqiValue = airQualityData.current?.us_aqi;
+
+        setProjectTemperature(
+          typeof temperatureValue === "number"
+            ? `${Math.round(temperatureValue)}°C`
+            : "--°C",
+        );
+        setProjectAqi(
+          typeof aqiValue === "number" ? `AQI ${Math.round(aqiValue)}` : "AQI --",
+        );
+      } catch (error) {
+        console.error("Failed to fetch project conditions:", error);
+
+        if (!isCancelled) {
+          setProjectTemperature("--°C");
+          setProjectAqi("AQI --");
+        }
+      }
+    };
+
+    fetchProjectConditions();
+    const intervalId = window.setInterval(fetchProjectConditions, 15 * 60_000);
+
+    return () => {
+      isCancelled = true;
+      window.clearInterval(intervalId);
+    };
   }, []);
 
   useEffect(() => {
@@ -1052,39 +1142,56 @@ export default function HeroSection({
 
       <DesktopSiteRail className="absolute left-5 top-1/2 z-20 -translate-y-1/2 2xl:left-7" />
 
-      <div className="absolute left-1/2 top-5 z-20 -translate-x-1/2 sm:top-8">
-        <div className="flex items-center rounded-full border border-[#dfcfaa]/70 bg-[linear-gradient(180deg,rgba(251,249,241,0.96),rgba(241,237,226,0.92))] px-3 py-1.5 text-[#4d5f4d] shadow-[0_12px_28px_rgba(30,46,30,0.12),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-md sm:px-4 sm:py-2">
-          <div className="flex items-center gap-2 sm:gap-2.5">
-            <SunMedium className="h-[0.85rem] w-[0.85rem] text-[#b29349] sm:h-4 sm:w-4" strokeWidth={1.8} />
-            <span className="text-[0.76rem] font-medium sm:text-[0.88rem]">7:15 AM</span>
+      <div className="absolute inset-x-4 top-5 z-20 flex flex-col items-center gap-2.5 sm:hidden">
+        <div className="flex w-full max-w-[20rem] items-center justify-center rounded-full border border-[#dfcfaa]/70 bg-[linear-gradient(180deg,rgba(251,249,241,0.96),rgba(241,237,226,0.92))] px-3 py-1.5 text-[#4d5f4d] shadow-[0_12px_28px_rgba(30,46,30,0.12),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-md">
+          <div className="flex items-center gap-2">
+            <SunMedium className="h-[0.85rem] w-[0.85rem] text-[#b29349]" strokeWidth={1.8} />
+            <span className="text-[0.76rem] font-medium">{viewerLocalTime}</span>
           </div>
-          <span className="mx-3 h-6 w-px bg-[#dbcba7] sm:mx-4 sm:h-7" />
-          <div className="text-[0.76rem] font-semibold sm:text-[0.88rem]">25°C</div>
-          <span className="mx-3 h-6 w-px bg-[#dbcba7] sm:mx-4 sm:h-7" />
-          <label className="relative flex items-center gap-1 text-[0.76rem] font-semibold sm:text-[0.88rem]">
-            <select
-              value={selectedLanguage}
-              onChange={(event) => setSelectedLanguage(event.target.value)}
-              className="appearance-none bg-transparent pr-4 text-[#415541] outline-none"
-              aria-label="Language"
-            >
-              <option value="EN">EN</option>
-              <option value="FR">FR</option>
-              <option value="AR">AR</option>
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-0 h-3.5 w-3.5 text-[#6f7f6b]" strokeWidth={1.8} />
-          </label>
+          <span className="mx-3 h-6 w-px bg-[#dbcba7]" />
+          <div className="text-[0.76rem] font-semibold">{projectTemperature}</div>
+          <span className="mx-3 h-6 w-px bg-[#dbcba7]" />
+          <div className="min-w-0 text-[0.76rem] font-semibold text-[#415541]">
+            {projectAqi}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={openBookVisit}
+          className="group relative inline-flex w-full max-w-[15.5rem] items-center justify-center gap-2 overflow-hidden rounded-full px-[1px] py-[1px] shadow-[0_16px_34px_rgba(23,43,24,0.18)]"
+        >
+          <span className="absolute inset-0 rounded-full bg-[linear-gradient(135deg,#f1e0ac_0%,#b68f43_44%,#f0ddb2_100%)]" />
+          <span className="relative inline-flex w-full items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#3f5d38_0%,#24422b_52%,#183224_100%)] px-4 py-2.5 text-[0.82rem] font-semibold text-[#f7f1de]">
+            <CalendarDays className="h-4 w-4 text-[#e3c57c]" strokeWidth={1.9} />
+            Book a Visit
+          </span>
+        </button>
+      </div>
+
+      <div className="absolute left-1/2 top-8 z-20 hidden -translate-x-1/2 sm:block">
+        <div className="flex items-center rounded-full border border-[#dfcfaa]/70 bg-[linear-gradient(180deg,rgba(251,249,241,0.96),rgba(241,237,226,0.92))] px-4 py-2 text-[#4d5f4d] shadow-[0_12px_28px_rgba(30,46,30,0.12),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-md">
+          <div className="flex items-center gap-2.5">
+            <SunMedium className="h-4 w-4 text-[#b29349]" strokeWidth={1.8} />
+            <span className="text-[0.88rem] font-medium">{viewerLocalTime}</span>
+          </div>
+          <span className="mx-4 h-7 w-px bg-[#dbcba7]" />
+          <div className="text-[0.88rem] font-semibold">{projectTemperature}</div>
+          <span className="mx-4 h-7 w-px bg-[#dbcba7]" />
+          <div className="text-[0.88rem] font-semibold text-[#415541]">
+            {projectAqi}
+          </div>
         </div>
       </div>
 
-      <div className="absolute right-4 top-5 z-20 sm:right-8 sm:top-8 lg:right-12 xl:right-12 2xl:right-16">
+      <div className="absolute right-8 top-8 z-20 hidden sm:block lg:right-12 xl:right-12 2xl:right-16">
         <button
           type="button"
           onClick={openBookVisit}
           className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full px-[1px] py-[1px] shadow-[0_16px_34px_rgba(23,43,24,0.18)]"
         >
           <span className="absolute inset-0 rounded-full bg-[linear-gradient(135deg,#f1e0ac_0%,#b68f43_44%,#f0ddb2_100%)]" />
-          <span className="relative inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#3f5d38_0%,#24422b_52%,#183224_100%)] px-4 py-2.5 text-[0.82rem] font-semibold text-[#f7f1de] sm:px-5 sm:py-2.5 sm:text-[0.92rem]">
+          <span className="relative inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#3f5d38_0%,#24422b_52%,#183224_100%)] px-5 py-2.5 text-[0.92rem] font-semibold text-[#f7f1de]">
             <CalendarDays className="h-4 w-4 text-[#e3c57c]" strokeWidth={1.9} />
             Book a Visit
           </span>
