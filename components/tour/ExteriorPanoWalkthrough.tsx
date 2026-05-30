@@ -1093,7 +1093,7 @@ export default function ExteriorPanoWalkthrough({
     viewportHeight: exteriorMenuViewportHeight,
   } = useSnapListViewport({
     itemCount: visibleExteriorAmenities.length,
-    targetVisibleCards: 4.4,
+    targetVisibleCards: 4,
   });
   const {
     setFirstItemNode: setMobileExteriorMenuFirstItemNode,
@@ -1102,7 +1102,7 @@ export default function ExteriorPanoWalkthrough({
     viewportHeight: mobileExteriorMenuViewportHeight,
   } = useSnapListViewport({
     itemCount: visibleExteriorAmenities.length,
-    targetVisibleCards: 4.4,
+    targetVisibleCards: 4,
   });
   const projectMinimapPoint = useCallback((coordinate: Vec3) => {
     const xRange = Math.max(
@@ -1164,6 +1164,12 @@ export default function ExteriorPanoWalkthrough({
   const minimapTrailPolyline = minimapTrailPoints
     .map((point) => `${point.leftPercent * 100},${point.topPercent * 100}`)
     .join(" ");
+  const exteriorMenuViewportHeightWithBuffer = exteriorMenuViewportHeight
+    ? Math.ceil(exteriorMenuViewportHeight) + 16
+    : null;
+  const mobileExteriorMenuViewportHeightWithBuffer = mobileExteriorMenuViewportHeight
+    ? Math.ceil(mobileExteriorMenuViewportHeight) + 16
+    : null;
   const openMinimapExpanded = useCallback(() => {
     setIsMinimapExpanded(true);
   }, []);
@@ -2144,6 +2150,20 @@ export default function ExteriorPanoWalkthrough({
     [jumpToNode],
   );
 
+  const jumpToAmenityFromExpandedMap = useCallback(
+    async (amenity: ExteriorAmenity) => {
+      const completed = await jumpToAmenity(amenity);
+
+      if (completed) {
+        resetMinimapView();
+        closeMinimapExpanded();
+      }
+
+      return completed;
+    },
+    [closeMinimapExpanded, jumpToAmenity, resetMinimapView],
+  );
+
   const handleMinimapWheel = useCallback(
     (event: ReactWheelEvent<HTMLDivElement>) => {
       event.preventDefault();
@@ -2925,7 +2945,7 @@ export default function ExteriorPanoWalkthrough({
         />
 
         <div
-          className={`absolute left-2 top-2 flex w-[calc(100vw-1rem)] max-w-[22.5rem] max-h-[calc(100svh-1rem)] flex-col gap-5 overflow-hidden rounded-[1.9rem] px-4 py-4 shadow-[0_24px_64px_rgba(0,0,0,0.22)] transition duration-300 sm:left-3 sm:top-3 sm:w-[25rem] sm:max-w-none sm:max-h-[calc(100svh-1.5rem)] md:left-4 md:top-4 md:w-[26rem] md:max-h-[calc(100svh-2rem)] xl:left-8 xl:top-28 xl:w-[24rem] xl:max-h-[calc(100svh-9rem)] 2xl:left-10 2xl:top-32 2xl:w-[25rem] 2xl:max-h-[calc(100svh-10rem)] ${PREMIUM_PANEL_SURFACE} ${
+          className={`absolute left-2 top-2 flex h-fit w-[calc(100vw-1rem)] max-w-[22.5rem] max-h-[calc(100svh-1rem)] self-start flex-col gap-5 overflow-hidden rounded-[1.9rem] px-4 py-4 shadow-[0_24px_64px_rgba(0,0,0,0.22)] transition duration-300 sm:left-3 sm:top-3 sm:w-[25rem] sm:max-w-none sm:max-h-[calc(100svh-1.5rem)] md:left-4 md:top-4 md:w-[26rem] md:max-h-[calc(100svh-2rem)] xl:left-8 xl:top-28 xl:w-[24rem] xl:max-h-[calc(100svh-9rem)] 2xl:left-10 2xl:top-32 2xl:w-[25rem] 2xl:max-h-[calc(100svh-10rem)] ${PREMIUM_PANEL_SURFACE} ${
             isMobileAmenitiesOpen
               ? "translate-x-0"
               : "-translate-x-[calc(100%+0.5rem)] sm:-translate-x-[calc(100%+0.75rem)] md:-translate-x-[calc(100%+1rem)] xl:-translate-x-[calc(100%+2rem)] 2xl:-translate-x-[calc(100%+2.5rem)]"
@@ -2964,8 +2984,11 @@ export default function ExteriorPanoWalkthrough({
             ref={setMobileExteriorMenuScrollAreaNode}
             className="custom-scrollbar min-h-0 flex-none overflow-y-auto overscroll-contain pr-1 snap-y snap-mandatory xl:hidden"
             style={
-              mobileExteriorMenuViewportHeight
-                ? { maxHeight: `${Math.ceil(mobileExteriorMenuViewportHeight)}px` }
+              mobileExteriorMenuViewportHeightWithBuffer
+                ? {
+                    height: `${mobileExteriorMenuViewportHeightWithBuffer}px`,
+                    maxHeight: `${mobileExteriorMenuViewportHeightWithBuffer}px`,
+                  }
                 : undefined
             }
           >
@@ -2998,8 +3021,11 @@ export default function ExteriorPanoWalkthrough({
             ref={setExteriorMenuScrollAreaNode}
             className="custom-scrollbar hidden min-h-0 flex-none overflow-y-auto overscroll-contain pr-1 snap-y snap-mandatory xl:block"
             style={
-              exteriorMenuViewportHeight
-                ? { maxHeight: `${Math.ceil(exteriorMenuViewportHeight)}px` }
+              exteriorMenuViewportHeightWithBuffer
+                ? {
+                    height: `${exteriorMenuViewportHeightWithBuffer}px`,
+                    maxHeight: `${exteriorMenuViewportHeightWithBuffer}px`,
+                  }
                 : undefined
             }
           >
@@ -3243,7 +3269,7 @@ export default function ExteriorPanoWalkthrough({
               minimapTrailPolyline={minimapTrailPolyline}
               minimapDots={minimapDots}
               activeAmenityId={activeAmenityId}
-              jumpToAmenity={jumpToAmenity}
+              jumpToAmenity={jumpToAmenityFromExpandedMap}
               className="mx-auto w-full max-w-[72rem] rounded-[2.2rem]"
               mapClassName="w-full"
             />

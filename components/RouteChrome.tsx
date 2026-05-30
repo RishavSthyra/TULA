@@ -165,7 +165,7 @@ export default function RouteChrome() {
         <DesktopSiteRail className="fixed left-6 top-1/2 z-50 -translate-y-1/2 2xl:left-7" />
       ) : null}
 
-      {!isDocklessRoute ? <MobileSiteNav /> : null}
+      {!isDocklessRoute && !isAmenitiesRoute ? <MobileSiteNav /> : null}
 
       <QuoteRequestController
         mergeRouteLinks={!shouldMergeDockIntoCta && shouldMergeLinksForRoute}
