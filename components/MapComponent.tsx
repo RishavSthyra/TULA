@@ -1704,7 +1704,6 @@ export function CustomStyleExample() {
                 zoom={15}
                 theme="light"
                 fadeDuration={0}
-                cooperativeGestures
                 className="h-full w-full min-w-0 max-w-full"
                 onViewportChange={handleViewportChange}
                 styles={{ light: MAP_STYLE, dark: MAP_STYLE }}

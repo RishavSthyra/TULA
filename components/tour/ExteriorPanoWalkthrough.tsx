@@ -14,7 +14,6 @@ import {
   ArrowUp,
   Check,
   Clipboard,
-  Map as MapIcon,
   Maximize2,
   Menu,
   Minimize2,
@@ -590,8 +589,6 @@ function CurrentAmenityPanel({
   nodeIds,
   activeNodeId,
   progressIndex,
-  isMapExpanded,
-  onViewMap,
   className = "",
 }: {
   name: string;
@@ -599,8 +596,6 @@ function CurrentAmenityPanel({
   nodeIds: string[];
   activeNodeId: string;
   progressIndex: number;
-  isMapExpanded: boolean;
-  onViewMap: () => void;
   className?: string;
 }) {
   return (
@@ -644,14 +639,14 @@ function CurrentAmenityPanel({
           {description}
         </p>
 
-        <button
+        {/* <button
           type="button"
           onClick={onViewMap}
           className={`walkthrough-glass-button mt-6 inline-flex items-center gap-3 rounded-[1.15rem] px-5 py-3 text-sm font-semibold text-white transition hover:scale-[1.01] active:scale-[0.99] ${PREMIUM_OLIVE_GRADIENT}`}
         >
           <MapIcon className="h-4 w-4" />
           {isMapExpanded ? "Hide Map" : "View on Map"}
-        </button>
+        </button> */}
 
         <div className="mt-5 flex items-center gap-2">
           <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white/78 ${PREMIUM_PILL_SURFACE}`}>
@@ -686,7 +681,6 @@ function CurrentAmenityPanel({
 function ExteriorMinimapGraphic({
   signedMinimapImageUrl,
   fallbackMinimapImageUrl,
-  isExpanded,
   minimapZoom,
   minimapOffset,
   isMinimapDragging,
@@ -703,7 +697,6 @@ function ExteriorMinimapGraphic({
 }: {
   signedMinimapImageUrl: string;
   fallbackMinimapImageUrl: string;
-  isExpanded: boolean;
   minimapZoom: number;
   minimapOffset: { x: number; y: number };
   isMinimapDragging: boolean;
@@ -722,15 +715,10 @@ function ExteriorMinimapGraphic({
   jumpToAmenity: (amenity: ExteriorAmenity) => Promise<boolean>;
   className?: string;
 }) {
-  const preferredMinimapImageSrc =
+  const minimapImageSrc =
     signedMinimapImageUrl && signedMinimapImageUrl !== EMPTY_IMAGE_DATA_URL
       ? signedMinimapImageUrl
       : fallbackMinimapImageUrl;
-  const [failedMinimapImageSrc, setFailedMinimapImageSrc] = useState<string | null>(null);
-  const minimapImageSrc =
-    failedMinimapImageSrc === preferredMinimapImageSrc
-      ? fallbackMinimapImageUrl
-      : preferredMinimapImageSrc;
 
   return (
     <div
@@ -757,20 +745,19 @@ function ExteriorMinimapGraphic({
         style={{
           transform: `translate(${minimapOffset.x}px, ${minimapOffset.y}px) scale(${minimapZoom})`,
           transformOrigin: "center center",
+          willChange: "transform",
         }}
       >
-        <div className="absolute inset-0">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+        <div className="relative h-full w-full overflow-hidden rounded-[1.45rem] bg-[#132015]">
+          <Image
             src={minimapImageSrc}
             alt="Trifecta amenity minimap"
-            className="h-full w-full brightness-[0.96] contrast-[1.02] saturate-[0.84] hue-rotate-[6deg]"
+            unoptimized
+            width={EXTERIOR_MINIMAP_IMAGE_LAYOUT.width}
+            height={EXTERIOR_MINIMAP_IMAGE_LAYOUT.height}
+            sizes="(max-width: 640px) 70vw, 19rem"
             draggable={false}
-            onError={() => {
-              if (preferredMinimapImageSrc !== fallbackMinimapImageUrl) {
-                setFailedMinimapImageSrc(preferredMinimapImageSrc);
-              }
-            }}
+            className="pointer-events-none block h-full w-full select-none object-cover brightness-[0.96] contrast-[1.02] saturate-[0.84] hue-rotate-[6deg]"
           />
 
           {minimapTrailPoints.length > 1 ? (
@@ -783,8 +770,8 @@ function ExteriorMinimapGraphic({
               <polyline
                 points={minimapTrailPolyline}
                 fill="none"
-                stroke="rgba(58,90,72,0.28)"
-                strokeWidth={isExpanded ? 1.35 : 1.5}
+                stroke="rgba(120,92,6,0.34)"
+                strokeWidth={1.5}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 vectorEffect="non-scaling-stroke"
@@ -792,8 +779,8 @@ function ExteriorMinimapGraphic({
               <polyline
                 points={minimapTrailPolyline}
                 fill="none"
-                stroke="rgba(165,220,191,0.22)"
-                strokeWidth={isExpanded ? 3.6 : 3}
+                stroke="rgba(255,223,77,0.34)"
+                strokeWidth={3}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 vectorEffect="non-scaling-stroke"
@@ -802,8 +789,8 @@ function ExteriorMinimapGraphic({
               <polyline
                 points={minimapTrailPolyline}
                 fill="none"
-                stroke="rgba(78,124,101,0.92)"
-                strokeWidth={isExpanded ? 1.1 : 1.15}
+                stroke="rgba(255,214,64,0.98)"
+                strokeWidth={1.15}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 vectorEffect="non-scaling-stroke"
@@ -813,7 +800,7 @@ function ExteriorMinimapGraphic({
 
           {minimapTrailPoints.length > 0 ? (
             <span
-              className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/70 bg-[#315840] shadow-[0_0_0_4px_rgba(184,235,207,0.14),0_0_16px_rgba(78,124,101,0.28)]"
+              className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/80 bg-[#ffd54a] shadow-[0_0_0_4px_rgba(255,222,89,0.22),0_0_16px_rgba(255,214,64,0.36)]"
               style={{
                 left: `${minimapTrailPoints[minimapTrailPoints.length - 1].leftPercent * 100}%`,
                 top: `${minimapTrailPoints[minimapTrailPoints.length - 1].topPercent * 100}%`,
@@ -828,12 +815,10 @@ function ExteriorMinimapGraphic({
               aria-label={`Go to ${amenity.name}`}
               title={amenity.name}
               onClick={() => void jumpToAmenity(amenity)}
-              className={`group absolute -translate-x-1/2 -translate-y-1/2 rounded-full border transition hover:scale-110 ${
-                isExpanded ? "h-3 w-3" : "h-2.5 w-2.5"
-              } ${
+              className={`group absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border transition hover:scale-110 ${
                 activeAmenityId === amenity.id
-                  ? "border-white/80 bg-[#5d896f] shadow-[0_0_0_4px_rgba(184,235,207,0.18),0_0_12px_rgba(120,192,150,0.26)]"
-                  : "border-white/60 bg-[#315840] shadow-[0_0_8px_rgba(49,82,56,0.24)]"
+                  ? "border-white/85 bg-[#ffd54a] shadow-[0_0_0_4px_rgba(255,222,89,0.24),0_0_12px_rgba(255,214,64,0.34)]"
+                  : "border-[#fff4c4] bg-[#ffcc33] shadow-[0_0_0_2px_rgba(255,214,64,0.14),0_0_10px_rgba(255,204,51,0.3)]"
               }`}
               style={{
                 left: `${amenity.leftPercent * 100}%`,
@@ -844,8 +829,8 @@ function ExteriorMinimapGraphic({
                 aria-hidden
                 className={`pointer-events-none absolute inset-0 rounded-full ${
                   activeAmenityId === amenity.id
-                    ? "bg-[#d5f0df]/42"
-                    : "bg-[#93c2a8]/30"
+                    ? "bg-[#fff3a6]/60"
+                    : "bg-[#ffe27a]/44"
                 }`}
                 style={{ animation: "walkthroughMinimapPulse 1.8s ease-in-out infinite" }}
               />
@@ -859,7 +844,7 @@ function ExteriorMinimapGraphic({
 
 function ExteriorMinimapPanel({
   isExpanded,
-  onToggle,
+  onToggleExpanded,
   signedMinimapImageUrl,
   fallbackMinimapImageUrl,
   minimapZoom,
@@ -878,7 +863,7 @@ function ExteriorMinimapPanel({
   mapClassName,
 }: {
   isExpanded: boolean;
-  onToggle: () => void;
+  onToggleExpanded: () => void;
   signedMinimapImageUrl: string;
   fallbackMinimapImageUrl: string;
   minimapZoom: number;
@@ -906,7 +891,7 @@ function ExteriorMinimapPanel({
     >
       <div className="pointer-events-none absolute inset-[8px] rounded-[1.45rem] border border-white/18" />
       <div className="relative z-10">
-        <div className={`${uiFont.className} flex items-center justify-between gap-3 px-4 pb-3 pt-4 text-white`}>
+        <div className={`${uiFont.className} flex items-start justify-between gap-3 px-4 pb-3 pt-4 text-white`}>
           <div className="min-w-0">
             <div className="truncate text-[10px] font-bold uppercase tracking-[0.26em] text-white/62">
               Amenity Map
@@ -918,8 +903,8 @@ function ExteriorMinimapPanel({
           <button
             type="button"
             aria-label={isExpanded ? "Collapse minimap" : "Expand minimap"}
-            onClick={onToggle}
-            className={`walkthrough-glass-button flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/86 transition ${PREMIUM_PILL_SURFACE}`}
+            onClick={onToggleExpanded}
+            className={`walkthrough-glass-button flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/86 transition hover:scale-105 active:scale-95 ${PREMIUM_PILL_SURFACE}`}
           >
             {isExpanded ? (
               <Minimize2 className="h-4 w-4" />
@@ -930,19 +915,18 @@ function ExteriorMinimapPanel({
         </div>
 
         <div className="px-4 pb-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
+          {/* <div className="mb-3 flex items-center justify-between gap-3">
             <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white/78 ${PREMIUM_PILL_SURFACE}`}>
-              {isExpanded ? "Click outside to close" : "Tap to expand"}
+              {isExpanded ? "Tap outside to close" : "Expand for detail"}
             </span>
             <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/56">
               Scroll to zoom
             </span>
-          </div>
+          </div> */}
 
           <ExteriorMinimapGraphic
             signedMinimapImageUrl={signedMinimapImageUrl}
             fallbackMinimapImageUrl={fallbackMinimapImageUrl}
-            isExpanded={isExpanded}
             minimapZoom={minimapZoom}
             minimapOffset={minimapOffset}
             isMinimapDragging={isMinimapDragging}
@@ -987,6 +971,7 @@ export default function ExteriorPanoWalkthrough({
     createLoadState("idle", "Preparing panorama"),
   );
   const [hasCompletedInitialPano, setHasCompletedInitialPano] = useState(false);
+  const [isMinimapExpanded, setIsMinimapExpanded] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isMobileAmenitiesOpen, setIsMobileAmenitiesOpen] = useState(false);
   const [isTrailPlaying, setIsTrailPlaying] = useState(false);
@@ -996,7 +981,6 @@ export default function ExteriorPanoWalkthrough({
   const [trailSecondsRemaining, setTrailSecondsRemaining] = useState(
     Math.ceil(TRAIL_ADVANCE_MS / 1000),
   );
-  const [isMinimapExpanded, setIsMinimapExpanded] = useState(false);
   const [minimapZoom, setMinimapZoom] = useState(1);
   const [minimapOffset, setMinimapOffset] = useState({ x: 0, y: 0 });
   const [isMinimapDragging, setIsMinimapDragging] = useState(false);
@@ -1121,28 +1105,26 @@ export default function ExteriorPanoWalkthrough({
     targetVisibleCards: 4.4,
   });
   const projectMinimapPoint = useCallback((coordinate: Vec3) => {
-    const minX = Math.min(
-      EXTERIOR_MINIMAP_BOUNDS.bottomLeft.x,
-      EXTERIOR_MINIMAP_BOUNDS.topRight.x,
+    const xRange = Math.max(
+      EXTERIOR_MINIMAP_BOUNDS.topRight.x - EXTERIOR_MINIMAP_BOUNDS.bottomLeft.x,
+      1,
     );
-    const maxX = Math.max(
-      EXTERIOR_MINIMAP_BOUNDS.bottomLeft.x,
-      EXTERIOR_MINIMAP_BOUNDS.topRight.x,
+    const yRange = Math.max(
+      EXTERIOR_MINIMAP_BOUNDS.bottomLeft.y - EXTERIOR_MINIMAP_BOUNDS.topRight.y,
+      1,
     );
-    const minY = Math.min(
-      EXTERIOR_MINIMAP_BOUNDS.bottomLeft.y,
-      EXTERIOR_MINIMAP_BOUNDS.topRight.y,
-    );
-    const maxY = Math.max(
-      EXTERIOR_MINIMAP_BOUNDS.bottomLeft.y,
-      EXTERIOR_MINIMAP_BOUNDS.topRight.y,
-    );
-    const xRange = Math.max(maxX - minX, 1);
-    const yRange = Math.max(maxY - minY, 1);
 
     return {
-      leftPercent: clamp((coordinate.x - minX) / xRange, 0, 1),
-      topPercent: clamp((coordinate.y - minY) / yRange, 0, 1),
+      leftPercent: clamp(
+        (coordinate.x - EXTERIOR_MINIMAP_BOUNDS.bottomLeft.x) / xRange,
+        0,
+        1,
+      ),
+      topPercent: clamp(
+        (coordinate.y - EXTERIOR_MINIMAP_BOUNDS.topRight.y) / yRange,
+        0,
+        1,
+      ),
     };
   }, []);
   const minimapDots = useMemo(() => {
@@ -1182,12 +1164,41 @@ export default function ExteriorPanoWalkthrough({
   const minimapTrailPolyline = minimapTrailPoints
     .map((point) => `${point.leftPercent * 100},${point.topPercent * 100}`)
     .join(" ");
-  const toggleMinimapExpanded = useCallback(() => {
-    setIsMinimapExpanded((current) => !current);
+  const openMinimapExpanded = useCallback(() => {
+    setIsMinimapExpanded(true);
   }, []);
   const closeMinimapExpanded = useCallback(() => {
     setIsMinimapExpanded(false);
   }, []);
+  const resetMinimapView = useCallback(() => {
+    minimapDragRef.current = {
+      pointerId: null,
+      lastX: 0,
+      lastY: 0,
+      dragging: false,
+    };
+    setIsMinimapDragging(false);
+    setMinimapZoom(1);
+    setMinimapOffset({ x: 0, y: 0 });
+  }, []);
+
+  useEffect(() => {
+    if (!isMinimapExpanded) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsMinimapExpanded(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isMinimapExpanded]);
 
   const rememberResolvedPano = useCallback((resolved: ResolvedPano) => {
     const cache = cacheRef.current;
@@ -2225,33 +2236,6 @@ export default function ExteriorPanoWalkthrough({
     [],
   );
 
-  useEffect(() => {
-    if (!isMinimapExpanded) {
-      minimapDragRef.current = {
-        pointerId: null,
-        lastX: 0,
-        lastY: 0,
-        dragging: false,
-      };
-      setIsMinimapDragging(false);
-      setMinimapZoom(1);
-      setMinimapOffset({ x: 0, y: 0 });
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsMinimapExpanded(false);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isMinimapExpanded]);
-
   const navigateTo = useCallback(
     async (direction: NavigationDirection) => {
       if (isTransitioning || navigationLockRef.current) {
@@ -2924,7 +2908,6 @@ export default function ExteriorPanoWalkthrough({
             <Menu className="h-5 w-5" />
           </button>
         </div>
-
       </div>
 
       <div
@@ -2942,7 +2925,7 @@ export default function ExteriorPanoWalkthrough({
         />
 
         <div
-          className={`absolute bottom-2 left-2 top-2 flex w-[calc(100vw-1rem)] max-w-[22.5rem] flex-col gap-5 overflow-hidden rounded-[1.9rem] px-4 py-4 shadow-[0_24px_64px_rgba(0,0,0,0.22)] transition duration-300 sm:bottom-3 sm:left-3 sm:top-3 sm:w-[25rem] sm:max-w-none md:bottom-4 md:left-4 md:top-4 md:w-[26rem] xl:bottom-8 xl:left-8 xl:top-28 xl:w-[24rem] 2xl:bottom-10 2xl:left-10 2xl:top-32 2xl:w-[25rem] ${PREMIUM_PANEL_SURFACE} ${
+          className={`absolute left-2 top-2 flex w-[calc(100vw-1rem)] max-w-[22.5rem] max-h-[calc(100svh-1rem)] flex-col gap-5 overflow-hidden rounded-[1.9rem] px-4 py-4 shadow-[0_24px_64px_rgba(0,0,0,0.22)] transition duration-300 sm:left-3 sm:top-3 sm:w-[25rem] sm:max-w-none sm:max-h-[calc(100svh-1.5rem)] md:left-4 md:top-4 md:w-[26rem] md:max-h-[calc(100svh-2rem)] xl:left-8 xl:top-28 xl:w-[24rem] xl:max-h-[calc(100svh-9rem)] 2xl:left-10 2xl:top-32 2xl:w-[25rem] 2xl:max-h-[calc(100svh-10rem)] ${PREMIUM_PANEL_SURFACE} ${
             isMobileAmenitiesOpen
               ? "translate-x-0"
               : "-translate-x-[calc(100%+0.5rem)] sm:-translate-x-[calc(100%+0.75rem)] md:-translate-x-[calc(100%+1rem)] xl:-translate-x-[calc(100%+2rem)] 2xl:-translate-x-[calc(100%+2.5rem)]"
@@ -3164,8 +3147,6 @@ export default function ExteriorPanoWalkthrough({
           nodeIds={activeAmenityNodeIds}
           activeNodeId={activeNodeId}
           progressIndex={activeAmenityProgressIndex}
-          isMapExpanded={isMinimapExpanded}
-          onViewMap={toggleMinimapExpanded}
         />
       </div>
 
@@ -3235,14 +3216,20 @@ export default function ExteriorPanoWalkthrough({
         <div className="absolute inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
           <button
             type="button"
-            aria-label="Close expanded amenity map"
-            onClick={closeMinimapExpanded}
-            className="absolute inset-0 bg-[rgba(6,12,10,0.32)] backdrop-blur-[8px]"
+            aria-label="Close expanded exterior minimap"
+            onClick={() => {
+              resetMinimapView();
+              closeMinimapExpanded();
+            }}
+            className="absolute inset-0 bg-[rgba(6,12,10,0.42)] backdrop-blur-[10px]"
           />
-          <div className="relative z-10 w-[min(92vw,72rem)] max-w-[72rem]">
+          <div className="relative z-10 w-[min(94vw,72rem)]">
             <ExteriorMinimapPanel
               isExpanded
-              onToggle={closeMinimapExpanded}
+              onToggleExpanded={() => {
+                resetMinimapView();
+                closeMinimapExpanded();
+              }}
               signedMinimapImageUrl={signedMinimapImageUrl}
               fallbackMinimapImageUrl={fallbackMinimapImageUrl}
               minimapZoom={minimapZoom}
@@ -3257,6 +3244,7 @@ export default function ExteriorPanoWalkthrough({
               minimapDots={minimapDots}
               activeAmenityId={activeAmenityId}
               jumpToAmenity={jumpToAmenity}
+              className="mx-auto w-full max-w-[72rem] rounded-[2.2rem]"
               mapClassName="w-full"
             />
           </div>
@@ -3266,7 +3254,7 @@ export default function ExteriorPanoWalkthrough({
       <div className="pointer-events-auto absolute bottom-3 right-3 z-30">
         <ExteriorMinimapPanel
           isExpanded={false}
-          onToggle={toggleMinimapExpanded}
+          onToggleExpanded={openMinimapExpanded}
           signedMinimapImageUrl={signedMinimapImageUrl}
           fallbackMinimapImageUrl={fallbackMinimapImageUrl}
           minimapZoom={minimapZoom}

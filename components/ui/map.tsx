@@ -228,6 +228,11 @@ const Map = forwardRef<MapRef, MapProps>(function Map(
       ...viewport,
     });
 
+    map.dragPan.enable();
+    map.scrollZoom.enable();
+    map.touchZoomRotate.enable();
+    map.touchZoomRotate.disableRotation();
+
     const styleDataHandler = () => {
       clearStyleTimeout();
       // Delay to ensure style is fully processed before allowing layer operations
