@@ -1900,7 +1900,7 @@ export function CustomStyleExample() {
                   <img
                     src="/flowerUI.png"
                     alt=""
-                    className="pointer-events-none absolute -right-6 -top-3 z-0 h-88 w-auto opacity-60 select-none"
+                    className="pointer-events-none absolute -right-6 -top-3 z-0 h-88 w-auto opacity-40 select-none"
                   />
                   <div className="relative mb-5 flex items-start justify-between gap-3">
                     <div>
