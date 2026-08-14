@@ -68,6 +68,7 @@ import type {
   InventoryStatus,
   TowerType,
 } from "@/types/inventory";
+import type { MasterPlanDeveloperConfig } from "@/types/developer-config";
 import { useSignedAssetUrls } from "@/src/lib/use-signed-assets";
 (BufferGeometry.prototype as unknown as {
   computeBoundsTree?: typeof computeBoundsTree;
@@ -81,8 +82,6 @@ Mesh.prototype.raycast = acceleratedRaycast as Mesh["raycast"];
 const MODEL_PATH_A = "/models/forglb.glb";
 const MODEL_PATH_B = "/models/forglb - Copy.glb";
 const MASTER_PLAN_STAGE_FALLBACK_IMAGE = "images/first_frame_again.png";
-const INTERACTION_MODEL_PATH_A = "/models/forglb.glb";
-const INTERACTION_MODEL_PATH_B = "/models/forglb - Copy.glb";
 // const MODEL_PATH_A = "/models/Towers_Final.glb";
 // const MODEL_PATH_B = "/models/Towers_Final - Copy.glb";
 const APARTMENT_ID_PATTERN = /^(Tower_[A-Z]_\d{2}_\d{3,4})_/;
@@ -1081,8 +1080,11 @@ function unrealToThreePosition(point: UnrealVector3Like) {
 
 function getPrecomputedTowerTransform(
   towerCode: TowerCode,
+  config?: MasterPlanDeveloperConfig,
 ): SimilarityTransform | null {
-  const transform = PRECOMPUTED_SCENE_DATA[towerCode]?.transform;
+  const transform = config
+    ? towerCode === "A" ? config.towerATransform : config.towerBTransform
+    : PRECOMPUTED_SCENE_DATA[towerCode]?.transform;
 
   if (!transform) {
     return null;
@@ -1099,8 +1101,18 @@ function getPrecomputedTrackingCameraView(
   towerCode: TowerCode,
   trackingKey: UnrealCameraKey,
   aspect: number,
+  config?: MasterPlanDeveloperConfig,
 ) {
-  const cameraData = PRECOMPUTED_SCENE_DATA[towerCode]?.camera?.[trackingKey];
+  const configuredCamera = config
+    ? (towerCode === "A" ? config.towerACameras : config.towerBCameras)[trackingKey]
+    : null;
+  const cameraData = configuredCamera
+    ? {
+        position: [configuredCamera.position.x, configuredCamera.position.y, configuredCamera.position.z] as [number, number, number],
+        quaternion: configuredCamera.quaternion,
+        fov: configuredCamera.fov,
+      }
+    : PRECOMPUTED_SCENE_DATA[towerCode]?.camera?.[trackingKey];
 
   if (!cameraData) {
     return null;
@@ -2329,6 +2341,9 @@ const TowerScene = memo(function TowerScene({
   showTrackingDebug,
   touchHighlightProfile,
   trackingVideoAspect,
+  towerAModelPath,
+  towerBModelPath,
+  masterPlanConfig,
 }: {
   apartments: InventoryApartment[];
   enableBoundsTree: boolean;
@@ -2356,12 +2371,15 @@ const TowerScene = memo(function TowerScene({
   showTrackingDebug: boolean;
   touchHighlightProfile: TouchHighlightProfile;
   trackingVideoAspect: number;
+  towerAModelPath: string;
+  towerBModelPath: string;
+  masterPlanConfig?: MasterPlanDeveloperConfig;
 }) {
   const { camera, gl, invalidate, raycaster } = useThree();
-  const towerAGltf = useGLTF(MODEL_PATH_A);
-  const towerBGltf = useGLTF(MODEL_PATH_B);
-  const towerAInteractionGltf = useGLTF(INTERACTION_MODEL_PATH_A);
-  const towerBInteractionGltf = useGLTF(INTERACTION_MODEL_PATH_B);
+  const towerAGltf = useGLTF(towerAModelPath);
+  const towerBGltf = useGLTF(towerBModelPath);
+  const towerAInteractionGltf = useGLTF(towerAModelPath);
+  const towerBInteractionGltf = useGLTF(towerBModelPath);
   const cameraRef = useRef<ThreePerspectiveCamera | null>(null);
   const fallbackGroupRef = useRef<Group | null>(null);
   const hoveredApartmentIdRef = useRef<string | null>(null);
@@ -2409,12 +2427,12 @@ const TowerScene = memo(function TowerScene({
     [currentFrame],
   );
   const towerATrackingTransform = useMemo(
-    () => getPrecomputedTowerTransform("A"),
-    [],
+    () => getPrecomputedTowerTransform("A", masterPlanConfig),
+    [masterPlanConfig],
   );
   const towerBTrackingTransform = useMemo(
-    () => getPrecomputedTowerTransform("B"),
-    [],
+    () => getPrecomputedTowerTransform("B", masterPlanConfig),
+    [masterPlanConfig],
   );
   const currentTrackingKey =
     TOWER_A_TRACKING_KEYS[nearestTrackingFrameInfo.index] ?? TOWER_A_TRACKING_KEYS[0];
@@ -2425,11 +2443,13 @@ const TowerScene = memo(function TowerScene({
       activeTowerCode,
       trackingInterpolation.fromKey,
       normalizedTrackingVideoAspect,
+      masterPlanConfig,
     );
     const toCamera = getPrecomputedTrackingCameraView(
       activeTowerCode,
       trackingInterpolation.toKey,
       normalizedTrackingVideoAspect,
+      masterPlanConfig,
     );
 
     if (!fromCamera && !toCamera) {
@@ -2465,6 +2485,7 @@ const TowerScene = memo(function TowerScene({
   }, [
     activeTowerCode,
     normalizedTrackingVideoAspect,
+    masterPlanConfig,
     trackingInterpolation.fromKey,
     trackingInterpolation.t,
     trackingInterpolation.toKey,
@@ -2949,6 +2970,7 @@ type MasterPlanFrameHoverStageProps = {
   selectedApartmentId: string | null;
   selectedTower: TowerType | null;
   touchHighlightProfile?: TouchHighlightProfile;
+  config?: MasterPlanDeveloperConfig;
 };
 
 export default function MasterPlanFrameHoverStage({
@@ -2964,11 +2986,19 @@ export default function MasterPlanFrameHoverStage({
   selectedApartmentId,
   selectedTower,
   touchHighlightProfile = "desktop",
+  config,
 }: MasterPlanFrameHoverStageProps) {
+  const scrubVideoKey = config?.scrubVideoKey ?? MASTER_PLAN_SCRUB_HQ_VIDEO_PATH;
+  const interactionVideoKey = config?.interactionVideoKey ?? MASTER_PLAN_SCRUB_INTERACTION_VIDEO_PATH;
+  const fallbackImageKey = config?.fallbackImageKey ?? MASTER_PLAN_STAGE_FALLBACK_IMAGE;
+  const towerAModelKey = config?.towerAModelKey ?? MODEL_PATH_A.replace(/^\//, "");
+  const towerBModelKey = config?.towerBModelKey ?? MODEL_PATH_B.replace(/^\//, "");
   const signedAssetUrls = useSignedAssetUrls([
-    MASTER_PLAN_SCRUB_HQ_VIDEO_PATH,
-    MASTER_PLAN_SCRUB_INTERACTION_VIDEO_PATH,
-    MASTER_PLAN_STAGE_FALLBACK_IMAGE,
+    scrubVideoKey,
+    interactionVideoKey,
+    fallbackImageKey,
+    towerAModelKey,
+    towerBModelKey,
   ]);
   const sectionRef = useRef<HTMLElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
@@ -3102,22 +3132,30 @@ export default function MasterPlanFrameHoverStage({
   const scrubVideoPath = useMemo(
     () => {
       if (performanceProfile.isSafariLike) {
-      return MASTER_PLAN_SCRUB_INTERACTION_VIDEO_PATH;
+      return interactionVideoKey;
     }
 
     return getScrubVideoPath(performanceProfile.tier, {
-      high: MASTER_PLAN_SCRUB_HQ_VIDEO_PATH,
-        low: MASTER_PLAN_SCRUB_INTERACTION_VIDEO_PATH,
-      medium: MASTER_PLAN_SCRUB_INTERACTION_VIDEO_PATH,
+      high: scrubVideoKey,
+        low: interactionVideoKey,
+      medium: interactionVideoKey,
     });
     },
-    [performanceProfile.isSafariLike, performanceProfile.tier],
+    [interactionVideoKey, performanceProfile.isSafariLike, performanceProfile.tier, scrubVideoKey],
   );
   const signedScrubVideoPath = scrubVideoPath
     ? signedAssetUrls[scrubVideoPath] ?? null
     : null;
   const signedMasterPlanStageFallbackImage =
-    signedAssetUrls[MASTER_PLAN_STAGE_FALLBACK_IMAGE] ?? null;
+    signedAssetUrls[fallbackImageKey] ?? null;
+  // The existing Unreal GLBs ship from /public/models. New 3ds Max + Vantage
+  // GLBs are delivered from R2 through the signed asset worker.
+  const towerAModelPath = config?.renderer === "3ds-max-vantage"
+    ? signedAssetUrls[towerAModelKey] ?? MODEL_PATH_A
+    : `/${towerAModelKey.replace(/^\/+/, "")}`;
+  const towerBModelPath = config?.renderer === "3ds-max-vantage"
+    ? signedAssetUrls[towerBModelKey] ?? MODEL_PATH_B
+    : `/${towerBModelKey.replace(/^\/+/, "")}`;
   const shouldAllowTouchViewportGestures =
     !dragEnabled || touchHighlightProfile === "tablet";
   const interactionMode: InteractionMode = isDragging
@@ -3875,12 +3913,10 @@ export default function MasterPlanFrameHoverStage({
     }
 
     return runWhenBrowserIdle(() => {
-      useGLTF.preload(MODEL_PATH_A);
-      useGLTF.preload(MODEL_PATH_B);
-      useGLTF.preload(INTERACTION_MODEL_PATH_A);
-      useGLTF.preload(INTERACTION_MODEL_PATH_B);
+      useGLTF.preload(towerAModelPath);
+      useGLTF.preload(towerBModelPath);
     }, performanceProfile.tier === "low" ? 2200 : 1400);
-  }, [isVideoReady, performanceProfile.tier]);
+  }, [isVideoReady, performanceProfile.tier, towerAModelPath, towerBModelPath]);
 
   useEffect(() => {
     if (!isVideoReady) {
@@ -5050,6 +5086,9 @@ export default function MasterPlanFrameHoverStage({
                       showTrackingDebug={showTrackingDebug}
                       touchHighlightProfile={touchHighlightProfile}
                       trackingVideoAspect={trackingSceneAspect}
+                      towerAModelPath={towerAModelPath}
+                      towerBModelPath={towerBModelPath}
+                      masterPlanConfig={config}
                     />
                   </Suspense>
                 </Canvas>

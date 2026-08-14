@@ -1,9 +1,9 @@
 import AmenitiesPageClient, {
   type AmenitiesPageData,
 } from "@/components/amenities/AmenitiesPageClient";
-import amenitiesPageData from "@/data/amenitiesPage.json";
 import { signR2AssetKeys } from "@/lib/server/r2-signed-assets";
 import { buildPageMetadata } from "@/lib/metadata";
+import { getPublishedDeveloperRuntimeConfig } from "@/lib/developer-config";
 
 export const metadata = buildPageMetadata({
   title: "Amenities",
@@ -17,8 +17,9 @@ export const metadata = buildPageMetadata({
   ],
 });
 
-export default function AmenitiesPage() {
-  const typedData = amenitiesPageData as AmenitiesPageData;
+export default async function AmenitiesPage() {
+  const runtimeConfig = await getPublishedDeveloperRuntimeConfig();
+  const typedData = runtimeConfig.amenities.pageData as AmenitiesPageData;
   const assetKeys = typedData.items.flatMap((item) =>
     [item.videoSrc, item.thumbnailSrc].filter(
       (value): value is string => Boolean(value),

@@ -158,6 +158,7 @@ type ExteriorPanoWalkthroughProps = {
   cdnBaseUrl: string;
   initialNodeId?: string;
   initialSignedAssetUrls?: Record<string, string>;
+  amenities?: ExteriorAmenity[];
   className?: string;
   title?: string;
   subtitle?: string;
@@ -952,13 +953,14 @@ export default function ExteriorPanoWalkthrough({
   cdnBaseUrl,
   initialNodeId,
   initialSignedAssetUrls = {},
+  amenities = exteriorAmenities,
   className,
   title = "Exterior Walkthrough",
   subtitle = "Fast sphere-based exterior navigation",
 }: ExteriorPanoWalkthroughProps) {
   primeSignedAssetUrls(initialSignedAssetUrls);
   const signedAssetUrls = useSignedAssetUrls([
-    ...exteriorAmenities.map((amenity) => amenity.image),
+    ...amenities.map((amenity) => amenity.image),
   ]);
   const graph = useMemo(() => buildExteriorTourGraph(nodes), [nodes]);
   const initialRequestedNodeId =
@@ -1059,8 +1061,8 @@ export default function ExteriorPanoWalkthrough({
   );
   const nextTrailNodeId = sequential.nextId ?? graph.order[0] ?? null;
   const activeAmenity = useMemo(
-    () => exteriorAmenities.find((amenity) => amenity.nodeIds.includes(activeNodeId)) ?? null,
-    [activeNodeId],
+    () => amenities.find((amenity) => amenity.nodeIds.includes(activeNodeId)) ?? null,
+    [activeNodeId, amenities],
   );
   const signedMinimapImageUrl = LOCAL_EXTERIOR_MINIMAP_IMAGE_URL;
   const fallbackMinimapImageUrl = LOCAL_EXTERIOR_MINIMAP_IMAGE_URL;
@@ -1083,8 +1085,8 @@ export default function ExteriorPanoWalkthrough({
     activeAmenityNodeIds.indexOf(activeNodeId),
   );
   const visibleExteriorAmenities = useMemo(
-    () => exteriorAmenities.filter((amenity) => amenity.id !== "general"),
-    [],
+    () => amenities.filter((amenity) => amenity.id !== "general"),
+    [amenities],
   );
   const {
     setFirstItemNode: setExteriorMenuFirstItemNode,
@@ -1546,7 +1548,7 @@ export default function ExteriorPanoWalkthrough({
       }
 
       const initialNode = graph.byId[initialResolved.nodeId];
-      const initialAmenity = exteriorAmenities.find(
+      const initialAmenity = amenities.find(
         (amenity) => amenity.startingPano.nodeId === initialResolved.nodeId,
       );
       const initialYaw = initialAmenity
@@ -1736,6 +1738,7 @@ export default function ExteriorPanoWalkthrough({
       }
     };
   }, [
+    amenities,
     graph.byId,
     graph.order,
     hidePreviewOverlay,

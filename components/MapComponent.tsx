@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Cormorant_Garamond } from "next/font/google";
 import pLimit from "p-limit";
 import poidata from "@/data/poi.json";
@@ -16,33 +16,31 @@ import { Map as MapView,
 } from "@/components/ui/map";
 import {
   BriefcaseBusiness,
+  CalendarDays,
   Cross,
   Loader2,
   ChevronDown,
+  ChevronRight,
   ChevronUp,
   School,
   Store,
   Trees,
   BusFront,
   Landmark,
-  Search,
   X,
-  Map as MapIcon,
-  SlidersHorizontal,
   LocateFixed,
   Clock3,
   Star,
   Navigation,
   Heart,
   Share2,
-  ParkingCircle,
-  Coffee,
-  Accessibility,
-  WalletCards,
-  Droplets,
+  ListFilter,
+  Grid2x2,
+  Layers3,
 } from "lucide-react";
 
 const MAP_STYLE = "https://tiles.openfreemap.org/styles/bright";
+const CARTO_MAP_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 
 const displaySerif = Cormorant_Garamond({
   subsets: ["latin"],
@@ -94,6 +92,7 @@ type ClusterPoiProperties = {
 
 type DistanceFilter = "5km" | "10km" | "all";
 type SortMode = "popularity" | "nearest" | "rating";
+type MapDisplayMode = "normal" | "carto" | "3d";
 
 const centerPlace = {
   name: "Whisper of Trees",
@@ -111,7 +110,6 @@ const DEFAULT_SELECTED_CATEGORIES: PoiCategory[] = [
   "landmark",
   "IT Company",
 ];
-
 const CATEGORY_ORDER = DEFAULT_SELECTED_CATEGORIES;
 const ROUTE_CACHE_KEY = "veranza-poi-routes-v1";
 const ROUTE_REQUEST_TIMEOUT = 12000;
@@ -127,8 +125,14 @@ const PREMIUM_OLIVE_GRADIENT =
   "bg-[radial-gradient(circle_at_32%_25%,#69895e_0%,#45603c_58%,#2a452d_100%)]";
 const PREMIUM_OLIVE_BUTTON =
   "bg-[radial-gradient(circle_at_32%_25%,#69895e_0%,#45603c_58%,#2a452d_100%)]";
-const PREMIUM_PANEL =
-  "border border-[#dfcfac]/80 bg-[linear-gradient(180deg,rgba(255,252,245,0.96)_0%,rgba(245,239,228,0.9)_100%)] shadow-[0_20px_46px_rgba(43,52,37,0.08),inset_0_1px_0_rgba(255,255,255,0.96)]";
+const FLOATING_PANEL =
+  "rounded-[1.6rem] border border-[rgba(75,95,60,0.14)] bg-[rgba(251,249,243,0.94)] shadow-[0_8px_30px_rgba(41,52,35,0.08),0_2px_8px_rgba(41,52,35,0.04)] backdrop-blur-xl";
+const FLOATING_BUTTON =
+  "inline-flex items-center justify-center rounded-full border border-[rgba(75,95,60,0.14)] bg-[rgba(251,249,243,0.94)] text-[#304638] shadow-[0_8px_30px_rgba(41,52,35,0.08),0_2px_8px_rgba(41,52,35,0.04)] backdrop-blur-xl transition hover:bg-white";
+const FLOATING_GHOST_PANEL =
+  "rounded-[1.6rem] border border-transparent bg-transparent shadow-none backdrop-blur-0";
+const OVERLAY_TRANSITION =
+  "transition duration-200 ease-out data-[state=closed]:translate-y-2 data-[state=closed]:scale-[0.98] data-[state=closed]:opacity-0 data-[state=open]:translate-y-0 data-[state=open]:scale-100 data-[state=open]:opacity-100";
 
 type IdleWindow = Window &
   typeof globalThis & {
@@ -614,18 +618,26 @@ const PoiMarker = memo(function PoiMarker({
           className="group relative flex items-center justify-center"
           aria-label={poi.name}
         >
+          {isSelected ? (
+            <>
+              <span className="absolute size-16 rounded-full bg-[#6a8a5d]/16" />
+              <span className="absolute size-11 rounded-full bg-[#6a8a5d]/20" />
+            </>
+          ) : null}
           <span
-            className={`relative flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(229,219,190,0.82)] shadow-[0_8px_18px_rgba(47,73,50,0.18)] transition ${PREMIUM_OLIVE_GRADIENT} ${
-              isSelected ? "scale-110 ring-4 ring-[#c4d8b7]/70" : ""
+            className={`relative flex items-center justify-center rounded-full border shadow-[0_8px_18px_rgba(47,73,50,0.18)] transition ${
+              isSelected
+                ? `h-9 w-9 border-[rgba(229,219,190,0.9)] ${PREMIUM_OLIVE_GRADIENT}`
+                : "h-8 w-8 border-[rgba(229,219,190,0.82)] bg-[#fffaf0]"
             }`}
           >
-            <Icon className="size-4 text-white" />
+            <Icon className={`size-4 ${isSelected ? "text-white" : "text-[#41593e]"}`} />
           </span>
         </button>
       </MarkerContent>
       <MarkerTooltip
         offset={10}
-        className="rounded-full border border-[#e4d8b7] bg-[#fffaf0] px-3 py-1 text-[0.68rem] font-semibold text-[#31482d] shadow-[0_10px_24px_rgba(43,52,37,0.12)]"
+        className={`rounded-full border border-[#e4d8b7] bg-[#fffaf0] px-3 py-1 text-[0.68rem] font-semibold text-[#31482d] shadow-[0_10px_24px_rgba(43,52,37,0.12)] ${isSelected ? "opacity-100" : ""}`}
       >
         {poi.name}
       </MarkerTooltip>
@@ -777,13 +789,98 @@ function UserLocationAccuracyLayer({
   return null;
 }
 
-const nearbyAmenities = [
-  { label: "Parking", distance: "200 m", icon: ParkingCircle, color: "text-[#51663f]", bg: "bg-[#eef1e5]" },
-  { label: "Cafes", distance: "150 m", icon: Coffee, color: "text-[#8c6f2a]", bg: "bg-[#f6f0df]" },
-  { label: "Restroom", distance: "180 m", icon: Accessibility, color: "text-[#51663f]", bg: "bg-[#eef1e5]" },
-  { label: "ATM", distance: "220 m", icon: WalletCards, color: "text-[#6f6040]", bg: "bg-[#f4eddc]" },
-  { label: "Water", distance: "120 m", icon: Droplets, color: "text-[#51663f]", bg: "bg-[#eef1e5]" },
-];
+function ThreeDBuildingsLayer({
+  active,
+}: {
+  active: boolean;
+}) {
+  const { map, isLoaded } = useMap();
+
+  useEffect(() => {
+    if (!map || !isLoaded) return;
+
+    const sourceId = "openfreemap-3d-buildings";
+    const layerId = "openfreemap-3d-buildings-layer";
+
+    const removeBuildings = () => {
+      try {
+        if (map.getLayer(layerId)) map.removeLayer(layerId);
+        if (map.getSource(sourceId)) map.removeSource(sourceId);
+      } catch {
+        // ignore style teardown races
+      }
+    };
+
+    if (!active) {
+      removeBuildings();
+      return;
+    }
+
+    const layers = map.getStyle().layers ?? [];
+    const labelLayerId = layers.find(
+      (layer) => layer.type === "symbol" && Boolean(layer.layout?.["text-field"]),
+    )?.id;
+
+    if (!map.getSource(sourceId)) {
+      map.addSource(sourceId, {
+        type: "vector",
+        url: "https://tiles.openfreemap.org/planet",
+      });
+    }
+
+    if (!map.getLayer(layerId)) {
+      map.addLayer(
+        {
+          id: layerId,
+          type: "fill-extrusion",
+          source: sourceId,
+          "source-layer": "building",
+          minzoom: 15,
+          filter: ["!=", ["get", "hide_3d"], true],
+          paint: {
+            "fill-extrusion-color": [
+              "interpolate",
+              ["linear"],
+              ["get", "render_height"],
+              0,
+              "#d7d6cf",
+              60,
+              "#c9ccb8",
+              160,
+              "#b3b89e",
+            ],
+            "fill-extrusion-opacity": 0.92,
+            "fill-extrusion-height": [
+              "interpolate",
+              ["linear"],
+              ["zoom"],
+              15,
+              0,
+              16,
+              ["get", "render_height"],
+            ],
+            "fill-extrusion-base": [
+              "interpolate",
+              ["linear"],
+              ["zoom"],
+              15,
+              0,
+              16,
+              ["coalesce", ["get", "render_min_height"], 0],
+            ],
+          },
+        },
+        labelLayerId,
+      );
+    }
+
+    return () => {
+      removeBuildings();
+    };
+  }, [active, isLoaded, map]);
+
+  return null;
+}
 
 const placeDescriptions: Partial<Record<PoiCategory, string>> = {
   park:
@@ -831,30 +928,6 @@ function isPopularPoi(poi: Poi) {
   return Boolean(poi.featured) || (poi.rating ?? 0) >= 4.4;
 }
 
-function isPoiOpenNow(poi: Poi, now = new Date()) {
-  const hour = now.getHours() + now.getMinutes() / 60;
-  const day = now.getDay();
-  const isWeekend = day === 0 || day === 6;
-
-  switch (poi.category) {
-    case "hospital":
-    case "bus_stop":
-      return true;
-    case "park":
-      return hour >= 5.5 && hour <= 20;
-    case "mall":
-      return hour >= 10 && hour <= 22.5;
-    case "school":
-      return !isWeekend && hour >= 8 && hour <= 17.5;
-    case "landmark":
-      return hour >= 9 && hour <= 18.5;
-    case "IT Company":
-      return !isWeekend && hour >= 8.5 && hour <= 20;
-    default:
-      return true;
-  }
-}
-
 function MetricPill({
   icon: Icon,
   children,
@@ -876,21 +949,29 @@ function PremiumSelect({
   options,
   icon: Icon,
   ariaLabel,
+  className,
+  selectClassName,
+  iconClassName,
 }: {
   value: string;
   onChange: (value: string) => void;
   options: Array<{ value: string; label: string }>;
   icon: React.ComponentType<{ className?: string }>;
   ariaLabel: string;
+  className?: string;
+  selectClassName?: string;
+  iconClassName?: string;
 }) {
   return (
-    <div className="relative">
-      <Icon className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[#55684a]" />
+    <div className={`relative ${className ?? ""}`}>
+      <Icon
+        className={`pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[#55684a] ${iconClassName ?? ""}`}
+      />
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
         aria-label={ariaLabel}
-        className="h-12 w-full appearance-none rounded-full border border-[#e2d8c4] bg-[linear-gradient(180deg,rgba(255,253,248,0.98),rgba(247,242,233,0.96))] pl-10 pr-10 text-xs font-medium text-[#304238] shadow-[0_10px_22px_rgba(43,52,37,0.06),inset_0_1px_0_rgba(255,255,255,0.92)] outline-none transition focus:border-[#cbbd8c]"
+        className={`h-11 w-full appearance-none rounded-full border border-[#e2d8c4] bg-[rgba(255,253,248,0.96)] pl-10 pr-10 text-sm font-medium text-[#304238] outline-none transition focus:border-[#cbbd8c] ${selectClassName ?? ""}`}
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -898,7 +979,9 @@ function PremiumSelect({
           </option>
         ))}
       </select>
-      <ChevronDown className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-[#55684a]" />
+      <ChevronDown
+        className={`pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-[#55684a] ${iconClassName ?? ""}`}
+      />
     </div>
   );
 }
@@ -928,15 +1011,23 @@ export function CustomStyleExample() {
   const [userRoute, setUserRoute] = useState<RouteData | null>(null);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [currentZoom, setCurrentZoom] = useState(15);
+  const [viewportWidth, setViewportWidth] = useState(1440);
+  const [showFilters, setShowFilters] = useState(true);
+  const [showPopular, setShowPopular] = useState(true);
+  const [showPoiDetails, setShowPoiDetails] = useState(false);
+  const [showDesktopSidebar, setShowDesktopSidebar] = useState(true);
+  const [mobilePopularExpanded, setMobilePopularExpanded] = useState(false);
 
   const [selectedCategories, setSelectedCategories] = useState<PoiCategory[]>(
     DEFAULT_SELECTED_CATEGORIES,
   );
   const [distanceFilter, setDistanceFilter] = useState<DistanceFilter>("5km");
   const [sortMode, setSortMode] = useState<SortMode>("popularity");
-  const [openNowOnly, setOpenNowOnly] = useState(false);
-  const [search, setSearch] = useState("");
-  const deferredSearch = useDeferredValue(search);
+  const [mapDisplayMode, setMapDisplayMode] = useState<MapDisplayMode>("normal");
+  const isMobileLayout = viewportWidth < 768;
+  const isTabletLayout = viewportWidth >= 768 && viewportWidth < 1280;
+  const isCompactDesktop = viewportWidth >= 1280 && viewportWidth < 1560;
+  const filterInsetClass = "left-4 right-4 top-4";
   const poiIndexes = useMemo(() => {
     const byCategory = new Map<PoiCategory, Poi[]>(
       CATEGORY_ORDER.map((category) => [
@@ -993,6 +1084,25 @@ export function CustomStyleExample() {
       mountedRef.current = false;
       userRouteAbortRef.current?.abort();
       userRouteAbortRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const syncViewportWidth = () => {
+      const nextWidth = window.innerWidth;
+      setViewportWidth(nextWidth);
+
+      if (nextWidth < 768) {
+        setMobilePopularExpanded(false);
+        setIsMobileFiltersOpen(false);
+      }
+    };
+
+    syncViewportWidth();
+    window.addEventListener("resize", syncViewportWidth);
+
+    return () => {
+      window.removeEventListener("resize", syncViewportWidth);
     };
   }, []);
 
@@ -1085,7 +1195,7 @@ export function CustomStyleExample() {
   );
 
   const filteredPois = useMemo(() => {
-    const q = deferredSearch.trim().toLowerCase();
+    const q = "";
     const selectedCategorySet = new Set(selectedCategories);
     const categoryPois =
       selectedCategories.length === CATEGORY_ORDER.length
@@ -1106,17 +1216,13 @@ export function CustomStyleExample() {
 
       return matchesCategory && matchesSearch;
     });
-  }, [deferredSearch, poiIndexes.byCategory, selectedCategories]);
+  }, [poiIndexes.byCategory, selectedCategories]);
 
   const visiblePois = useMemo(() => {
     const thresholdMeters =
       distanceFilter === "5km" ? 5000 : distanceFilter === "10km" ? 10000 : Number.POSITIVE_INFINITY;
 
     const nextPois = filteredPois.filter((poi) => {
-      if (openNowOnly && !isPoiOpenNow(poi)) {
-        return false;
-      }
-
       return getPoiDistanceMeters(poi, routeLookup.get(poi.id)) <= thresholdMeters;
     });
 
@@ -1141,7 +1247,7 @@ export function CustomStyleExample() {
     });
 
     return nextPois;
-  }, [distanceFilter, filteredPois, openNowOnly, routeLookup, sortMode]);
+  }, [distanceFilter, filteredPois, routeLookup, sortMode]);
 
   const clusterData = useMemo<
     GeoJSON.FeatureCollection<GeoJSON.Point, ClusterPoiProperties>
@@ -1166,16 +1272,6 @@ export function CustomStyleExample() {
     setSelectedPoiId(null);
   }, []);
 
-  const applySearchInput = useCallback((value: string) => {
-    clearPoiSelection();
-    setSearch(value);
-  }, [clearPoiSelection]);
-
-  const clearSearchInput = useCallback(() => {
-    clearPoiSelection();
-    setSearch("");
-  }, [clearPoiSelection]);
-
   const toggleCategory = useCallback((category: PoiCategory) => {
     clearPoiSelection();
     setSelectedCategories((prev) =>
@@ -1193,6 +1289,9 @@ export function CustomStyleExample() {
     suppressNextMapClearRef.current = true;
     setRoutePoiId(null);
     setSelectedPoiId(poi.id);
+    setShowPoiDetails(true);
+    setShowDesktopSidebar(false);
+    setMobilePopularExpanded(false);
 
     mapRef.current?.flyTo?.({
       center: [poi.lng, poi.lat],
@@ -1214,11 +1313,14 @@ export function CustomStyleExample() {
     setUserLocation(null);
     setUserRoute(null);
     setIsUserRouteLoading(false);
-    setSearch("");
     setSelectedCategories(DEFAULT_SELECTED_CATEGORIES);
     setDistanceFilter("5km");
     setSortMode("popularity");
-    setOpenNowOnly(false);
+    setMapDisplayMode("normal");
+    setShowFilters(true);
+    setShowPopular(true);
+    setShowPoiDetails(false);
+    setShowDesktopSidebar(true);
     mapRef.current?.flyTo?.({
       center: [centerPlace.lng, centerPlace.lat],
       zoom: 15,
@@ -1229,6 +1331,8 @@ export function CustomStyleExample() {
   const clearActiveRoute = useCallback(() => {
     setRoutePoiId(null);
     setSelectedPoiId(null);
+    setShowPoiDetails(false);
+    setShowDesktopSidebar(true);
   }, []);
 
   const stopAllRouteAnimations = useCallback(() => {
@@ -1248,6 +1352,8 @@ export function CustomStyleExample() {
     suppressNextMapClearRef.current = true;
     setSelectedPoiId(poi.id);
     setRoutePoiId(poi.id);
+    setShowPoiDetails(true);
+    setShowDesktopSidebar(false);
 
     mapRef.current?.flyTo?.({
       center: [poi.lng, poi.lat],
@@ -1274,6 +1380,9 @@ export function CustomStyleExample() {
       suppressNextMapClearRef.current = true;
       setRoutePoiId(null);
       setSelectedPoiId(poi.id);
+      setShowPoiDetails(true);
+      setShowDesktopSidebar(false);
+      setMobilePopularExpanded(false);
 
       mapRef.current?.flyTo?.({
         center: coordinates,
@@ -1394,6 +1503,69 @@ export function CustomStyleExample() {
   const userRouteColor = "#4d6a3d";
   const showClusters = currentZoom < POI_CLUSTER_SWITCH_ZOOM;
   const selectedDisplayPoi = selectedPoi ?? visiblePois[0] ?? pois[0] ?? null;
+  const desktopSidebarVisible = !isMobileLayout && showDesktopSidebar && !showPoiDetails;
+  const desktopSidebarWidthClass = isTabletLayout
+    ? "w-[20rem]"
+    : isCompactDesktop
+      ? "w-[23rem]"
+      : "w-[28rem]";
+  const desktopSidebarPanelPaddingClass = isTabletLayout ? "p-4" : isCompactDesktop ? "p-4.5" : "p-5";
+  const desktopSidebarHeaderEyebrowClass = isTabletLayout
+    ? "text-[0.64rem] tracking-[0.18em]"
+    : isCompactDesktop
+      ? "text-[0.68rem] tracking-[0.2em]"
+      : "text-[0.72rem] tracking-[0.22em]";
+  const desktopSidebarTitleClass = isTabletLayout
+    ? "text-[2rem] leading-[0.94]"
+    : isCompactDesktop
+      ? "text-[2.25rem] leading-[0.93]"
+      : "text-[2.6rem] leading-[0.92]";
+  const desktopSidebarBodyCopyClass = isTabletLayout
+    ? "max-w-[11rem] text-[0.92rem] leading-6"
+    : isCompactDesktop
+      ? "max-w-[12rem] text-[0.96rem] leading-6"
+      : "max-w-[13rem] text-sm leading-6";
+  const desktopSidebarActionTextClass = isTabletLayout ? "text-[0.92rem]" : "text-sm";
+  const desktopSidebarCloseButtonClass = isTabletLayout ? "size-10" : "size-11";
+  const desktopSidebarTileGridClass = isTabletLayout ? "gap-2" : "gap-2.5";
+  const desktopSidebarTileClass = isTabletLayout
+    ? "rounded-[1rem] px-2 py-2 text-[0.8rem]"
+    : isCompactDesktop
+      ? "rounded-[1.05rem] px-2.5 py-2.5 text-[0.86rem]"
+      : "rounded-[1.1rem] px-2.5 py-2.5 text-[0.92rem]";
+  const desktopSidebarTileIconWrapClass = isTabletLayout
+    ? "size-7 rounded-[0.8rem]"
+    : isCompactDesktop
+      ? "size-7.5 rounded-[0.9rem]"
+      : "size-8 rounded-[0.95rem]";
+  const desktopSidebarTileIconClass = isTabletLayout
+    ? "size-4"
+    : isCompactDesktop
+      ? "size-[1.05rem]"
+      : "size-[1.125rem]";
+  const desktopSidebarTileLabelClass = isTabletLayout
+    ? "max-w-[4.4rem] whitespace-nowrap text-[0.68rem]"
+    : isCompactDesktop
+      ? "max-w-[5rem] whitespace-nowrap text-[0.72rem]"
+      : "max-w-[5.4rem] whitespace-nowrap text-[0.76rem]";
+  const desktopSidebarFilterLabelClass = isTabletLayout
+    ? "text-[0.64rem] tracking-[0.18em]"
+    : isCompactDesktop
+      ? "text-[0.68rem] tracking-[0.2em]"
+      : "text-[0.72rem] tracking-[0.22em]";
+  const desktopSidebarControlHeightClass = isTabletLayout ? "h-10" : "h-12";
+  const desktopSidebarControlTextClass = isTabletLayout ? "text-[0.95rem]" : "text-sm";
+  const desktopSidebarControlRadiusClass = isTabletLayout ? "rounded-[1rem]" : "rounded-[1.1rem]";
+  const desktopSidebarControlIconClass = isTabletLayout ? "text-[#d7dfcb] size-3.5" : "text-[#d7dfcb]";
+  const activeMapStyle = mapDisplayMode === "carto" ? CARTO_MAP_STYLE : MAP_STYLE;
+  const activeProjection = { type: "mercator" } as const;
+  const popularPanelPaddingClass = isTabletLayout ? "p-3.5" : "p-4";
+  const popularPanelTitleClass = isTabletLayout ? "text-[1.5rem]" : "text-lg";
+  const popularPanelDescriptionClass = isTabletLayout ? "text-[0.72rem]" : "text-xs";
+  const popularItemImageClass = isTabletLayout ? "h-[4.2rem] w-[4.4rem]" : "h-[4.8rem] w-[5.2rem]";
+  const popularItemTitleClass = isTabletLayout ? "text-[0.9rem]" : "text-[0.98rem]";
+  const popularItemMetaClass = isTabletLayout ? "text-[0.68rem]" : "text-[0.72rem]";
+  const popularItemArrowClass = isTabletLayout ? "size-8" : "size-9";
   const selectedPoiImages = getPoiImages(selectedDisplayPoi);
   const defaultSelectedPoiImage = selectedPoiImages[0] ?? "/RGA.webp";
   const selectedMainImage =
@@ -1411,7 +1583,30 @@ export function CustomStyleExample() {
     selectedDisplayPoi,
   );
   const listedPois = visiblePois;
-  const selectedIsPopular = selectedDisplayPoi ? isPopularPoi(selectedDisplayPoi) : false;
+  const extraImageCount = Math.max(selectedPoiImages.length - 3, 0);
+  const sidePreviewImages = selectedPoiImages.slice(1, 3);
+  const topCategories = useMemo(
+    () => [
+      { id: "all", label: "All", icon: Grid2x2, active: selectedCategories.length === CATEGORY_ORDER.length },
+      ...CATEGORY_ORDER.map((category) => ({
+        id: category,
+        label: categoryMeta[category].label,
+        icon: categoryMeta[category].icon,
+        active: selectedCategories.includes(category),
+      })),
+    ],
+    [selectedCategories],
+  );
+  const desktopSidebarCategories = useMemo(
+    () =>
+      CATEGORY_ORDER.map((category) => ({
+        id: category,
+        label: categoryMeta[category].label,
+        icon: categoryMeta[category].icon,
+        active: selectedCategories.includes(category),
+      })),
+    [selectedCategories],
+  );
   const detailDescription =
     (selectedDisplayPoi && placeDescriptions[selectedDisplayPoi.category]) ??
     "A convenient nearby destination selected from the project neighborhood map.";
@@ -1453,474 +1648,665 @@ export function CustomStyleExample() {
     };
   }, []);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const timeoutId = window.setTimeout(() => {
+      map.easeTo({
+        pitch: mapDisplayMode === "3d" ? 55 : 0,
+        bearing: mapDisplayMode === "3d" ? -18 : 0,
+        duration: 900,
+      });
+    }, 120);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [mapDisplayMode]);
+
   return (
-    <main className="relative min-h-dvh w-full max-w-[100vw] overflow-x-hidden bg-[#f3efe6] text-[#263b2b] xl:h-dvh xl:overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_76%_4%,rgba(255,255,255,0.92)_0%,rgba(255,255,255,0.38)_34%,transparent_58%),linear-gradient(135deg,#f8f4eb_0%,#eee7da_100%)]" />
-      <div className="pointer-events-none absolute inset-0 opacity-[0.26] [background-image:linear-gradient(rgba(92,112,78,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(92,112,78,0.06)_1px,transparent_1px)] [background-size:42px_42px]" />
-
-      <section className="relative z-10 flex min-h-dvh w-full max-w-full flex-col gap-5 overflow-x-hidden px-4 py-5 sm:px-6 xl:h-dvh xl:pl-[9.25rem] xl:pr-8 2xl:pl-[9.55rem] 2xl:pr-10">
-        <header className="grid w-full min-w-0 shrink-0 gap-4 lg:grid-cols-[minmax(21rem,40rem)_1fr_auto] lg:items-end 2xl:grid-cols-[minmax(30rem,41rem)_1fr_auto]">
-          <div>
-            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[#445a43]">
-              Discover Nearby
-            </p>
-            <h1 className={`${displaySerif.className} mt-2 text-[2.2rem] font-semibold leading-none text-[#315238] sm:text-[3rem] 2xl:text-[3.35rem]`}>
-              Explore Places
-            </h1>
-            <p className="mt-3 max-w-[22rem] text-sm leading-6 text-[#72796e]">
-              Find famous places and everyday essentials around you.
-            </p>
-          </div>
-
-          <div className="relative lg:mb-2">
-            <Search className="pointer-events-none absolute left-5 top-1/2 size-5 -translate-y-1/2 text-[#304638]" />
-            <input
-              value={search}
-              onChange={(e) => applySearchInput(e.target.value)}
-              placeholder="Search places, companies, schools..."
-              className="h-14 w-full rounded-full border border-[#e1d8c8] bg-[#fffdf8]/88 pl-14 pr-12 text-sm text-[#263b2b] shadow-[0_12px_34px_rgba(39,52,38,0.09),inset_0_1px_0_rgba(255,255,255,0.96)] outline-none placeholder:text-[#8a8d84] focus:border-[#b9c9ae]"
+    <main className="relative h-[100dvh] w-full overflow-hidden bg-[#f3efe6] text-[#263b2b]">
+      <div className="absolute inset-0">
+        <MapView
+          ref={mapRef}
+          center={[centerPlace.lng, centerPlace.lat]}
+          zoom={15}
+          theme="light"
+          projection={activeProjection}
+          canvasContextAttributes={{ antialias: true }}
+          fadeDuration={0}
+          className="h-full w-full"
+          onViewportChange={handleViewportChange}
+          styles={{ light: activeMapStyle, dark: activeMapStyle }}
+        >
+          <ThreeDBuildingsLayer active={mapDisplayMode === "3d"} />
+          <MapControls
+            position="bottom-right"
+            showZoom
+            showCompass
+            showLocate
+            onLocate={handleUserLocate}
+            className={
+              isMobileLayout
+                ? `right-4 ${showPoiDetails ? "bottom-[22rem]" : showPopular && mobilePopularExpanded ? "bottom-[20rem]" : "bottom-[8.75rem]"}`
+                : `right-6 ${showPoiDetails ? "bottom-[26rem]" : "bottom-8"}`
+            }
+          />
+          <MapClickClearRoute onClear={clearActiveRoute} suppressRef={suppressNextMapClearRef} />
+          {userLocation ? <UserLocationAccuracyLayer location={userLocation} /> : null}
+          {userRoute ? (
+            <>
+              <MapRoute id="user-route-outline" coordinates={userRoute.coordinates} color="#ffffff" width={3} opacity={0.6} />
+              <MapRoute id="user-route-base" coordinates={userRoute.coordinates} color={userRouteColor} width={6} opacity={0.18} />
+            </>
+          ) : null}
+          {userAnimatedCoordinates.length > 1 ? (
+            <MapRoute id="user-route-animated" coordinates={userAnimatedCoordinates} color={userRouteColor} width={5} opacity={1} />
+          ) : null}
+          {activeRoute ? (
+            <>
+              <MapRoute id="poi-route-outline" coordinates={activeRoute.coordinates} color="#ffffff" width={3} opacity={0.55} />
+              <MapRoute id="poi-route-base" coordinates={activeRoute.coordinates} color={activeRouteColor} width={6} opacity={0.16} />
+            </>
+          ) : null}
+          {animatedCoordinates.length > 1 ? (
+            <MapRoute id="poi-route-animated" coordinates={animatedCoordinates} color={activeRouteColor} width={5} opacity={1} />
+          ) : null}
+          {showClusters ? (
+            <MapClusterLayer<ClusterPoiProperties>
+              data={clusterData}
+              clusterRadius={POI_CLUSTER_RADIUS}
+              clusterMaxZoom={POI_CLUSTER_MAX_ZOOM}
+              clusterColors={["#7a8f5a", "#5d7445", "#455933"]}
+              clusterThresholds={[12, 28]}
+              pointColor="#5d7445"
+              onPointClick={handleClusterPointClick}
             />
-            {search ? (
+          ) : null}
+          <MapMarker longitude={centerPlace.lng} latitude={centerPlace.lat}>
+            <MarkerContent>
               <button
                 type="button"
-                onClick={clearSearchInput}
-                className="absolute right-4 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-[#697465] transition hover:bg-[#f3eddf]"
-                aria-label="Clear search"
+                onClick={clearActiveRoute}
+                className="relative flex items-center justify-center"
+                aria-label={centerPlace.name}
               >
-                <X className="size-4" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://cdn.sthyra.com/TULA/Images/Whisper_of_Tree_Logo_Gold%202.avif"
+                  alt={centerPlace.name}
+                  className="h-16 w-16 object-contain"
+                />
               </button>
-            ) : null}
-          </div>
-
-          <div className="flex items-center gap-3 lg:mb-2 lg:justify-end">
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="flex size-14 items-center justify-center rounded-full border border-[#e3dacb] bg-[#fffdf8]/90 text-[#304638] shadow-[0_12px_28px_rgba(39,52,38,0.1)] transition hover:bg-white"
-              aria-label="Reset nearby filters"
-            >
-              <SlidersHorizontal className="size-5" />
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                window.open(
-                  `https://www.google.com/maps/search/?api=1&query=${centerPlace.lat},${centerPlace.lng}`,
-                  "_blank",
-                )
-              }
-              className="inline-flex h-14 items-center gap-3 rounded-full border border-[#e3dacb] bg-[#fffdf8]/90 px-6 text-sm font-semibold text-[#304638] shadow-[0_12px_28px_rgba(39,52,38,0.1)] transition hover:bg-white"
-            >
-              <MapIcon className="size-5" />
-              View on Map
-            </button>
-          </div>
-        </header>
-
-        <div className="grid w-full min-w-0 max-w-full gap-5 pb-6 xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:pb-0">
-          <aside className="order-2 flex min-w-0 max-w-full flex-col gap-4 xl:order-1 xl:min-h-0">
-            <section className={`rounded-[1.55rem] p-4 backdrop-blur-xl 2xl:p-5 ${PREMIUM_PANEL}`}>
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-[0.82rem] font-semibold uppercase tracking-[0.16em] text-[#374c3a]">
-                  Categories
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => setSelectedCategories(DEFAULT_SELECTED_CATEGORIES)}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-[#40543f]"
-                >
-                  View All
-                  <ChevronDown className="-rotate-90 size-4" />
-                </button>
-              </div>
-              <div
-                className="flex w-full gap-2 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:grid xl:overflow-visible xl:pb-0"
-                style={{ gridTemplateColumns: `repeat(${CATEGORY_ORDER.length}, minmax(0, 1fr))` }}
-              >
-                {CATEGORY_ORDER.map((category) => {
-                  const Icon = categoryMeta[category].icon;
-                  const active = selectedCategories.includes(category);
-
-                  return (
-                    <button
-                      key={category}
-                      type="button"
-                      onClick={() => toggleCategory(category)}
-                      className={`flex h-[5rem] w-[5rem] shrink-0 flex-col items-center justify-center rounded-[1.15rem] border text-center shadow-[0_10px_22px_rgba(43,52,37,0.06)] transition xl:w-full ${
-                        active
-                          ? `${PREMIUM_OLIVE_GRADIENT} border-[#5f7544] ring-1 ring-[#d8ca9c]`
-                          : "border-[#e8dfd0] bg-[#fffdf8]/92 hover:border-[#cfc7b8]"
-                      }`}
-                    >
-                      <span className={`mb-2 flex size-8 items-center justify-center rounded-full border shadow-[inset_0_1px_0_rgba(255,255,255,0.95)] ${
-                        active
-                          ? "border-[#dccc9d] bg-[rgba(255,249,236,0.14)]"
-                          : "border-[#e2d7ba] bg-[linear-gradient(180deg,rgba(253,251,245,0.98),rgba(245,238,222,0.92))]"
-                      }`}>
-                        <Icon className={`size-4.5 ${active ? "text-[#f6edd7]" : "text-[#50653e]"}`} />
-                      </span>
-                      <span className={`max-w-full px-1 text-[0.67rem] font-semibold leading-tight ${active ? "text-[#f6edd7]" : "text-[#26362a]"}`}>
-                        {categoryMeta[category].label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-
-            <section className={`rounded-[1.55rem] p-4 backdrop-blur-xl ${PREMIUM_PANEL}`}>
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-[0.82rem] font-semibold uppercase tracking-[0.16em] text-[#374c3a]">
-                  Quick Filters
-                </h2>
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="text-xs font-semibold text-[#536150]"
-                >
-                  Clear All
-                </button>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-3">
-                <PremiumSelect
-                  value={distanceFilter}
-                  onChange={(value) => setDistanceFilter(value as DistanceFilter)}
-                  ariaLabel="Filter nearby places by distance"
-                  icon={LocateFixed}
-                  options={[
-                    { value: "5km", label: "Within 5 km" },
-                    { value: "10km", label: "Within 10 km" },
-                    { value: "all", label: "All Distances" },
-                  ]}
+            </MarkerContent>
+          </MapMarker>
+          {userLocation ? (
+            <MapMarker longitude={userLocation.longitude} latitude={userLocation.latitude}>
+              <MarkerContent>
+                <div className="relative flex items-center justify-center">
+                  <div className="absolute size-8 animate-ping rounded-full bg-[#315238]/20" />
+                  <div className="relative size-4 rounded-full border-2 border-white bg-[#315238] shadow-[0_0_0_6px_rgba(49,82,56,0.18)]" />
+                </div>
+              </MarkerContent>
+            </MapMarker>
+          ) : null}
+          {!showClusters
+            ? visiblePois.map((poi) => (
+                <PoiMarker
+                  key={poi.id}
+                  poi={poi}
+                  isSelected={selectedPoiId === poi.id}
+                  onMarkerClick={handlePoiMarkerClick}
                 />
-                <PremiumSelect
-                  value={sortMode}
-                  onChange={(value) => setSortMode(value as SortMode)}
-                  ariaLabel="Sort nearby places"
-                  icon={ChevronUp}
-                  options={[
-                    { value: "popularity", label: "Sort by: Popularity" },
-                    { value: "nearest", label: "Sort by: Nearby" },
-                    { value: "rating", label: "Sort by: Rating" },
-                  ]}
-                />
-                <button
-                  type="button"
-                  onClick={() => setOpenNowOnly((current) => !current)}
-                  className="flex h-12 items-center justify-between rounded-full border border-[#e7dece] bg-[#fffdf8]/88 px-4 text-xs font-medium text-[#304238] shadow-[inset_0_1px_0_rgba(255,255,255,0.86)]"
-                >
-                  <span className="inline-flex items-center gap-3">
-                    <Clock3 className="size-4" />
-                    Open Now
-                  </span>
-                  <span className={`h-5 w-9 rounded-full p-0.5 transition ${openNowOnly ? PREMIUM_OLIVE_BUTTON : "bg-[#d7d6d1]"}`}>
-                    <span className={`block size-4 rounded-full bg-white shadow transition ${openNowOnly ? "translate-x-4" : ""}`} />
-                  </span>
-                </button>
-              </div>
-            </section>
+              ))
+            : null}
+        </MapView>
 
-            <section className={`rounded-[1.55rem] p-4 backdrop-blur-xl xl:min-h-0 xl:flex-1 ${PREMIUM_PANEL}`}>
-              <div className="mb-4">
-                <h2 className="text-[0.82rem] font-semibold uppercase tracking-[0.16em] text-[#374c3a]">
-                  Popular Nearby
-                </h2>
-                <span className="mt-3 block h-px w-8 bg-[#38583b]" />
-              </div>
-              <div className="space-y-3 pr-1 xl:h-[calc(100%-2.8rem)] xl:overflow-y-auto">
-                {listedPois.map((poi) => {
-                  const meta = categoryMeta[poi.category];
-                  const Icon = meta.icon;
-                  const linkedRoute = routeLookup.get(poi.id);
-                  const metrics = getDisplayRoute(linkedRoute, poi);
-                  const isSelected = selectedDisplayPoi?.id === poi.id;
-                  const isPopular = isPopularPoi(poi);
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(248,245,236,0.96)_0%,rgba(248,245,236,0.52)_16%,rgba(248,245,236,0.06)_44%,transparent_58%),radial-gradient(circle_at_80%_86%,rgba(248,245,236,0.58)_0%,rgba(248,245,236,0.18)_24%,transparent_48%)]" />
+      </div>
 
-                  return (
-                    <button
-                      key={poi.id}
-                      type="button"
-                      onClick={() => handleFilteredPoiSelection(poi)}
-                      className={`group grid w-full grid-cols-[5.5rem_minmax(0,1fr)_2.25rem] items-center gap-3 rounded-[1.35rem] border bg-[linear-gradient(180deg,rgba(255,252,246,0.98),rgba(246,240,230,0.94))] p-3 text-left shadow-[0_14px_28px_rgba(43,52,37,0.06),inset_0_1px_0_rgba(255,255,255,0.92)] transition sm:grid-cols-[8.2rem_1fr_auto] sm:gap-4 sm:rounded-[1.55rem] sm:p-4 ${
-                        isSelected
-                          ? "border-[#96b184] ring-1 ring-[#d8ca9d]"
-                          : "border-[#eadfcb] hover:border-[#d9caac]"
-                      }`}
-                    >
-                      <div className="relative h-[4.8rem] overflow-hidden rounded-[1rem] border border-[#dcca9d]/60 bg-[#e9e1d3] shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] sm:h-[5rem] sm:rounded-[1.1rem]">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={getPoiImage(poi)} alt={poi.name} className="h-full w-full object-cover" />
-                        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,248,235,0.18),transparent_45%,rgba(42,69,45,0.12)_100%)]" />
+      <div className="pointer-events-none absolute inset-0 z-20">
+        {isMobileLayout ? (
+          showFilters ? (
+            <section
+              className={`absolute ${filterInsetClass} max-w-[calc(100vw-2rem)] ${OVERLAY_TRANSITION}`}
+              data-state="open"
+            >
+              <div className={`pointer-events-auto ${FLOATING_PANEL} p-3 ${isMobileLayout ? "rounded-[1.35rem]" : "rounded-[1.6rem]"}`}>
+                <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex gap-2 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      {topCategories.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              if (item.id === "all") {
+                                clearPoiSelection();
+                                setSelectedCategories(DEFAULT_SELECTED_CATEGORIES);
+                                return;
+                              }
+
+                              toggleCategory(item.id as PoiCategory);
+                            }}
+                            className={`shrink-0 rounded-full border px-3 py-1.5 text-[0.82rem] font-medium transition ${
+                              item.active
+                                ? `${PREMIUM_OLIVE_GRADIENT} border-[#51663f] text-[#f8f5ec]`
+                                : "border-[rgba(75,95,60,0.12)] bg-white/74 text-[#43533f] hover:bg-white"
+                            }`}
+                          >
+                            <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                              <Icon className="size-4" />
+                              {item.label}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {isMobileFiltersOpen ? (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <PremiumSelect
+                          className="min-w-[10.5rem] flex-1 basis-[10.5rem]"
+                          value={distanceFilter}
+                          onChange={(value) => setDistanceFilter(value as DistanceFilter)}
+                          ariaLabel="Filter nearby places by distance"
+                          icon={LocateFixed}
+                          selectClassName="h-10 text-[0.82rem]"
+                          iconClassName="size-3.5"
+                          options={[
+                            { value: "5km", label: "Within 5 km" },
+                            { value: "10km", label: "Within 10 km" },
+                            { value: "all", label: "All Distances" },
+                          ]}
+                        />
+                        <PremiumSelect
+                          className="min-w-[10.5rem] flex-1 basis-[10.5rem]"
+                          value={sortMode}
+                          onChange={(value) => setSortMode(value as SortMode)}
+                          ariaLabel="Sort nearby places"
+                          icon={ChevronUp}
+                          selectClassName="h-10 text-[0.82rem]"
+                          iconClassName="size-3.5"
+                          options={[
+                            { value: "popularity", label: "Sort by: Popularity" },
+                            { value: "nearest", label: "Sort by: Nearby" },
+                            { value: "rating", label: "Sort by: Rating" },
+                          ]}
+                        />
+                        <PremiumSelect
+                          className="min-w-[10rem] flex-1 basis-[10rem]"
+                          value={mapDisplayMode}
+                          onChange={(value) => setMapDisplayMode(value as MapDisplayMode)}
+                          ariaLabel="Change map style"
+                          icon={Layers3}
+                          selectClassName="h-10 text-[0.82rem]"
+                          iconClassName="size-3.5"
+                          options={[
+                            { value: "normal", label: "Map: Normal" },
+                            { value: "carto", label: "Map: Carto" },
+                            { value: "3d", label: "Map: 3D" },
+                          ]}
+                        />
                       </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className={`flex size-9 shrink-0 items-center justify-center rounded-full border border-[#d8cda8] text-white shadow-[0_8px_18px_rgba(33,57,36,0.16)] ${PREMIUM_OLIVE_GRADIENT}`}>
-                            <Icon className="size-4" />
-                          </span>
-                          <div className="min-w-0">
-                            <p className="truncate text-[1.02rem] font-semibold text-[#213528]">
-                              {poi.name}
-                            </p>
-                            <p className="mt-0.5 text-xs text-[#6f766a]">{meta.label}</p>
-                          </div>
-                        </div>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <span className="rounded-full border border-[#eee3d0] bg-white/86 px-2.5 py-1 text-[0.68rem] text-[#405040] shadow-[inset_0_1px_0_rgba(255,255,255,0.94)]">{metrics.distance}</span>
-                          <span className="rounded-full border border-[#eee3d0] bg-white/86 px-2.5 py-1 text-[0.68rem] text-[#405040] shadow-[inset_0_1px_0_rgba(255,255,255,0.94)]">{metrics.duration}</span>
-                          {poi.rating ? (
-                            <span className="rounded-full border border-[#eee3d0] bg-white/86 px-2.5 py-1 text-[0.68rem] text-[#405040] shadow-[inset_0_1px_0_rgba(255,255,255,0.94)]">{poi.rating.toFixed(1)} ★</span>
-                          ) : null}
-                        </div>
-                      </div>
-                        <div className="flex items-center gap-2 sm:gap-3">
-                        {isPopular ? (
-                          <span className="hidden rounded-full border border-[#cfddb9] bg-[#fbfff8] px-3 py-1 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-[#4f8654] sm:inline-flex">
-                            Popular
-                          </span>
-                        ) : null}
-                        <span className="flex size-9 items-center justify-center rounded-full border border-[#e7dcc7] bg-white/82 text-[#415343] transition group-hover:border-[#d4c49f]">
-                          <ChevronDown className="-rotate-90 size-5" />
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-                {!visiblePois.length ? (
-                  <div className="rounded-2xl border border-[#e8dfd0] bg-white/70 p-6 text-center text-sm text-[#73796f]">
-                    No places match your current filters.
+                    ) : null}
                   </div>
-                ) : null}
+                  <div className="flex items-center gap-2 xl:self-start">
+                    <button
+                      type="button"
+                      onClick={resetFilters}
+                      className="whitespace-nowrap px-2 text-sm font-medium text-[#4b5f48] transition hover:text-[#2c3f2b]"
+                    >
+                      Clear All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowFilters(false);
+                        setIsMobileFiltersOpen(false);
+                      }}
+                      className="flex size-10 shrink-0 items-center justify-center rounded-full border border-[rgba(75,95,60,0.12)] bg-white/75 text-[#4b5f48]"
+                      aria-label="Collapse filter controls"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                </div>
               </div>
             </section>
-          </aside>
-
-          <section className="order-1 grid min-w-0 max-w-full gap-5 xl:order-2 xl:min-h-0 xl:grid-rows-[minmax(20rem,0.95fr)_auto_auto]">
-            <div className={`relative h-[22rem] w-full min-w-0 max-w-full overflow-hidden rounded-[1.55rem] bg-[#ede6d8] sm:h-[26rem] lg:h-[30rem] xl:h-auto xl:min-h-0 ${PREMIUM_PANEL}`}>
-              <div className="pointer-events-none absolute inset-0 z-10 rounded-[1.55rem] shadow-[inset_0_0_0_1px_rgba(245,235,212,0.9),inset_0_0_90px_rgba(244,236,223,0.78)]" />
-              <div className="pointer-events-none absolute inset-0 z-10 rounded-[1.55rem] bg-[radial-gradient(circle_at_center,transparent_58%,rgba(244,236,223,0.72)_100%)]" />
-              <MapView
-                ref={mapRef}
-                center={[centerPlace.lng, centerPlace.lat]}
-                zoom={15}
-                theme="light"
-                fadeDuration={0}
-                className="h-full w-full min-w-0 max-w-full"
-                onViewportChange={handleViewportChange}
-                styles={{ light: MAP_STYLE, dark: MAP_STYLE }}
-              >
-                <MapControls
-                  position="bottom-right"
-                  showZoom
-                  showCompass
-                  showLocate
-                  onLocate={handleUserLocate}
-                />
-                <MapClickClearRoute onClear={clearActiveRoute} suppressRef={suppressNextMapClearRef} />
-                {userLocation ? <UserLocationAccuracyLayer location={userLocation} /> : null}
-                {userRoute ? (
-                  <>
-                    <MapRoute id="user-route-outline" coordinates={userRoute.coordinates} color="#ffffff" width={3} opacity={0.6} />
-                    <MapRoute id="user-route-base" coordinates={userRoute.coordinates} color={userRouteColor} width={6} opacity={0.18} />
-                  </>
-                ) : null}
-                {userAnimatedCoordinates.length > 1 ? (
-                  <MapRoute id="user-route-animated" coordinates={userAnimatedCoordinates} color={userRouteColor} width={5} opacity={1} />
-                ) : null}
-                {activeRoute ? (
-                  <>
-                    <MapRoute id="poi-route-outline" coordinates={activeRoute.coordinates} color="#ffffff" width={3} opacity={0.55} />
-                    <MapRoute id="poi-route-base" coordinates={activeRoute.coordinates} color={activeRouteColor} width={6} opacity={0.16} />
-                  </>
-                ) : null}
-                {animatedCoordinates.length > 1 ? (
-                  <MapRoute id="poi-route-animated" coordinates={animatedCoordinates} color={activeRouteColor} width={5} opacity={1} />
-                ) : null}
-                {showClusters ? (
-                  <MapClusterLayer<ClusterPoiProperties>
-                    data={clusterData}
-                    clusterRadius={POI_CLUSTER_RADIUS}
-                    clusterMaxZoom={POI_CLUSTER_MAX_ZOOM}
-                    clusterColors={["#7a8f5a", "#5d7445", "#455933"]}
-                    clusterThresholds={[12, 28]}
-                    pointColor="#5d7445"
-                    onPointClick={handleClusterPointClick}
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowFilters(true)}
+              className={`absolute right-4 top-[5.25rem] pointer-events-auto inline-flex items-center gap-2 px-4 py-2 text-sm font-medium ${FLOATING_BUTTON}`}
+            >
+              <ListFilter className="size-4" />
+              Filters
+            </button>
+          )
+        ) : desktopSidebarVisible ? (
+          <section
+            className={`absolute right-6 top-6 bottom-6 ${desktopSidebarWidthClass} pointer-events-none ${OVERLAY_TRANSITION}`}
+            data-state="open"
+          >
+            <div className="flex h-full flex-col gap-6 overflow-y-auto overscroll-contain pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className={`pointer-events-auto ${FLOATING_GHOST_PANEL} p-0`}>
+                <div className={`relative overflow-hidden rounded-[2rem] border border-[rgba(217,226,205,0.18)] bg-[linear-gradient(180deg,rgba(45,66,36,0.94)_0%,rgba(32,49,27,0.97)_100%)] shadow-[0_24px_60px_rgba(25,34,22,0.28)] backdrop-blur-xl ${desktopSidebarPanelPaddingClass}`}>
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_16%,rgba(165,197,120,0.2),transparent_34%),radial-gradient(circle_at_88%_82%,rgba(132,160,96,0.14),transparent_28%)]" />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/flowerUI.png"
+                    alt=""
+                    className="pointer-events-none absolute -right-6 -top-3 z-0 h-88 w-auto opacity-60 select-none"
                   />
-                ) : null}
-                <MapMarker longitude={centerPlace.lng} latitude={centerPlace.lat}>
-                  <MarkerContent>
-                    <button
-                      type="button"
-                      onClick={clearActiveRoute}
-                      className="relative flex items-center justify-center"
-                      aria-label={centerPlace.name}
-                    >
-                      <span className="absolute size-16 rounded-full bg-[#6f925f]/20" />
-                      <span className="absolute size-10 rounded-full bg-[#6f925f]/30 blur-md" />
-                      <span className="relative size-7 rounded-full border-[6px] border-white bg-[#315238] shadow-[0_0_0_12px_rgba(103,137,90,0.18)]" />
-                    </button>
-                  </MarkerContent>
-                </MapMarker>
-                {userLocation ? (
-                  <MapMarker longitude={userLocation.longitude} latitude={userLocation.latitude}>
-                    <MarkerContent>
-                      <div className="relative flex items-center justify-center">
-                        <div className="absolute size-8 animate-ping rounded-full bg-[#315238]/20" />
-                        <div className="relative size-4 rounded-full border-2 border-white bg-[#315238] shadow-[0_0_0_6px_rgba(49,82,56,0.18)]" />
-                      </div>
-                    </MarkerContent>
-                  </MapMarker>
-                ) : null}
-                {!showClusters
-                  ? visiblePois.map((poi) => (
-                      <PoiMarker
-                        key={poi.id}
-                        poi={poi}
-                        isSelected={selectedDisplayPoi?.id === poi.id}
-                        onMarkerClick={handlePoiMarkerClick}
-                      />
-                    ))
-                  : null}
-              </MapView>
-            </div>
-
-            <div className="grid min-w-0 max-w-full gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-              <article className="h-full min-w-0 max-w-full overflow-hidden rounded-[1.55rem]">
-                <div className="grid h-full min-h-[20rem] grid-rows-[minmax(0,1fr)_4.25rem] gap-3 overflow-hidden sm:min-h-[15.5rem] sm:grid-cols-[minmax(0,1fr)_4.4rem] sm:grid-rows-none">
-                  <div className="relative min-h-0 overflow-hidden rounded-[1.25rem] bg-[#e9e1d3]">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={selectedMainImage}
-                      alt={selectedDisplayPoi?.name ?? "Selected place"}
-                      className="h-full w-full object-cover"
-                    />
-                    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,248,235,0.18),transparent_45%,rgba(42,69,45,0.12)_100%)]" />
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src="/LEAF UI.png"
-                      alt=""
-                      className="pointer-events-none absolute -left-5 bottom-0 h-28 w-auto opacity-[0.18] mix-blend-multiply"
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-4 top-4 z-20 flex size-11 items-center justify-center rounded-full bg-[#fffdf8]/88 text-[#425143] shadow-[0_10px_22px_rgba(43,52,37,0.12)]"
-                      aria-label="Close selected place"
-                    >
-                      <X className="size-5" />
-                    </button>
+                  <div className="relative mb-5 flex items-start justify-between gap-3">
+                    <div>
+                      <p className={`font-semibold uppercase text-[#d7dfcb] ${desktopSidebarHeaderEyebrowClass}`}>
+                        Discover Nearby
+                      </p>
+                      <h2 className={`${displaySerif.className} mt-2 font-semibold text-[#f7f3e8] ${desktopSidebarTitleClass}`}>
+                        Explore Places
+                      </h2>
+                      <p className={`mt-3 text-[#d7dfcb]/80 ${desktopSidebarBodyCopyClass}`}>
+                        Everything you need, just moments away.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={resetFilters}
+                        className={`whitespace-nowrap px-2 font-medium text-[#eef2e7] transition hover:text-white ${desktopSidebarActionTextClass}`}
+                      >
+                        Clear All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowDesktopSidebar(false)}
+                        className={`flex shrink-0 items-center justify-center rounded-full border border-[rgba(235,239,229,0.18)] bg-white/10 text-[#f4f7ee] ${desktopSidebarCloseButtonClass}`}
+                        aria-label="Close sidebar"
+                      >
+                        <X className="size-4" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex min-h-0 gap-2 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-col sm:overflow-x-hidden sm:overflow-y-auto sm:pb-0">
-                    {selectedPoiImages.map((image, index) => {
-                      const isActive = image === selectedMainImage;
-
+                  <div className={`grid grid-cols-4 ${desktopSidebarTileGridClass}`}>
+                    {desktopSidebarCategories.map((item) => {
+                      const Icon = item.icon;
                       return (
                         <button
-                          key={`${image}-${index}`}
+                          key={item.id}
                           type="button"
-                          onClick={() =>
-                            selectedDisplayPoi &&
-                            setActivePoiImage({
-                              poiId: selectedDisplayPoi.id,
-                              image,
-                            })
-                          }
-                          className={`relative aspect-square h-full shrink-0 overflow-hidden rounded-[0.9rem] border bg-[#e9e1d3] shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] transition sm:h-auto sm:w-full ${
-                            isActive
-                              ? "border-[#5d7445] ring-2 ring-[#c7d7b8]"
-                              : "border-[#dcca9d]/70 hover:border-[#9fb587]"
+                          onClick={() => toggleCategory(item.id as PoiCategory)}
+                          className={`group aspect-square border transition ${desktopSidebarTileClass} ${
+                            item.active
+                              ? "border-[rgba(225,234,212,0.28)] bg-white/14 text-[#fbf8ef] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                              : "border-[rgba(225,234,212,0.12)] bg-white/5 text-[#d6dec9] hover:bg-white/9"
                           }`}
-                          aria-label={`View image ${index + 1} for ${selectedDisplayPoi?.name ?? "selected place"}`}
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={image}
-                            alt=""
-                            className="h-full w-full object-cover"
-                          />
+                          <span className="flex h-full flex-col items-center justify-center gap-1.5 text-center">
+                            <span className={`flex items-center justify-center ${desktopSidebarTileIconWrapClass} ${item.active ? "bg-white/12" : "bg-transparent"}`}>
+                              <Icon className={desktopSidebarTileIconClass} />
+                            </span>
+                            <span className={`leading-tight ${desktopSidebarTileLabelClass}`}>{item.label}</span>
+                          </span>
                         </button>
                       );
                     })}
                   </div>
-                </div>
-              </article>
-
-              <article className={`relative overflow-hidden rounded-[1.55rem] p-5 2xl:p-6 ${PREMIUM_PANEL}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/LEAF UI.png"
-                  alt=""
-                  className="pointer-events-none absolute -right-6 top-0 h-36 w-auto opacity-[0.15] mix-blend-multiply"
-                />
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex gap-4">
-                    <span className={`flex size-12 shrink-0 items-center justify-center rounded-full border border-[#d8cda8] text-white shadow-[0_10px_20px_rgba(43,52,37,0.14)] ${PREMIUM_OLIVE_GRADIENT}`}>
-                      <SelectedIcon className="size-6" />
-                    </span>
-                    <div>
-                      <h2 className={`${displaySerif.className} text-2xl font-semibold leading-tight text-[#263b2b] 2xl:text-3xl`}>
-                        {selectedDisplayPoi?.name ?? "Explore Nearby"}
-                      </h2>
-                      <p className="mt-1 text-sm text-[#777b73]">{selectedMeta.label}</p>
-                    </div>
+                  <div className="mt-5">
+                    <p className={`font-semibold uppercase text-[#d7dfcb] ${desktopSidebarFilterLabelClass}`}>
+                      Quick Filters
+                    </p>
                   </div>
-                  {selectedIsPopular ? (
-                    <span className="rounded-full border border-[#b9d5ba] bg-[#f9fff7] px-4 py-1.5 text-[0.68rem] font-bold uppercase tracking-[0.05em] text-[#2f9a5c]">
-                      Popular
-                    </span>
-                  ) : null}
+                  <div className="mt-3 flex flex-col gap-3">
+                    <PremiumSelect
+                      className="w-full"
+                      value={distanceFilter}
+                      onChange={(value) => setDistanceFilter(value as DistanceFilter)}
+                      ariaLabel="Filter nearby places by distance"
+                      icon={LocateFixed}
+                      iconClassName={desktopSidebarControlIconClass}
+                      selectClassName={`${desktopSidebarControlHeightClass} ${desktopSidebarControlRadiusClass} border-[rgba(225,234,212,0.14)] bg-white/7 text-[#f7f3e8] focus:border-[rgba(225,234,212,0.28)] ${desktopSidebarControlTextClass}`}
+                      options={[
+                        { value: "5km", label: "Within 5 km" },
+                        { value: "10km", label: "Within 10 km" },
+                        { value: "all", label: "All Distances" },
+                      ]}
+                    />
+                    <PremiumSelect
+                      className="w-full"
+                      value={sortMode}
+                      onChange={(value) => setSortMode(value as SortMode)}
+                      ariaLabel="Sort nearby places"
+                      icon={ChevronUp}
+                      iconClassName={desktopSidebarControlIconClass}
+                      selectClassName={`${desktopSidebarControlHeightClass} ${desktopSidebarControlRadiusClass} border-[rgba(225,234,212,0.14)] bg-white/7 text-[#f7f3e8] focus:border-[rgba(225,234,212,0.28)] ${desktopSidebarControlTextClass}`}
+                      options={[
+                        { value: "popularity", label: "Sort by: Popularity" },
+                        { value: "nearest", label: "Sort by: Nearby" },
+                        { value: "rating", label: "Sort by: Rating" },
+                      ]}
+                    />
+                    <PremiumSelect
+                      className="w-full"
+                      value={mapDisplayMode}
+                      onChange={(value) => setMapDisplayMode(value as MapDisplayMode)}
+                      ariaLabel="Change map style"
+                      icon={Layers3}
+                      iconClassName={desktopSidebarControlIconClass}
+                      selectClassName={`${desktopSidebarControlHeightClass} ${desktopSidebarControlRadiusClass} border-[rgba(225,234,212,0.14)] bg-white/7 text-[#f7f3e8] focus:border-[rgba(225,234,212,0.28)] ${desktopSidebarControlTextClass}`}
+                      options={[
+                        { value: "normal", label: "Map: Normal" },
+                        { value: "carto", label: "Map: Carto" },
+                        { value: "3d", label: "Map: 3D" },
+                      ]}
+                    />
+                  </div>
                 </div>
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <MetricPill icon={LocateFixed}>{selectedRouteMetrics.distance}</MetricPill>
-                  <MetricPill icon={Clock3}>{selectedRouteMetrics.duration}</MetricPill>
-                  <MetricPill icon={Star}>{selectedDisplayPoi?.rating?.toFixed(1) ?? "4.4"}</MetricPill>
+              </div>
+
+              <div className={`pointer-events-auto ${FLOATING_GHOST_PANEL} p-0`}>
+                <div className={`rounded-[1.8rem] border border-[rgba(255,255,255,0.55)] bg-[rgba(251,249,243,0.9)] shadow-[0_18px_44px_rgba(32,44,27,0.12)] backdrop-blur-xl ${popularPanelPaddingClass}`}>
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                      <h2 className={`font-semibold text-[#223326] ${popularPanelTitleClass}`}>Popular Nearby</h2>
+                      <p className={`mt-1 text-[#6d746b] ${popularPanelDescriptionClass}`}>Browse the best-rated places around the project.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCategories(DEFAULT_SELECTED_CATEGORIES)}
+                      className={`whitespace-nowrap font-medium text-[#4c6047] ${desktopSidebarActionTextClass}`}
+                    >
+                      View all
+                    </button>
+                  </div>
+                  <div className="max-h-[46vh] space-y-1 overflow-y-auto overscroll-contain pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {listedPois.map((poi) => {
+                      const meta = categoryMeta[poi.category];
+                      const linkedRoute = routeLookup.get(poi.id);
+                      const metrics = getDisplayRoute(linkedRoute, poi);
+                      const isSelected = selectedPoiId === poi.id;
+
+                      return (
+                        <button
+                          key={poi.id}
+                          type="button"
+                          onClick={() => handleFilteredPoiSelection(poi)}
+                          className={`group flex w-full items-center gap-3 rounded-[1.2rem] border px-3 py-3 text-left transition ${
+                            isSelected
+                              ? "border-[#9fb587] bg-white/88"
+                              : "border-[rgba(75,95,60,0.08)] bg-white/72 hover:border-[rgba(75,95,60,0.12)] hover:bg-white/88"
+                          }`}
+                        >
+                          <div className={`relative shrink-0 overflow-hidden rounded-[1rem] border border-[rgba(75,95,60,0.14)] bg-[#e9e1d3] ${popularItemImageClass}`}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={getPoiImage(poi)} alt={poi.name} className="h-full w-full object-cover" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className={`truncate font-semibold text-[#243428] ${popularItemTitleClass}`}>{poi.name}</p>
+                            <p className="mt-0.5 text-xs text-[#6f766a]">{meta.label}</p>
+                            <div className={`mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[#4e5e49] ${popularItemMetaClass}`}>
+                              <span>{metrics.distance}</span>
+                              <span>{metrics.duration}</span>
+                              {poi.rating ? <span>{poi.rating.toFixed(1)} ★</span> : null}
+                            </div>
+                          </div>
+                          <span className={`flex shrink-0 items-center justify-center rounded-full border border-[rgba(75,95,60,0.12)] bg-white/82 text-[#445642] ${popularItemArrowClass}`}>
+                            <ChevronRight className="size-4" />
+                          </span>
+                        </button>
+                      );
+                    })}
+                    {!visiblePois.length ? (
+                      <div className="rounded-2xl border border-[#e8dfd0] bg-white/70 p-6 text-center text-sm text-[#73796f]">
+                        No places match your current filters.
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-                <p className="mt-5 max-w-[42rem] text-sm leading-6 text-[#757b72]">
-                  {detailDescription}
-                </p>
-                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              </div>
+            </div>
+          </section>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowDesktopSidebar(true)}
+            className={`absolute right-6 top-6 pointer-events-auto inline-flex items-center gap-2 px-4 py-2 text-sm font-medium ${FLOATING_BUTTON}`}
+          >
+            <ListFilter className="size-4" />
+            Sidebar
+          </button>
+        )}
+
+        {!isMobileLayout && showPoiDetails && selectedDisplayPoi ? (
+          <section
+            className={`absolute bottom-6 right-6 w-[26rem] ${isTabletLayout ? "w-[22rem]" : ""} ${FLOATING_PANEL} ${OVERLAY_TRANSITION}`}
+            data-state="open"
+          >
+            <div className="pointer-events-auto p-4">
+              <div className="mb-4 flex items-center justify-between">
+                <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(75,95,60,0.12)] bg-white/76 px-3 py-1.5 text-xs font-semibold text-[#41533f]">
+                  <SelectedIcon className="size-3.5" />
+                  {selectedMeta.label}
+                </span>
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => selectedDisplayPoi && handleViewRoute(selectedDisplayPoi)}
-                    className={`inline-flex h-12 items-center justify-center gap-2 rounded-full px-4 text-xs font-semibold text-white shadow-[0_10px_20px_rgba(50,79,45,0.24)] ${PREMIUM_OLIVE_BUTTON}`}
+                    className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[rgba(75,95,60,0.12)] bg-white/78 text-[#4e5e49]"
+                    aria-label="Save this place"
+                  >
+                    <Heart className="size-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearActiveRoute}
+                    className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[rgba(75,95,60,0.12)] bg-white/78 text-[#4e5e49]"
+                    aria-label="Close selected place details"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className={`grid gap-3 ${sidePreviewImages.length > 0 || extraImageCount > 0 ? "grid-cols-[minmax(0,1fr)_5.25rem]" : "grid-cols-1"}`}>
+                <div className="relative overflow-hidden rounded-[1.2rem] border border-[rgba(75,95,60,0.14)] bg-[#e9e1d3]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={selectedMainImage}
+                    alt={selectedDisplayPoi.name}
+                    className="h-[13rem] w-full object-cover"
+                  />
+                  <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(42,69,45,0.12))]" />
+                </div>
+                {sidePreviewImages.length > 0 || extraImageCount > 0 ? (
+                  <div className="flex flex-col gap-3">
+                    {sidePreviewImages.map((image, index) => (
+                      <button
+                        key={`${image}-${index}`}
+                        type="button"
+                        onClick={() =>
+                          setActivePoiImage({
+                            poiId: selectedDisplayPoi.id,
+                            image,
+                          })
+                        }
+                        className="overflow-hidden rounded-[1rem] border border-[rgba(75,95,60,0.14)] bg-[#e9e1d3]"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={image} alt="" className="h-[5rem] w-full object-cover" />
+                      </button>
+                    ))}
+                    {extraImageCount > 0 ? (
+                      <div className={`flex flex-1 items-center justify-center rounded-[1rem] text-sm font-semibold text-[#f8f5ec] ${PREMIUM_OLIVE_GRADIENT}`}>
+                        +{extraImageCount}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="mt-5">
+                <h2 className={`${displaySerif.className} text-[2rem] font-semibold leading-tight text-[#253529]`}>
+                  {selectedDisplayPoi.name}
+                </h2>
+                <p className="mt-1 text-sm text-[#70766d]">Bengaluru, Karnataka</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <MetricPill icon={LocateFixed}>{selectedRouteMetrics.distance}</MetricPill>
+                  <MetricPill icon={Clock3}>{selectedRouteMetrics.duration}</MetricPill>
+                  <MetricPill icon={Star}>{selectedDisplayPoi.rating?.toFixed(1) ?? "4.4"}</MetricPill>
+                </div>
+                <p className="mt-4 text-sm leading-6 text-[#72786f]">{detailDescription}</p>
+              </div>
+
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  className="inline-flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-[#e6ddce] bg-[#fffdf8] px-4 text-[0.95rem] font-semibold text-[#405040]"
+                >
+                  <CalendarDays className="size-4" />
+                  Schedule Visit
+                </button>
+                <button className="inline-flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-[#e6ddce] bg-[#fffdf8] px-4 text-[0.95rem] font-semibold text-[#405040]">
+                  <Share2 className="size-4" />
+                  Share
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleViewRoute(selectedDisplayPoi)}
+                className={`mt-3 inline-flex h-12 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 text-[0.98rem] font-semibold text-white shadow-[0_10px_20px_rgba(50,79,45,0.24)] ${PREMIUM_OLIVE_BUTTON}`}
+              >
+                <Navigation className="size-4" />
+                Get Directions
+              </button>
+            </div>
+          </section>
+        ) : null}
+
+        {isMobileLayout ? (
+          <>
+            {showPopular && !showPoiDetails ? (
+              <section
+                className={`absolute inset-x-3 ${FLOATING_PANEL} ${OVERLAY_TRANSITION}`}
+                style={{ bottom: "calc(env(safe-area-inset-bottom) + 5rem)" }}
+                data-state="open"
+              >
+                <div className="pointer-events-auto p-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setMobilePopularExpanded((current) => !current)}
+                    className="flex w-full items-center justify-between gap-3 px-2 py-1.5 text-left"
+                  >
+                    <div>
+                      <p className="text-[0.92rem] font-semibold text-[#223326]">Popular Nearby</p>
+                      <p className="text-[0.72rem] text-[#6d746b]">{mobilePopularExpanded ? "Tap to collapse" : "Swipe through the best nearby places"}</p>
+                    </div>
+                    <ChevronUp className={`size-3.5 text-[#445642] transition ${mobilePopularExpanded ? "" : "rotate-180"}`} />
+                  </button>
+                  {mobilePopularExpanded ? (
+                    <div className="mt-2 max-h-[48dvh] space-y-1 overflow-y-auto overscroll-contain pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      {listedPois.map((poi) => {
+                        const meta = categoryMeta[poi.category];
+                        const linkedRoute = routeLookup.get(poi.id);
+                        const metrics = getDisplayRoute(linkedRoute, poi);
+
+                        return (
+                          <button
+                            key={poi.id}
+                            type="button"
+                            onClick={() => handleFilteredPoiSelection(poi)}
+                            className="flex w-full items-center gap-2.5 rounded-[1rem] border border-transparent bg-white/55 px-2 py-2 text-left"
+                          >
+                            <div className="relative h-[3.8rem] w-[4.2rem] shrink-0 overflow-hidden rounded-[0.9rem] border border-[rgba(75,95,60,0.14)] bg-[#e9e1d3]">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={getPoiImage(poi)} alt={poi.name} className="h-full w-full object-cover" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-[0.84rem] font-semibold text-[#243428]">{poi.name}</p>
+                              <p className="text-[0.72rem] text-[#6f766a]">{meta.label}</p>
+                              <div className="mt-1 flex flex-wrap gap-x-2 text-[0.66rem] text-[#4e5e49]">
+                                <span>{metrics.distance}</span>
+                                <span>{metrics.duration}</span>
+                                {poi.rating ? <span>{poi.rating.toFixed(1)} ★</span> : null}
+                              </div>
+                            </div>
+                            <ChevronRight className="size-3.5 text-[#4d5c49]" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
+              </section>
+            ) : null}
+
+            {showPoiDetails && selectedDisplayPoi ? (
+              <section
+                className={`absolute inset-x-3 ${FLOATING_PANEL} ${OVERLAY_TRANSITION}`}
+                style={{ bottom: "calc(env(safe-area-inset-bottom) + 5rem)" }}
+                data-state="open"
+              >
+                <div className="pointer-events-auto p-3">
+                  <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-[#d8d1c0]" />
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(75,95,60,0.12)] bg-white/80 px-3 py-1 text-xs font-semibold text-[#41533f]">
+                      <SelectedIcon className="size-3.5" />
+                      {selectedMeta.label}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={clearActiveRoute}
+                      className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[rgba(75,95,60,0.12)] bg-white/78 text-[#4e5e49]"
+                      aria-label="Close selected place details"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                  <div className="overflow-hidden rounded-[1.2rem] border border-[rgba(75,95,60,0.14)] bg-[#e9e1d3]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={selectedMainImage} alt={selectedDisplayPoi.name} className="h-44 w-full object-cover" />
+                  </div>
+                  <div className="mt-4">
+                    <h2 className={`${displaySerif.className} text-[1.8rem] font-semibold leading-tight text-[#253529]`}>
+                      {selectedDisplayPoi.name}
+                    </h2>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <MetricPill icon={LocateFixed}>{selectedRouteMetrics.distance}</MetricPill>
+                      <MetricPill icon={Clock3}>{selectedRouteMetrics.duration}</MetricPill>
+                      <MetricPill icon={Star}>{selectedDisplayPoi.rating?.toFixed(1) ?? "4.4"}</MetricPill>
+                    </div>
+                    <p className="mt-3 text-sm leading-6 text-[#72786f]">{detailDescription}</p>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      className="inline-flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-[#e6ddce] bg-[#fffdf8] px-4 text-sm font-semibold text-[#405040]"
+                    >
+                      <CalendarDays className="size-4" />
+                      Schedule Visit
+                    </button>
+                    <button className="inline-flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-[#e6ddce] bg-[#fffdf8] px-4 text-sm font-semibold text-[#405040]">
+                      <Share2 className="size-4" />
+                      Share
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleViewRoute(selectedDisplayPoi)}
+                    className={`mt-3 inline-flex h-12 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(50,79,45,0.24)] ${PREMIUM_OLIVE_BUTTON}`}
                   >
                     <Navigation className="size-4" />
                     Get Directions
                   </button>
-                  <button className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#e6ddce] bg-[#fffdf8] px-4 text-xs font-semibold text-[#405040]">
-                    <Heart className="size-4" />
-                    Save
-                  </button>
-                  <button className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#e6ddce] bg-[#fffdf8] px-4 text-xs font-semibold text-[#405040]">
-                    <Share2 className="size-4" />
-                    Share
-                  </button>
                 </div>
-              </article>
-            </div>
-
-            <section className={`rounded-[1.55rem] p-5 ${PREMIUM_PANEL}`}>
-              <h2 className="mb-5 text-[0.78rem] font-semibold uppercase tracking-[0.16em] text-[#405040]">
-                Nearby at this location
-              </h2>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-                {nearbyAmenities.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <div key={item.label} className="flex items-center gap-3">
-                      <span className={`flex size-11 shrink-0 items-center justify-center rounded-full ${item.bg}`}>
-                        <Icon className={`size-5 ${item.color}`} />
-                      </span>
-                      <div>
-                        <p className="text-xs font-semibold text-[#303d33]">{item.label}</p>
-                        <p className="mt-1 text-xs text-[#777b73]">{item.distance}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          </section>
-        </div>
-      </section>
+              </section>
+            ) : null}
+          </>
+        ) : null}
+      </div>
 
       {(isLoading || isUserRouteLoading) && (
         <div className="pointer-events-none absolute inset-x-0 top-4 z-30 flex justify-center px-4">

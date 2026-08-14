@@ -7,20 +7,7 @@ import {
   getAssetWorkerDomain,
   signR2AssetKeys,
 } from "@/lib/server/r2-signed-assets";
-import {
-  MASTER_PLAN_SCRUB_HQ_VIDEO_PATH,
-  MASTER_PLAN_SCRUB_INTERACTION_VIDEO_PATH,
-} from "@/data/masterPlanFrameCdnUrls";
-
-const MASTER_PLAN_CRITICAL_ASSET_KEYS = [
-  "images/first_frame_again.png",
-  MASTER_PLAN_SCRUB_HQ_VIDEO_PATH,
-  MASTER_PLAN_SCRUB_INTERACTION_VIDEO_PATH,
-  "videos/Unit  View.mp4",
-  "videos/Unit View 3S Reversed New_Compressed.mp4",
-  "videos/Unit  View4sec.mp4",
-  "videos/Unit_View4sec_reversed_SMALL.mp4",
-] as const;
+import { getPublishedDeveloperRuntimeConfig } from "@/lib/developer-config";
 
 export const metadata = buildPageMetadata({
   title: "Master Plan",
@@ -55,8 +42,16 @@ export default async function MasterPlanPage() {
   }
 
   const workerDomain = getAssetWorkerDomain();
+  const runtimeConfig = await getPublishedDeveloperRuntimeConfig();
+  const masterPlan = runtimeConfig.masterPlan;
   const signedMasterPlanCriticalAssets = signR2AssetKeys([
-    ...MASTER_PLAN_CRITICAL_ASSET_KEYS,
+    masterPlan.fallbackImageKey,
+    masterPlan.scrubVideoKey,
+    masterPlan.interactionVideoKey,
+    ...Object.values(masterPlan.unitViewVideos).flatMap((video) => [
+      video.forwardKey,
+      video.reverseKey,
+    ]),
   ]);
 
   return (
@@ -67,6 +62,7 @@ export default async function MasterPlanPage() {
         <MasterPlanLayout
           initialApartments={initialApartments}
           initialSignedAssetUrls={signedMasterPlanCriticalAssets}
+          masterPlanConfig={masterPlan}
         />
       </div>
     </div>

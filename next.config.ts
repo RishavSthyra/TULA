@@ -18,6 +18,11 @@ const nextConfig = {
       },
       {
         protocol: "https",
+        hostname: "cdn.sthyra.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
         hostname: "curly-leaf-d240.aasish.workers.dev",
         pathname: "/**",
       },

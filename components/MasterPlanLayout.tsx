@@ -45,6 +45,7 @@ import {
 } from "@/lib/master-plan-hotspots";
 import { readJsonResponse } from "@/lib/utils";
 import type { InventoryApartment, TowerType } from "@/types/inventory";
+import type { MasterPlanDeveloperConfig } from "@/types/developer-config";
 import { primeSignedAssetUrls } from "@/src/lib/signed-assets";
 import { useSignedAssetUrls } from "@/src/lib/use-signed-assets";
 
@@ -154,6 +155,7 @@ function getApartmentMeshId(apartment: InventoryApartment) {
 type MasterPlanLayoutProps = {
   initialApartments?: InventoryApartment[];
   initialSignedAssetUrls?: Record<string, string>;
+  masterPlanConfig?: MasterPlanDeveloperConfig;
 };
 
 type FloorFilterOption = {
@@ -353,19 +355,25 @@ function getMasterPlanFrameTransitionDuration(
   );
 }
 
-function isSpecialVideoApartment(apartment: InventoryApartment | null) {
+function isSpecialVideoApartment(
+  apartment: InventoryApartment | null,
+  configs: Record<string, SpecialUnitVideoConfig>,
+) {
   if (!apartment) {
     return false;
   }
 
   return (
     apartment.tower === SPECIAL_UNIT_VIDEO_TOWER &&
-    Boolean(SPECIAL_UNIT_VIDEO_CONFIGS[getApartmentFlatToken(apartment)])
+    Boolean(configs[getApartmentFlatToken(apartment)])
   );
 }
 
-function getSpecialUnitVideoConfig(flatToken: string) {
-  return SPECIAL_UNIT_VIDEO_CONFIGS[flatToken] ?? null;
+function getSpecialUnitVideoConfig(
+  flatToken: string,
+  configs: Record<string, SpecialUnitVideoConfig>,
+) {
+  return configs[flatToken] ?? null;
 }
 
 function MasterPlanHotspotControls({
@@ -600,8 +608,19 @@ function MasterPlanModeToggle({
 export default function MasterPlanLayout({
   initialApartments = [],
   initialSignedAssetUrls = {},
+  masterPlanConfig,
 }: MasterPlanLayoutProps) {
   primeSignedAssetUrls(initialSignedAssetUrls);
+  const specialUnitVideoConfigs = masterPlanConfig
+    ? Object.fromEntries(
+        Object.entries(masterPlanConfig.unitViewVideos).map(([flat, video]) => [
+          flat,
+          { forwardUrl: video.forwardKey, reverseUrl: video.reverseKey },
+        ]),
+      )
+    : SPECIAL_UNIT_VIDEO_CONFIGS;
+  const masterPlanFallbackImageKey =
+    masterPlanConfig?.fallbackImageKey ?? MASTER_PLAN_STAGE_FALLBACK_IMAGE;
   const rootRef = useRef<HTMLDivElement | null>(null);
   const selectedFlatPanelRef = useRef<HTMLDivElement | null>(null);
   const specialUnitVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -614,8 +633,8 @@ export default function MasterPlanLayout({
   const inventorySignatureRef = useRef("");
   const currentFrameRef = useRef(1);
   const signedAssetUrls = useSignedAssetUrls([
-    MASTER_PLAN_STAGE_FALLBACK_IMAGE,
-    ...Object.values(SPECIAL_UNIT_VIDEO_CONFIGS).flatMap((config) => [
+    masterPlanFallbackImageKey,
+    ...Object.values(specialUnitVideoConfigs).flatMap((config) => [
       config.forwardUrl,
       config.reverseUrl,
     ]),
@@ -721,7 +740,10 @@ export default function MasterPlanLayout({
       return null;
     }
 
-    const rawConfig = getSpecialUnitVideoConfig(activeSpecialVideoFlatToken!);
+    const rawConfig = getSpecialUnitVideoConfig(
+      activeSpecialVideoFlatToken!,
+      specialUnitVideoConfigs,
+    );
 
     if (!rawConfig) {
       return null;
@@ -738,9 +760,9 @@ export default function MasterPlanLayout({
       forwardUrl: signedForwardUrl,
       reverseUrl: signedReverseUrl,
     };
-  }, [activeSpecialVideoFlatToken, signedAssetUrls, specialVideoApartment]);
+  }, [activeSpecialVideoFlatToken, signedAssetUrls, specialUnitVideoConfigs, specialVideoApartment]);
   const signedMasterPlanStageFallbackImage =
-    signedAssetUrls[MASTER_PLAN_STAGE_FALLBACK_IMAGE] ?? null;
+    signedAssetUrls[masterPlanFallbackImageKey] ?? null;
   const activeSpecialVideoUrl = isSpecialVideoReversing
     ? activeSpecialVideoConfig?.reverseUrl ?? null
     : activeSpecialVideoConfig?.forwardUrl ?? null;
@@ -1266,7 +1288,7 @@ export default function MasterPlanLayout({
       setSelectedTower(apartment.tower);
       setIsDesktopSidebarOpen(true);
 
-      if (isSpecialVideoApartment(apartment)) {
+      if (isSpecialVideoApartment(apartment, specialUnitVideoConfigs)) {
         setSelectedApartment(null);
         setSelectedApartmentMeshId(null);
         setIsMobileSheetOpen(false);
@@ -1313,7 +1335,7 @@ export default function MasterPlanLayout({
       setSelectedApartmentMeshId(apartmentMeshId);
       setIsMobileSheetOpen(false);
     },
-    [activeHotspot, closeSpecialUnitVideo],
+    [activeHotspot, closeSpecialUnitVideo, specialUnitVideoConfigs],
   );
 
   const handleApartmentListSelect = useCallback((apartment: InventoryApartment) => {
@@ -1667,6 +1689,7 @@ export default function MasterPlanLayout({
             onSetFrame={setWrappedFrame}
             selectedApartmentId={selectedApartmentMeshId}
             selectedTower={selectedTower}
+            config={masterPlanConfig}
             touchHighlightProfile="desktop"
           />
         )
@@ -1781,6 +1804,7 @@ export default function MasterPlanLayout({
                   onSetFrame={setWrappedFrame}
                   selectedApartmentId={selectedApartmentMeshId}
                   selectedTower={selectedTower}
+                  config={masterPlanConfig}
                   touchHighlightProfile={compactTouchHighlightProfile}
                 />
               )}

@@ -328,3 +328,204 @@
 .masterplan-range-dark::-moz-range-thumb {
   background: #050505;
 }
+
+.desktop-site-rail {
+  --rail-width: 5rem;
+  --rail-padding-x: 0.6rem;
+  --rail-padding-top: 1rem;
+  --rail-padding-bottom: 1.25rem;
+  --rail-brand-size: 2.35rem;
+  --rail-brand-icon-size: 1.1rem;
+  --rail-title-gap: 0.625rem;
+  --rail-title-size: 1.38rem;
+  --rail-nav-margin-top: 1.75rem;
+  --rail-nav-gap: 1.25rem;
+  --rail-active-button-size: 2.55rem;
+  --rail-inactive-button-size: 2rem;
+  --rail-active-icon-size: 1rem;
+  --rail-inactive-icon-size: 0.98rem;
+  --rail-divider-margin-top: 1.75rem;
+  --rail-divider-width: 2rem;
+  --rail-filter-margin-top: 1.25rem;
+  --rail-filter-button-size: 2.05rem;
+  --rail-filter-icon-size: 0.84rem;
+  --rail-filter-label-gap: 0.625rem;
+  --rail-filter-label-size: 0.64rem;
+  --rail-leaf-margin-top: 1rem;
+  --rail-leaf-height: 11rem;
+  width: var(--rail-width);
+  padding: var(--rail-padding-top) var(--rail-padding-x)
+    var(--rail-padding-bottom);
+}
+
+.desktop-site-rail__brand-mark {
+  width: var(--rail-brand-size);
+  height: var(--rail-brand-size);
+}
+
+.desktop-site-rail__brand-icon {
+  width: var(--rail-brand-icon-size);
+  height: var(--rail-brand-icon-size);
+}
+
+.desktop-site-rail__title {
+  margin-top: var(--rail-title-gap);
+  font-size: var(--rail-title-size);
+}
+
+.desktop-site-rail__nav {
+  margin-top: var(--rail-nav-margin-top);
+  gap: var(--rail-nav-gap);
+}
+
+.desktop-site-rail__nav-button--active {
+  width: var(--rail-active-button-size);
+  height: var(--rail-active-button-size);
+}
+
+.desktop-site-rail__nav-button--inactive {
+  width: var(--rail-inactive-button-size);
+  height: var(--rail-inactive-button-size);
+}
+
+.desktop-site-rail__nav-icon--active {
+  width: var(--rail-active-icon-size);
+  height: var(--rail-active-icon-size);
+}
+
+.desktop-site-rail__nav-icon--inactive {
+  width: var(--rail-inactive-icon-size);
+  height: var(--rail-inactive-icon-size);
+}
+
+.desktop-site-rail__divider {
+  margin-top: var(--rail-divider-margin-top);
+  width: var(--rail-divider-width);
+}
+
+.desktop-site-rail__filter {
+  margin-top: var(--rail-filter-margin-top);
+}
+
+.desktop-site-rail__filter-button {
+  width: var(--rail-filter-button-size);
+  height: var(--rail-filter-button-size);
+}
+
+.desktop-site-rail__filter-icon {
+  width: var(--rail-filter-icon-size);
+  height: var(--rail-filter-icon-size);
+}
+
+.desktop-site-rail__filter-label {
+  margin-top: var(--rail-filter-label-gap);
+  font-size: var(--rail-filter-label-size);
+}
+
+.desktop-site-rail__filter-tooltip {
+  top: calc(var(--rail-filter-button-size) / 2);
+}
+
+.desktop-site-rail__leaf {
+  margin-top: var(--rail-leaf-margin-top);
+  height: var(--rail-leaf-height);
+}
+
+@media (min-width: 1536px) and (min-height: 960px) {
+  .desktop-site-rail {
+    --rail-width: 5.35rem;
+    --rail-padding-bottom: 1.5rem;
+    --rail-brand-size: 2.55rem;
+    --rail-title-size: 1.52rem;
+    --rail-nav-gap: 1.15rem;
+    --rail-active-button-size: 2.8rem;
+    --rail-inactive-button-size: 2.1rem;
+    --rail-active-icon-size: 1.08rem;
+    --rail-inactive-icon-size: 1.02rem;
+    --rail-filter-button-size: 2.3rem;
+    --rail-filter-icon-size: 0.92rem;
+    --rail-filter-label-size: 0.68rem;
+    --rail-leaf-margin-top: 1rem;
+    --rail-leaf-height: 13rem;
+  }
+}
+
+@media (max-height: 920px) {
+  .desktop-site-rail {
+    --rail-width: 4.8rem;
+    --rail-padding-x: 0.55rem;
+    --rail-padding-top: 0.875rem;
+    --rail-padding-bottom: 1rem;
+    --rail-brand-size: 2.15rem;
+    --rail-brand-icon-size: 1rem;
+    --rail-title-gap: 0.5rem;
+    --rail-title-size: 1.25rem;
+    --rail-nav-margin-top: 1.35rem;
+    --rail-nav-gap: 1rem;
+    --rail-active-button-size: 2.35rem;
+    --rail-inactive-button-size: 1.85rem;
+    --rail-active-icon-size: 0.92rem;
+    --rail-inactive-icon-size: 0.88rem;
+    --rail-divider-margin-top: 1.3rem;
+    --rail-divider-width: 1.75rem;
+    --rail-filter-margin-top: 1rem;
+    --rail-filter-button-size: 2.16rem;
+    --rail-filter-icon-size: 0.84rem;
+    --rail-filter-label-gap: 0.5rem;
+    --rail-filter-label-size: 0.6rem;
+    --rail-leaf-margin-top: 0.82rem;
+    --rail-leaf-height: 8.5rem;
+  }
+}
+
+@media (max-height: 820px) {
+  .desktop-site-rail {
+    --rail-width: 4.55rem;
+    --rail-padding-x: 0.5rem;
+    --rail-padding-top: 0.75rem;
+    --rail-padding-bottom: 0.92rem;
+    --rail-brand-size: 2rem;
+    --rail-brand-icon-size: 0.92rem;
+    --rail-title-gap: 0.42rem;
+    --rail-title-size: 1.12rem;
+    --rail-nav-margin-top: 1.1rem;
+    --rail-nav-gap: 0.72rem;
+    --rail-active-button-size: 2.15rem;
+    --rail-inactive-button-size: 1.65rem;
+    --rail-active-icon-size: 0.88rem;
+    --rail-inactive-icon-size: 0.82rem;
+    --rail-divider-margin-top: 0.95rem;
+    --rail-divider-width: 1.55rem;
+    --rail-filter-margin-top: 0.85rem;
+    --rail-filter-button-size: 2rem;
+    --rail-filter-icon-size: 0.78rem;
+    --rail-filter-label-gap: 0.42rem;
+    --rail-filter-label-size: 0.56rem;
+    --rail-leaf-margin-top: 0.58rem;
+    --rail-leaf-height: 6rem;
+  }
+}
+
+@media (max-height: 740px) {
+  .desktop-site-rail {
+    --rail-width: 4.3rem;
+    --rail-padding-top: 0.65rem;
+    --rail-padding-bottom: 0.78rem;
+    --rail-brand-size: 1.85rem;
+    --rail-brand-icon-size: 0.84rem;
+    --rail-title-size: 1.02rem;
+    --rail-nav-margin-top: 0.9rem;
+    --rail-nav-gap: 0.55rem;
+    --rail-active-button-size: 1.95rem;
+    --rail-inactive-button-size: 1.48rem;
+    --rail-active-icon-size: 0.8rem;
+    --rail-inactive-icon-size: 0.76rem;
+    --rail-divider-margin-top: 0.8rem;
+    --rail-filter-margin-top: 0.7rem;
+    --rail-filter-button-size: 1.86rem;
+    --rail-filter-icon-size: 0.72rem;
+    --rail-filter-label-size: 0.52rem;
+    --rail-leaf-margin-top: 0.45rem;
+    --rail-leaf-height: 4.4rem;
+  }
+}

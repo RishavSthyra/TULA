@@ -1,4 +1,3 @@
-import exteriorNodes from "@/data/trifecta_pano_walkthrough_data_Exterior1.json";
 import ExteriorPanoWalkthrough from "@/components/tour/ExteriorPanoWalkthrough";
 import { buildPageMetadata } from "@/lib/metadata";
 import {
@@ -6,7 +5,7 @@ import {
   signR2AssetKey,
 } from "@/lib/server/r2-signed-assets";
 import type { ExteriorPanoNodeSource } from "@/lib/exterior-tour/types";
-import { exteriorAmenities } from "@/data/exteriorAmenities";
+import { getPublishedDeveloperRuntimeConfig } from "@/lib/developer-config";
 
 function isIgnoredExteriorPano(node: ExteriorPanoNodeSource) {
   return (
@@ -14,17 +13,6 @@ function isIgnoredExteriorPano(node: ExteriorPanoNodeSource) {
     /\.0000(?:\.[^/.]+)?$/i.test(node.image_filename)
   );
 }
-
-const exteriorTourNodes = (exteriorNodes as ExteriorPanoNodeSource[]).filter(
-  (node) => !isIgnoredExteriorPano(node),
-);
-
-const preferredInitialNodeId =
-  exteriorTourNodes.find((node) => node.id === "BP_panoPath_Exterior_GateEntry_F0000")?.id ??
-  exteriorTourNodes[0]?.id;
-const EXTERIOR_PANO_BASE = "exterior-panos-trifecta";
-const INITIAL_PREVIEW_KEY =
-  "exterior-panos-trifecta/LS_BP_panoPath_Exterior_GateEntry_F0000/preview.jpg";
 
 export const metadata = buildPageMetadata({
   title: "Exterior Walkthrough",
@@ -38,42 +26,49 @@ export const metadata = buildPageMetadata({
   ],
 });
 
-function ExteriorWalkthroughHead() {
+function ExteriorWalkthroughHead({ initialPreviewKey }: { initialPreviewKey?: string }) {
   const workerDomain = getAssetWorkerDomain();
-  const initialPreviewUrl = signR2AssetKey(INITIAL_PREVIEW_KEY);
+  const initialPreviewUrl = initialPreviewKey ? signR2AssetKey(initialPreviewKey) : null;
 
   return (
     <>
       <link rel="preconnect" href={workerDomain} crossOrigin="anonymous" />
       <link rel="dns-prefetch" href={workerDomain} />
-      <link
+      {initialPreviewUrl ? <link
         rel="preload"
         as="image"
         href={initialPreviewUrl}
         fetchPriority="high"
-      />
+      /> : null}
     </>
   );
 }
 
-export default function ExteriorTourPage() {
+export default async function ExteriorTourPage() {
+  const runtimeConfig = await getPublishedDeveloperRuntimeConfig();
+  const exterior = runtimeConfig.exterior;
+  const exteriorTourNodes = exterior.nodes.filter((node) => !isIgnoredExteriorPano(node));
+  const preferredInitialNodeId =
+    (exterior.initialNodeId && exteriorTourNodes.find((node) => node.id === exterior.initialNodeId)?.id) ??
+    exteriorTourNodes[0]?.id;
   const signedExteriorMenuAssets = Object.fromEntries(
-    exteriorAmenities.map((amenity) => [amenity.image, signR2AssetKey(amenity.image)]),
+    runtimeConfig.amenities.exteriorAmenities.map((amenity) => [amenity.image, signR2AssetKey(amenity.image)]),
   );
 
   return (
     <main className="relative h-[100svh] min-h-[100svh] w-full overflow-hidden bg-[#040608]">
-      <ExteriorWalkthroughHead />
+      <ExteriorWalkthroughHead initialPreviewKey={exterior.initialPreviewKey} />
 
       <div className="absolute inset-0">
         <ExteriorPanoWalkthrough
           nodes={exteriorTourNodes}
-          cdnBaseUrl={EXTERIOR_PANO_BASE}
+          cdnBaseUrl={exterior.panoBasePath}
           initialNodeId={preferredInitialNodeId}
           initialSignedAssetUrls={signedExteriorMenuAssets}
+          amenities={runtimeConfig.amenities.exteriorAmenities}
           className="h-full w-full rounded-none"
-          title="Trifecta Exterior Walkthrough"
-          subtitle="Fast panoramic browsing with directional node navigation tuned for a lighter exterior experience."
+          title={exterior.title}
+          subtitle={exterior.subtitle}
         />
       </div>
     </main>

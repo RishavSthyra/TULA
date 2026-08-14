@@ -7,10 +7,10 @@ import { scheduleAmenityVideoWarmup } from "@/lib/amenity-video-warmup";
 import {
   getMasterPlanFrameCdnUrl,
   getMasterPlanFramePreloadSequence,
-  MASTER_PLAN_SCRUB_HQ_VIDEO_PATH,
 } from "@/data/masterPlanFrameCdnUrls";
 import { primeSignedAssetUrls } from "@/src/lib/signed-assets";
 import { useSignedAssetUrls } from "@/src/lib/use-signed-assets";
+import type { HomeDeveloperConfig } from "@/types/developer-config";
 
 type IdleWindow = Window &
   typeof globalThis & {
@@ -21,14 +21,7 @@ type IdleWindow = Window &
     ) => number;
   };
 
-const HERO_VIDEO_URL = "videos/01_2.mp4";
-const HERO_MOBILE_STATIC_IMAGE_URL = "images/01_lastframe.avif";
-const HERO_LOOP_VIDEO_URL = "videos/02.mp4";
 const HERO_VIDEO_RETRY_INTERVAL_MS = 850;
-const ENTRY_VIDEO_URL = "videos/Tf Fixed Final_2.mp4";
-const HERO_STAGE_FALLBACK_IMAGE_URL = "images/first_frame_again.png";
-const HERO_POSTER_URL = "images/hero_first_frame.avif";
-const HERO_LOGO_URL = "images/Logo_Trifect_Veranza A_new.png";
 const TEMPORARY_HOME_HERO_IMAGE_URL =
   "/HomeImage First Draft.jpeg";
 
@@ -71,10 +64,22 @@ function shouldUseMobileHeroVideo() {
 }
 
 export default function HomePageClient({
+  config,
   initialSignedAssetUrls = {},
 }: {
+  config: HomeDeveloperConfig;
   initialSignedAssetUrls?: Record<string, string>;
 }) {
+  const {
+    entryVideoKey: ENTRY_VIDEO_URL,
+    heroVideoKey: HERO_VIDEO_URL,
+    heroLoopVideoKey: HERO_LOOP_VIDEO_URL,
+    heroMobileFallbackKey: HERO_MOBILE_STATIC_IMAGE_URL,
+    heroStageFallbackKey: HERO_STAGE_FALLBACK_IMAGE_URL,
+    heroPosterKey: HERO_POSTER_URL,
+    heroLogoKey: HERO_LOGO_URL,
+    masterPlanWarmupVideoKey,
+  } = config;
   primeSignedAssetUrls(initialSignedAssetUrls);
   const loaderStartedAtRef = useRef(0);
   const heroReadyRef = useRef(false);
@@ -93,7 +98,7 @@ export default function HomePageClient({
     HERO_MOBILE_STATIC_IMAGE_URL,
     HERO_STAGE_FALLBACK_IMAGE_URL,
     HERO_VIDEO_URL,
-    MASTER_PLAN_SCRUB_HQ_VIDEO_PATH,
+    masterPlanWarmupVideoKey,
   ]);
   const signedEntryVideoUrl =
     signedAssetUrls[ENTRY_VIDEO_URL] ??
@@ -116,8 +121,8 @@ export default function HomePageClient({
     initialSignedAssetUrls[HERO_VIDEO_URL] ??
     null;
   const signedMasterPlanScrubVideoUrl =
-    signedAssetUrls[MASTER_PLAN_SCRUB_HQ_VIDEO_PATH] ??
-    initialSignedAssetUrls[MASTER_PLAN_SCRUB_HQ_VIDEO_PATH] ??
+    signedAssetUrls[masterPlanWarmupVideoKey] ??
+    initialSignedAssetUrls[masterPlanWarmupVideoKey] ??
     null;
   const signedHeroPosterUrl =
     initialSignedAssetUrls[HERO_POSTER_URL] ?? null;
