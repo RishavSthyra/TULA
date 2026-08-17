@@ -10,14 +10,6 @@ import {
 } from "react";
 import gsap from "gsap";
 import { Howl, Howler } from "howler";
-import { Cormorant_Garamond } from "next/font/google";
-
-const cinematicSerif = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  style: ["normal"],
-  variable: "--font-cinematic-serif",
-});
 
 type CinematicIntroProps = {
   onComplete?: () => void;
@@ -744,13 +736,13 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
         >
           <span
             ref={screen1Line1Ref}
-            className={`${cinematicSerif.className} cinematic-copy cinematic-copy--lead`}
+            className="cinematic-serif cinematic-copy cinematic-copy--lead"
           >
             Have you ever dreamed&hellip;
           </span>
           <span
             ref={screen1Line2Ref}
-            className={`${cinematicSerif.className} cinematic-copy cinematic-copy--lead cinematic-copy--indent`}
+            className="cinematic-serif cinematic-copy cinematic-copy--lead cinematic-copy--indent"
           >
             of a place where the city fades away?
           </span>
@@ -763,19 +755,19 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
         >
           <span
             ref={screen2Line1Ref}
-            className={`${cinematicSerif.className} cinematic-copy cinematic-copy--secondary cinematic-copy--left`}
+            className="cinematic-serif cinematic-copy cinematic-copy--secondary cinematic-copy--left"
           >
             Where water moves beside you.
           </span>
           <span
             ref={screen2Line2Ref}
-            className={`${cinematicSerif.className} cinematic-copy cinematic-copy--secondary cinematic-copy--right`}
+            className="cinematic-serif cinematic-copy cinematic-copy--secondary cinematic-copy--right"
           >
             Where paths lead deeper into calm.
           </span>
           <span
             ref={screen2Line3Ref}
-            className={`${cinematicSerif.className} cinematic-copy cinematic-copy--secondary cinematic-copy--center`}
+            className="cinematic-serif cinematic-copy cinematic-copy--secondary cinematic-copy--center"
           >
             Where the sky stays open.
           </span>
@@ -788,13 +780,13 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
         >
           <span
             ref={screen3Line1Ref}
-            className={`${cinematicSerif.className} cinematic-copy cinematic-copy--lead`}
+            className="cinematic-serif cinematic-copy cinematic-copy--lead"
           >
             Here, nature is not an escape.
           </span>
           <span
             ref={screen3Line2Ref}
-            className={`${cinematicSerif.className} cinematic-copy cinematic-copy--final`}
+            className="cinematic-serif cinematic-copy cinematic-copy--final"
           >
             It is home.
           </span>
@@ -807,14 +799,14 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
         >
           <span
             ref={revealWelcomeRef}
-            className={`${cinematicSerif.className} cinematic-reveal__welcome`}
+            className="cinematic-serif cinematic-reveal__welcome"
           >
             Welcome to
           </span>
 
           <h1
             ref={revealTulaRef}
-            className={`${cinematicSerif.className} cinematic-reveal__title`}
+            className="cinematic-serif cinematic-reveal__title"
           >
             TULA
           </h1>
@@ -833,14 +825,14 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
 
           <span
             ref={revealRhythmRef}
-            className={`${cinematicSerif.className} cinematic-reveal__rhythm`}
+            className="cinematic-serif cinematic-reveal__rhythm"
           >
             Rhythm of Trees
           </span>
 
           <span
             ref={revealLocationRef}
-            className={`${cinematicSerif.className} cinematic-reveal__location`}
+            className="cinematic-serif cinematic-reveal__location"
           >
             Bangalore
           </span>
@@ -908,6 +900,10 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
 
       {/* CSS Loader Animation */}
       <style>{`
+        .cinematic-serif {
+          font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+        }
+
         .cinematic-screen,
         .cinematic-reveal {
           position: absolute;
