@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MutableRefObject,
+} from "react";
 import gsap from "gsap";
 import { Howl, Howler } from "howler";
 import { Cormorant_Garamond } from "next/font/google";
@@ -18,6 +25,12 @@ type CinematicIntroProps = {
   readyToComplete?: boolean;
 };
 
+type CinematicIntroStageProps = {
+  onCompleteRef: MutableRefObject<(() => void) | undefined>;
+  readyToComplete?: boolean;
+  loaderNodeRef: MutableRefObject<HTMLDivElement | null>;
+};
+
 const SESSION_KEY = "tula-cinematic-intro-complete";
 const INTRO_AUDIO_URL = "/atlasaudio-nature-519434.mp3";
 
@@ -28,17 +41,15 @@ const SCREEN_OVERLAP = 0.35;
 const FADE_OUT_DURATION = 1;
 const INTRO_AUDIO_VOLUME = 0.22;
 
-export default function CinematicIntro({
-  onComplete,
-  progress = 0,
+const CinematicIntroStage = memo(function CinematicIntroStage({
+  onCompleteRef,
   readyToComplete = true,
-}: CinematicIntroProps) {
+  loaderNodeRef,
+}: CinematicIntroStageProps) {
   const [isActive, setIsActive] = useState(false);
   const [showSoundPrompt, setShowSoundPrompt] = useState(false);
-  const clampedProgress = Math.round(Math.max(0, Math.min(100, progress)));
   const overlayRef = useRef<HTMLDivElement>(null);
   const loaderRef = useRef<HTMLDivElement>(null);
-  const skipBtnRef = useRef<HTMLButtonElement>(null);
   const greenGlowRef = useRef<HTMLDivElement>(null);
   const goldLeakRef = useRef<HTMLDivElement>(null);
   const mistRef = useRef<HTMLDivElement>(null);
@@ -69,18 +80,20 @@ export default function CinematicIntro({
   const audioRef = useRef<Howl | null>(null);
   const soundIdRef = useRef<number | null>(null);
   const audioPlayAttemptInFlightRef = useRef(false);
-  const onCompleteRef = useRef(onComplete);
   const readyToCompleteRef = useRef(readyToComplete);
   const waitingForReadyRef = useRef(false);
+  const setLoaderRefs = useCallback(
+    (node: HTMLDivElement | null) => {
+      loaderRef.current = node;
+      loaderNodeRef.current = node;
+    },
+    [loaderNodeRef],
+  );
 
   const shouldPlay = useCallback((): boolean => {
     if (typeof window === "undefined") return false;
     return true;
   }, []);
-
-  useEffect(() => {
-    onCompleteRef.current = onComplete;
-  }, [onComplete]);
 
   const handleComplete = useCallback(() => {
     const audio = audioRef.current;
@@ -609,7 +622,7 @@ export default function CinematicIntro({
           revealWelcomeRef.current,
           revealTulaRef.current,
           revealRhythmRef.current,
-          revealLocationRef.current,
+          revealLocationRef.current, 
         ],
         { willChange: "auto" },
         14.2
@@ -836,8 +849,8 @@ export default function CinematicIntro({
 
       {/* Bottom-center ambient loader */}
       <div
-        ref={loaderRef}
-        aria-label={`Entering the landscape ${clampedProgress}%`}
+        ref={setLoaderRefs}
+        aria-label="Entering the landscape 0%"
         style={{
           position: "absolute",
           left: "50%",
@@ -859,8 +872,8 @@ export default function CinematicIntro({
 
       {/* Skip button — bottom right */}
       <button
-        ref={skipBtnRef}
         onClick={handleSkip}
+        className="cinematic-skip-button"
         style={{
           position: "absolute",
           bottom: "2.5rem",
@@ -876,14 +889,6 @@ export default function CinematicIntro({
           padding: "0.6rem 1.4rem",
           cursor: "pointer",
           transition: "all 0.3s ease",
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.color = "rgba(255,255,255,0.65)";
-          e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.05)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.color = "rgba(255,255,255,0.35)";
-          e.currentTarget.style.backgroundColor = "transparent";
         }}
         aria-label="Skip intro"
       >
@@ -1174,6 +1179,11 @@ export default function CinematicIntro({
           color: rgba(246, 230, 194, 0.88);
         }
 
+        .cinematic-skip-button:hover {
+          color: rgba(255,255,255,0.65) !important;
+          background-color: rgba(255,255,255,0.05) !important;
+        }
+
         @keyframes l12 {
           0%   {background-position: 50% 0,100% 100%,0 100%,0 0}
           25%  {background-position: 0 0,100% 50%,0 100%,0 0}
@@ -1184,5 +1194,34 @@ export default function CinematicIntro({
         }
       `}</style>
     </div>
+  );
+});
+
+export default function CinematicIntro({
+  onComplete,
+  progress = 0,
+  readyToComplete = true,
+}: CinematicIntroProps) {
+  const clampedProgress = Math.round(Math.max(0, Math.min(100, progress)));
+  const loaderNodeRef = useRef<HTMLDivElement | null>(null);
+  const onCompleteRef = useRef(onComplete);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  useEffect(() => {
+    loaderNodeRef.current?.setAttribute(
+      "aria-label",
+      `Entering the landscape ${clampedProgress}%`,
+    );
+  }, [clampedProgress]);
+
+  return (
+    <CinematicIntroStage
+      loaderNodeRef={loaderNodeRef}
+      onCompleteRef={onCompleteRef}
+      readyToComplete={readyToComplete}
+    />
   );
 }

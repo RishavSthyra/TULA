@@ -1894,8 +1894,8 @@ export function CustomStyleExample() {
           >
             <div className="flex h-full flex-col gap-6 overflow-y-auto overscroll-contain pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div className={`pointer-events-auto ${FLOATING_GHOST_PANEL} p-0`}>
-                <div className={`relative overflow-hidden rounded-[2rem] border border-[rgba(217,226,205,0.18)] bg-[linear-gradient(180deg,rgba(45,66,36,0.94)_0%,rgba(32,49,27,0.97)_100%)] shadow-[0_24px_60px_rgba(25,34,22,0.28)] backdrop-blur-xl ${desktopSidebarPanelPaddingClass}`}>
-                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_16%,rgba(165,197,120,0.2),transparent_34%),radial-gradient(circle_at_88%_82%,rgba(132,160,96,0.14),transparent_28%)]" />
+                <div className={`relative overflow-hidden rounded-[2rem] border border-[#d8bd78]/55 bg-[linear-gradient(180deg,rgba(35,65,42,0.96),rgba(28,54,36,0.98))] text-[#f5ecd7] shadow-[0_18px_38px_rgba(25,55,34,0.22),inset_0_1px_0_rgba(255,255,255,0.14)] ${desktopSidebarPanelPaddingClass}`}>
+                  <div className="pointer-events-none absolute inset-[8px] rounded-[1.65rem] border border-[#d9c28a]/18" />
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="/flowerUI.png"
