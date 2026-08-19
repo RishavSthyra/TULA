@@ -155,13 +155,13 @@ const SelectedFlatDetailsPanel = forwardRef<
   if (compact) {
     const compactWrapperClassName = desktopEnhancedCompact
       ? "pointer-events-auto w-full self-start"
-      : "pointer-events-auto h-full min-h-0 w-full self-stretch";
+      : "pointer-events-auto w-full self-start";
     const compactPanelClassName = desktopEnhancedCompact
       ? `custom-scrollbar flex max-h-[68vh] min-h-0 flex-col overflow-y-auto overscroll-contain rounded-[34px] rounded-tr-[70px] rounded-bl-[26px] ${premiumPanelShellClassName} [-webkit-overflow-scrolling:touch] touch-pan-y 2xl:max-h-[72vh] 2xl:rounded-[38px] 2xl:rounded-tr-[80px]`
-      : `custom-scrollbar flex h-full max-h-full min-h-0 flex-col overflow-y-auto overscroll-contain rounded-[28px] rounded-tr-[56px] rounded-bl-[22px] ${premiumPanelShellClassName} [-webkit-overflow-scrolling:touch] touch-pan-y sm:rounded-[32px] sm:rounded-tr-[64px] md:rounded-[36px] md:rounded-tr-[72px]`;
+      : `flex min-h-0 flex-col overflow-hidden rounded-[28px] rounded-tr-[56px] rounded-bl-[22px] ${premiumPanelShellClassName} sm:rounded-[32px] sm:rounded-tr-[64px] md:rounded-[36px] md:rounded-tr-[72px]`;
     const compactContentClassName = desktopEnhancedCompact
       ? "relative flex min-h-0 flex-col p-6 xl:p-6 2xl:p-7"
-      : "relative flex min-h-0 flex-col p-5 sm:p-6 md:p-7";
+      : "relative flex min-h-0 flex-col p-5 pb-[max(env(safe-area-inset-bottom),1.25rem)] sm:p-6 sm:pb-[max(env(safe-area-inset-bottom),1.5rem)] md:p-7 md:pb-[max(env(safe-area-inset-bottom),1.75rem)]";
     const compactHeroTitleClassName = desktopEnhancedCompact
       ? `${selectedFlatSerif.className} mt-1 truncate text-[3rem] font-medium leading-[0.88] text-[#21462d] xl:text-[3.2rem] 2xl:text-[3.65rem]`
       : `${selectedFlatSerif.className} mt-1 truncate text-[3.05rem] font-medium leading-[0.88] text-[#21462d] sm:text-[3.45rem]`;
@@ -212,10 +212,10 @@ const SelectedFlatDetailsPanel = forwardRef<
                   <button
                     type="button"
                     onClick={onClose}
-                    className={`${compactPillClassName} w-10 px-0`}
+                    className={`${compactPillClassName} h-11 w-11 px-0`}
                     aria-label="Close flat details"
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-5 w-5 stroke-[2.2]" />
                   </button>
                 ) : null}
 

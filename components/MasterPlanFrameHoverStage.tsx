@@ -115,7 +115,10 @@ const VIDEO_SYNC_THRESHOLD_SECONDS = 1 / (MASTER_PLAN_SCRUB_VIDEO_FPS * 1.5);
 const VIDEO_FAST_SEEK_THRESHOLD_SECONDS = 0.18;
 const ENABLE_TRACKING_DEBUG = false;
 const FILTER_HIGHLIGHT_EDGE_SIMPLIFY_THRESHOLD = 6;
-const MAX_HIGHLIGHTS = 80;
+const DESKTOP_MOUSE_DRAG_POINTER_DELTA_MULTIPLIER = 1.65;
+const DESKTOP_MOUSE_DRAG_PENDING_DELTA_MULTIPLIER = 4.25;
+const DESKTOP_MOUSE_DRAG_STARTUP_PENDING_DELTA_MULTIPLIER = 1.75;
+const DESKTOP_MOUSE_DRAG_LEAD_MULTIPLIER = 1.4;
 const MOBILE_STAGE_MAX_SCALE = 2.8;
 const MOBILE_STAGE_MIN_SCALE = 1;
 const MOBILE_STAGE_TAP_MOVE_THRESHOLD_PX = 10;
@@ -200,6 +203,7 @@ const PREPARED_TOWER_CACHE = new Map<string, PreparedTowerModel>();
 type DragState = {
   clampedDeltaX: number;
   didDrag: boolean;
+  inputMode: "desktop-mouse" | "generic-pointer";
   lastClientX: number;
   lastTimestamp: number;
   pointerId: number;
@@ -1574,6 +1578,25 @@ function findInventoryApartmentInIndex(
   return null;
 }
 
+function filterApartmentIdsForPreparedTower(
+  apartmentIds: Set<string>,
+  apartments: PreparedTowerModel["apartments"],
+) {
+  if (apartmentIds.size === 0) {
+    return EMPTY_APARTMENT_IDS;
+  }
+
+  const nextApartmentIds = new Set<string>();
+
+  apartmentIds.forEach((apartmentId) => {
+    if (apartments.has(apartmentId)) {
+      nextApartmentIds.add(apartmentId);
+    }
+  });
+
+  return nextApartmentIds;
+}
+
 function getStatusMeta(
   status: InventoryStatus | null | undefined,
   inventoryState: InventoryLoadState,
@@ -1982,7 +2005,7 @@ const HighlightOverlay = memo(function HighlightOverlay({
       meshData: HoverMeshData;
       palette: ApartmentHighlightPalette;
     }> = [];
-    const limitedIds = Array.from(filteredApartmentIds).slice(0, MAX_HIGHLIGHTS);
+    const limitedIds = Array.from(filteredApartmentIds);
 
     limitedIds.forEach((apartmentId) => {
       if (
@@ -2777,6 +2800,58 @@ const TowerScene = memo(function TowerScene({
     interactionMode === "idle" ? filteredApartmentIds : EMPTY_APARTMENT_IDS;
   const effectiveHoveredApartmentId =
     interactionMode === "idle" ? activeHoveredApartmentId : null;
+  const towerAFilteredApartmentIds = useMemo(
+    () =>
+      filterApartmentIdsForPreparedTower(
+        effectiveFilteredApartmentIds,
+        preparedTowerA.apartments,
+      ),
+    [effectiveFilteredApartmentIds, preparedTowerA.apartments],
+  );
+  const towerBFilteredApartmentIds = useMemo(
+    () =>
+      filterApartmentIdsForPreparedTower(
+        effectiveFilteredApartmentIds,
+        preparedTowerB.apartments,
+      ),
+    [effectiveFilteredApartmentIds, preparedTowerB.apartments],
+  );
+  const fallbackFilteredApartmentIds = useMemo(
+    () =>
+      filterApartmentIdsForPreparedTower(
+        effectiveFilteredApartmentIds,
+        primaryPreparedModel.apartments,
+      ),
+    [effectiveFilteredApartmentIds, primaryPreparedModel.apartments],
+  );
+  const towerAHoveredApartmentId =
+    effectiveHoveredApartmentId &&
+    preparedTowerA.apartments.has(effectiveHoveredApartmentId)
+      ? effectiveHoveredApartmentId
+      : null;
+  const towerBHoveredApartmentId =
+    effectiveHoveredApartmentId &&
+    preparedTowerB.apartments.has(effectiveHoveredApartmentId)
+      ? effectiveHoveredApartmentId
+      : null;
+  const fallbackHoveredApartmentId =
+    effectiveHoveredApartmentId &&
+    primaryPreparedModel.apartments.has(effectiveHoveredApartmentId)
+      ? effectiveHoveredApartmentId
+      : null;
+  const towerASelectedApartmentId =
+    selectedApartmentId && preparedTowerA.apartments.has(selectedApartmentId)
+      ? selectedApartmentId
+      : null;
+  const towerBSelectedApartmentId =
+    selectedApartmentId && preparedTowerB.apartments.has(selectedApartmentId)
+      ? selectedApartmentId
+      : null;
+  const fallbackSelectedApartmentId =
+    selectedApartmentId &&
+    primaryPreparedModel.apartments.has(selectedApartmentId)
+      ? selectedApartmentId
+      : null;
   const highlightRenderMode: HighlightRenderMode =
     interactionMode === "dragging" || interactionMode === "settling"
       ? "light"
@@ -2879,11 +2954,11 @@ const TowerScene = memo(function TowerScene({
               {shouldShowHighlightOverlay && interactionMode === "idle" ? (
                 <HighlightOverlay
                   apartments={preparedTowerA.apartments}
-                  filteredApartmentIds={effectiveFilteredApartmentIds}
+                  filteredApartmentIds={towerAFilteredApartmentIds}
                   getApartmentStatus={getApartmentStatus}
-                  hoveredApartmentId={effectiveHoveredApartmentId}
+                  hoveredApartmentId={towerAHoveredApartmentId}
                   renderMode={highlightRenderMode}
-                  selectedApartmentId={selectedApartmentId}
+                  selectedApartmentId={towerASelectedApartmentId}
                   simplifyFilteredVisuals={simplifyFilteredVisuals}
                   touchHighlightProfile={touchHighlightProfile}
                 />
@@ -2904,11 +2979,11 @@ const TowerScene = memo(function TowerScene({
               {shouldShowHighlightOverlay && interactionMode === "idle" ? (
                 <HighlightOverlay
                   apartments={preparedTowerB.apartments}
-                  filteredApartmentIds={effectiveFilteredApartmentIds}
+                  filteredApartmentIds={towerBFilteredApartmentIds}
                   getApartmentStatus={getApartmentStatus}
-                  hoveredApartmentId={effectiveHoveredApartmentId}
+                  hoveredApartmentId={towerBHoveredApartmentId}
                   renderMode={highlightRenderMode}
-                  selectedApartmentId={selectedApartmentId}
+                  selectedApartmentId={towerBSelectedApartmentId}
                   simplifyFilteredVisuals={simplifyFilteredVisuals}
                   touchHighlightProfile={touchHighlightProfile}
                 />
@@ -2928,11 +3003,11 @@ const TowerScene = memo(function TowerScene({
             {shouldShowHighlightOverlay && interactionMode === "idle" ? (
               <HighlightOverlay
                 apartments={primaryPreparedModel.apartments}
-                filteredApartmentIds={effectiveFilteredApartmentIds}
+                filteredApartmentIds={fallbackFilteredApartmentIds}
                 getApartmentStatus={getApartmentStatus}
-                hoveredApartmentId={effectiveHoveredApartmentId}
+                hoveredApartmentId={fallbackHoveredApartmentId}
                 renderMode={highlightRenderMode}
-                selectedApartmentId={selectedApartmentId}
+                selectedApartmentId={fallbackSelectedApartmentId}
                 simplifyFilteredVisuals={simplifyFilteredVisuals}
                 touchHighlightProfile={touchHighlightProfile}
               />
@@ -3641,11 +3716,15 @@ export default function MasterPlanFrameHoverStage({
         dragState.startProgress -
           dragState.clampedDeltaX / (dragConfig.pixelsPerFrame * TOTAL_FRAMES),
       );
+      const maxLeadFrames =
+        dragState.inputMode === "desktop-mouse"
+          ? Math.round(dragConfig.maxLeadFrames * DESKTOP_MOUSE_DRAG_LEAD_MULTIPLIER)
+          : dragConfig.maxLeadFrames;
 
       dragTargetProgressRef.current = clampProgressLead(
         displayProgressRef.current,
         rawTargetProgress,
-        dragConfig.maxLeadFrames,
+        maxLeadFrames,
       );
 
       return dragTargetProgressRef.current;
@@ -4093,6 +4172,42 @@ export default function MasterPlanFrameHoverStage({
       return;
     }
 
+    const accumulateDragPointerDelta = (
+      dragState: DragState,
+      clientX: number,
+      timeStamp: number,
+    ) => {
+      const elapsedMs = Math.max(timeStamp - dragState.lastTimestamp, 1);
+      const rawDeltaX = clientX - dragState.lastClientX;
+      const baseMaxDeltaX = dragConfig.maxPointerPixelsPerMs * elapsedMs;
+      const maxDeltaX =
+        dragState.inputMode === "desktop-mouse"
+          ? baseMaxDeltaX * DESKTOP_MOUSE_DRAG_POINTER_DELTA_MULTIPLIER
+          : baseMaxDeltaX;
+      const clampedIncrement = Math.max(
+        -maxDeltaX,
+        Math.min(maxDeltaX, rawDeltaX),
+      );
+      const pendingDeltaLimit =
+        maxDeltaX *
+        (dragState.inputMode === "desktop-mouse"
+          ? isStartupInteractionPending
+            ? DESKTOP_MOUSE_DRAG_STARTUP_PENDING_DELTA_MULTIPLIER
+            : DESKTOP_MOUSE_DRAG_PENDING_DELTA_MULTIPLIER
+          : isStartupInteractionPending
+            ? 1.35
+            : 2.4);
+
+      pendingPointerDeltaXRef.current = clampNumber(
+        pendingPointerDeltaXRef.current + clampedIncrement,
+        -pendingDeltaLimit,
+        pendingDeltaLimit,
+      );
+      dragState.lastClientX = clientX;
+      dragState.lastTimestamp = timeStamp;
+      startDragLoop();
+    };
+
     const handlePointerMove = (event: PointerEvent) => {
       const dragState = dragStateRef.current;
 
@@ -4123,23 +4238,11 @@ export default function MasterPlanFrameHoverStage({
       }
 
       event.preventDefault();
-      const elapsedMs = Math.max(event.timeStamp - dragState.lastTimestamp, 1);
-      const rawDeltaX = event.clientX - dragState.lastClientX;
-      const maxDeltaX = dragConfig.maxPointerPixelsPerMs * elapsedMs;
-      const clampedIncrement = Math.max(
-        -maxDeltaX,
-        Math.min(maxDeltaX, rawDeltaX),
+      accumulateDragPointerDelta(
+        dragState,
+        event.clientX,
+        event.timeStamp,
       );
-      const pendingDeltaLimit =
-        maxDeltaX * (isStartupInteractionPending ? 1.35 : 2.4);
-      pendingPointerDeltaXRef.current = clampNumber(
-        pendingPointerDeltaXRef.current + clampedIncrement,
-        -pendingDeltaLimit,
-        pendingDeltaLimit,
-      );
-      dragState.lastClientX = event.clientX;
-      dragState.lastTimestamp = event.timeStamp;
-      startDragLoop();
     };
 
     const handlePointerEnd = (event: PointerEvent) => {
@@ -4223,6 +4326,42 @@ export default function MasterPlanFrameHoverStage({
       return;
     }
 
+    const accumulateDragPointerDelta = (
+      dragState: DragState,
+      clientX: number,
+      timeStamp: number,
+    ) => {
+      const elapsedMs = Math.max(timeStamp - dragState.lastTimestamp, 1);
+      const rawDeltaX = clientX - dragState.lastClientX;
+      const baseMaxDeltaX = dragConfig.maxPointerPixelsPerMs * elapsedMs;
+      const maxDeltaX =
+        dragState.inputMode === "desktop-mouse"
+          ? baseMaxDeltaX * DESKTOP_MOUSE_DRAG_POINTER_DELTA_MULTIPLIER
+          : baseMaxDeltaX;
+      const clampedIncrement = Math.max(
+        -maxDeltaX,
+        Math.min(maxDeltaX, rawDeltaX),
+      );
+      const pendingDeltaLimit =
+        maxDeltaX *
+        (dragState.inputMode === "desktop-mouse"
+          ? isStartupInteractionPending
+            ? DESKTOP_MOUSE_DRAG_STARTUP_PENDING_DELTA_MULTIPLIER
+            : DESKTOP_MOUSE_DRAG_PENDING_DELTA_MULTIPLIER
+          : isStartupInteractionPending
+            ? 1.35
+            : 2.4);
+
+      pendingPointerDeltaXRef.current = clampNumber(
+        pendingPointerDeltaXRef.current + clampedIncrement,
+        -pendingDeltaLimit,
+        pendingDeltaLimit,
+      );
+      dragState.lastClientX = clientX;
+      dragState.lastTimestamp = timeStamp;
+      startDragLoop();
+    };
+
     const handleMouseMove = (event: MouseEvent) => {
       const dragState = dragStateRef.current;
 
@@ -4253,23 +4392,11 @@ export default function MasterPlanFrameHoverStage({
       }
 
       event.preventDefault();
-      const elapsedMs = Math.max(event.timeStamp - dragState.lastTimestamp, 1);
-      const rawDeltaX = event.clientX - dragState.lastClientX;
-      const maxDeltaX = dragConfig.maxPointerPixelsPerMs * elapsedMs;
-      const clampedIncrement = Math.max(
-        -maxDeltaX,
-        Math.min(maxDeltaX, rawDeltaX),
+      accumulateDragPointerDelta(
+        dragState,
+        event.clientX,
+        event.timeStamp,
       );
-      const pendingDeltaLimit =
-        maxDeltaX * (isStartupInteractionPending ? 1.35 : 2.4);
-      pendingPointerDeltaXRef.current = clampNumber(
-        pendingPointerDeltaXRef.current + clampedIncrement,
-        -pendingDeltaLimit,
-        pendingDeltaLimit,
-      );
-      dragState.lastClientX = event.clientX;
-      dragState.lastTimestamp = event.timeStamp;
-      startDragLoop();
     };
 
     const handleMouseEnd = () => {
@@ -4846,7 +4973,12 @@ export default function MasterPlanFrameHoverStage({
   }, []);
 
   const beginScrubInteraction = useCallback(
-    (clientX: number, timeStamp: number, pointerId: number) => {
+    (
+      clientX: number,
+      timeStamp: number,
+      pointerId: number,
+      inputMode: DragState["inputMode"],
+    ) => {
       if (!dragEnabled) {
         return;
       }
@@ -4866,6 +4998,7 @@ export default function MasterPlanFrameHoverStage({
       dragStateRef.current = {
         clampedDeltaX: 0,
         didDrag: false,
+        inputMode,
         lastClientX: clientX,
         lastTimestamp: timeStamp,
         pointerId,
@@ -4963,9 +5096,18 @@ export default function MasterPlanFrameHoverStage({
                   return;
                 }
 
-                beginScrubInteraction(event.clientX, event.timeStamp, -1);
+                beginScrubInteraction(
+                  event.clientX,
+                  event.timeStamp,
+                  -1,
+                  "desktop-mouse",
+                );
               }}
               onPointerDownCapture={(event) => {
+                if (dragStateRef.current) {
+                  return;
+                }
+
                 if (
                   event.pointerType === "touch" &&
                   (!event.isPrimary ||
@@ -4988,6 +5130,9 @@ export default function MasterPlanFrameHoverStage({
                   event.clientX,
                   event.timeStamp,
                   event.pointerId,
+                  event.pointerType === "mouse"
+                    ? "desktop-mouse"
+                    : "generic-pointer",
                 );
               }}
               onPointerUpCapture={(event) => {

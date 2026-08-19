@@ -1173,6 +1173,26 @@ export default function MasterPlanLayout({
       setFloor(FLOOR_ALL_VALUE);
     }
   }, [floor, floorOptions]);
+
+  useEffect(() => {
+    if (!shouldUseCompactLayout || !isFlatPanelOpen) {
+      return;
+    }
+
+    const resetScroll = () => {
+      const panelNode = selectedFlatPanelRef.current;
+      panelNode?.scrollTo({ top: 0, behavior: "auto" });
+
+      const compactSheet = panelNode?.closest('[data-scroll-area="compact-panel"]');
+      if (compactSheet instanceof HTMLElement) {
+        compactSheet.scrollTo({ top: 0, behavior: "auto" });
+      }
+    };
+
+    const frameId = window.requestAnimationFrame(resetScroll);
+    return () => window.cancelAnimationFrame(frameId);
+  }, [isFlatPanelOpen, selectedApartmentInventoryId, shouldUseCompactLayout]);
+
   const hasActiveInventoryFilters = useMemo(
     () =>
       normalizedDeferredSearch.length > 0 ||
@@ -1838,7 +1858,7 @@ export default function MasterPlanLayout({
           >
             {selectedApartment ? (
                 <div
-                  className="flex min-h-0 flex-1 items-stretch justify-center overflow-hidden px-0 pb-[max(env(safe-area-inset-bottom),0rem)] pt-0"
+                  className="custom-scrollbar flex min-h-0 flex-1 items-start justify-center overflow-y-auto overscroll-contain px-0 pb-[max(env(safe-area-inset-bottom),0rem)] pt-0 [-webkit-overflow-scrolling:touch] touch-pan-y"
                   data-scroll-area="compact-panel"
                 >
                   <SelectedFlatDetailsPanel
@@ -1850,7 +1870,7 @@ export default function MasterPlanLayout({
                 </div>
             ) : shouldShowCompactSpecialVideoPanel && specialVideoApartment ? (
                 <div
-                  className="flex min-h-0 flex-1 items-stretch justify-center overflow-hidden px-0 pb-[max(env(safe-area-inset-bottom),0rem)] pt-0"
+                  className="custom-scrollbar flex min-h-0 flex-1 items-start justify-center overflow-y-auto overscroll-contain px-0 pb-[max(env(safe-area-inset-bottom),0rem)] pt-0 [-webkit-overflow-scrolling:touch] touch-pan-y"
                   data-scroll-area="compact-panel"
                 >
                   <SelectedFlatDetailsPanel
@@ -1929,10 +1949,10 @@ export default function MasterPlanLayout({
               ? selectedTower
                 ? isDesktopCompactViewport
                   ? "xl:grid-cols-[minmax(0,1fr)_330px]"
-                  : "xl:grid-cols-[minmax(0,1fr)_clamp(320px,27vw,380px)] 2xl:grid-cols-[minmax(0,1fr)_420px]"
+                  : "xl:grid-cols-[minmax(0,1fr)_clamp(300px,26vw,360px)] 2xl:grid-cols-[minmax(0,1fr)_400px]"
                 : isDesktopCompactViewport
-                  ? "xl:grid-cols-[minmax(0,1fr)_310px]"
-                  : "xl:grid-cols-[minmax(0,1fr)_clamp(300px,22vw,360px)] 2xl:grid-cols-[minmax(0,1fr)_380px]"
+                  ? "xl:grid-cols-[minmax(0,1fr)_320px]"
+                  : "xl:grid-cols-[minmax(0,1fr)_clamp(290px,22vw,340px)] 2xl:grid-cols-[minmax(0,1fr)_360px]"
               : selectedTower
                 ? "xl:grid-cols-[minmax(0,1fr)]"
                 : "xl:grid-cols-[minmax(0,1fr)]"
@@ -2014,10 +2034,10 @@ export default function MasterPlanLayout({
                     selectedTower
                       ? isDesktopCompactViewport
                         ? "max-w-[330px]"
-                        : "max-w-[clamp(320px,27vw,380px)] 2xl:max-w-[420px]"
+                        : "max-w-[clamp(300px,26vw,360px)] 2xl:max-w-[400px]"
                       : isDesktopCompactViewport
-                        ? "max-w-[310px]"
-                        : "max-w-[clamp(300px,22vw,360px)] 2xl:max-w-[380px]"
+                        ? "max-w-[320px]"
+                        : "max-w-[clamp(290px,22vw,340px)] 2xl:max-w-[360px]"
                   }`}
                   style={{
                     height:
@@ -2026,7 +2046,9 @@ export default function MasterPlanLayout({
                   }}
                 >
                   <div
-                    className="relative flex h-full min-h-0 flex-col gap-6 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]"
+                    className={`relative flex h-full min-h-0 flex-col overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] ${
+                      isDesktopCompactViewport ? "gap-4" : "gap-6"
+                    }`}
                     data-scroll-area="sidebar"
                   >
                     {selectedTower ? (
@@ -2050,6 +2072,7 @@ export default function MasterPlanLayout({
                           onClosePanel={() => setIsDesktopSidebarOpen(false)}
                           onReset={resetFilters}
                           onBack={handleBackToTowerSelect}
+                          compactDesktop={isDesktopCompactViewport}
                         />
 
                         <MasterPlanResultsCard
@@ -2058,6 +2081,7 @@ export default function MasterPlanLayout({
                           inventoryError={inventoryError}
                           onApartmentSelect={handleApartmentListSelect}
                           selectedApartmentId={selectedApartmentInventoryId}
+                          compactDesktop={isDesktopCompactViewport}
                         />
                       </>
                     ) : (
@@ -2133,7 +2157,11 @@ export default function MasterPlanLayout({
             >
               <div
                 className={`surface-contain flex min-h-0 flex-col overflow-hidden overscroll-none rounded-t-[26px] border border-white/60 border-b-0 bg-white/92 shadow-[0_-20px_50px_rgba(15,23,42,0.20)] backdrop-blur-2xl dark:border-white/10 dark:bg-black/70 sm:mx-1 sm:rounded-t-[28px] sm:rounded-b-none ${
-                  selectedTower ? "h-[min(84dvh,48rem)] max-h-[min(84dvh,48rem)]" : "h-auto"
+                  selectedTower
+                    ? selectedApartment || shouldShowCompactSpecialVideoPanel
+                      ? "h-[min(92dvh,60rem)] max-h-[min(92dvh,60rem)]"
+                      : "h-[min(84dvh,48rem)] max-h-[min(84dvh,48rem)]"
+                    : "h-auto"
                 }`}
                 data-scroll-area={selectedTower ? "mobile-sheet" : undefined}
               >
@@ -2333,6 +2361,7 @@ function MasterPlanFiltersCard({
   onReset,
   onBack,
   compact = false,
+  compactDesktop = false,
 }: {
   search: string;
   onSearchChange: (value: string) => void;
@@ -2353,6 +2382,7 @@ function MasterPlanFiltersCard({
   onReset: () => void;
   onBack: () => void;
   compact?: boolean;
+  compactDesktop?: boolean;
 }) {
   const activeFilterCount =
     Number(search.trim().length > 0) +
@@ -2369,13 +2399,15 @@ function MasterPlanFiltersCard({
   const towerOptions: TowerType[] = ["Tower A", "Tower B"];
   const searchControl = (
     <div
-      className={`group flex items-center gap-2 rounded-full border px-3 py-2 transition ${
+      className={`group flex items-center rounded-full border transition ${
         compact
-          ? "border-[#e7e4d8] bg-[#f7f6ef] shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_12px_24px_rgba(33,50,35,0.10)] focus-within:border-[#cfd9c6] focus-within:bg-[#fbfaf4]"
-          : "border-[#e7e4d8] bg-[#f7f6ef] shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_12px_24px_rgba(33,50,35,0.10)] focus-within:border-[#cfd9c6] focus-within:bg-[#fbfaf4] dark:border-white/10 dark:bg-white/8 dark:focus-within:border-emerald-200/24"
+          ? "gap-2 border-[#e7e4d8] bg-[#f7f6ef] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_12px_24px_rgba(33,50,35,0.10)] focus-within:border-[#cfd9c6] focus-within:bg-[#fbfaf4]"
+          : compactDesktop
+            ? "gap-2 border-[#e7e4d8] bg-[#f7f6ef] px-3 py-[0.58rem] shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_10px_20px_rgba(33,50,35,0.09)] focus-within:border-[#cfd9c6] focus-within:bg-[#fbfaf4] dark:border-white/10 dark:bg-white/8 dark:focus-within:border-emerald-200/24"
+            : "gap-2.5 border-[#e7e4d8] bg-[#f7f6ef] px-3.5 py-[0.72rem] shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_12px_24px_rgba(33,50,35,0.10)] focus-within:border-[#cfd9c6] focus-within:bg-[#fbfaf4] dark:border-white/10 dark:bg-white/8 dark:focus-within:border-emerald-200/24"
       }`}
     >
-      <Search className="h-3.5 w-3.5 shrink-0 text-[#556f61] transition group-focus-within:text-[#23482f] dark:text-emerald-100/60 dark:group-focus-within:text-white" />
+      <Search className={`shrink-0 text-[#556f61] transition group-focus-within:text-[#23482f] dark:text-emerald-100/60 dark:group-focus-within:text-white ${compact || compactDesktop ? "h-3.5 w-3.5" : "h-4 w-4"}`} />
       <input
         value={search}
         onChange={(e) => handleSearchInputChange(e.target.value)}
@@ -2384,10 +2416,12 @@ function MasterPlanFiltersCard({
         enterKeyHint="search"
         autoComplete="off"
         placeholder="Search unit number"
-        className={`w-full bg-transparent text-xs font-medium outline-none sm:text-[13px] ${
+        className={`w-full bg-transparent font-medium outline-none ${
           compact
-            ? "text-[#1f3f2b] placeholder:text-[#718277]"
-            : "text-[#1f3f2b] placeholder:text-[#718277] dark:text-white"
+            ? "text-xs text-[#1f3f2b] placeholder:text-[#718277] sm:text-[13px]"
+            : compactDesktop
+              ? "text-[12px] text-[#1f3f2b] placeholder:text-[#718277] dark:text-white"
+              : "text-[13px] text-[#1f3f2b] placeholder:text-[#718277] dark:text-white"
         }`}
       />
     </div>
@@ -2552,28 +2586,30 @@ function MasterPlanFiltersCard({
 
   return (
     <motion.div
-      className="surface-contain relative shrink-0 overflow-hidden rounded-[42px] rounded-tr-[88px] border border-[#ded8c9] bg-[#f3f2ea]/95 p-5 text-[#1f3f2b] shadow-[0_28px_80px_rgba(25,43,30,0.20),inset_0_1px_0_rgba(255,255,255,0.94)] backdrop-blur-xl dark:border-emerald-100/10 dark:bg-emerald-950/45 dark:text-white dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
+      className={`surface-contain relative shrink-0 overflow-hidden border border-[#ded8c9] bg-[#f3f2ea]/95 text-[#1f3f2b] shadow-[0_28px_80px_rgba(25,43,30,0.20),inset_0_1px_0_rgba(255,255,255,0.94)] backdrop-blur-xl dark:border-emerald-100/10 dark:bg-emerald-950/45 dark:text-white dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] ${
+        compactDesktop ? "rounded-[34px] rounded-tr-[64px] p-4" : "rounded-[42px] rounded-tr-[88px] p-5"
+      }`}
     >
       <LiquidGlassFilterStyles />
-      <div className="pointer-events-none absolute -right-8 bottom-2 h-40 w-40 rounded-full border border-[#d8d0bd]/45 opacity-45" />
+      <div className={`pointer-events-none absolute rounded-full border border-[#d8d0bd]/45 opacity-45 ${compactDesktop ? "-right-6 bottom-2 h-32 w-32" : "-right-8 bottom-2 h-40 w-40"}`} />
       <NextImage
         src="/LEAF UI.png"
         alt=""
         aria-hidden="true"
         width={660}
         height={660}
-        className="pointer-events-none absolute -bottom-16 -right-10 z-0 w-full opacity-45 mix-blend-multiply sm:-bottom-16 sm:-right-12 sm:w-full"
+        className={`pointer-events-none absolute z-0 w-full opacity-45 mix-blend-multiply ${compactDesktop ? "-bottom-12 -right-8" : "-bottom-16 -right-10 sm:-bottom-16 sm:-right-12 sm:w-full"}`}
       />
-      <div className="mb-5 flex items-start justify-between gap-4">
+      <div className={`flex items-start justify-between gap-4 ${compactDesktop ? "mb-4" : "mb-5"}`}>
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-[#58715f]">
+          <p className={`font-bold uppercase text-[#58715f] ${compactDesktop ? "text-[9px] tracking-[0.28em]" : "text-[10px] tracking-[0.32em]"}`}>
             Filters
           </p>
-          <h2 className={`${masterPlanSerif.className} mt-1 text-[2rem] font-medium leading-none text-[#21492f]`}>
+          <h2 className={`${masterPlanSerif.className} mt-1 font-medium leading-none text-[#21492f] ${compactDesktop ? "text-[1.7rem]" : "text-[2rem]"}`}>
             Find Your Residence
           </h2>
-          <div className="mt-2 h-px w-7 bg-[#c4a667]" />
-          <p className="mt-2 text-[13px] font-medium text-[#718277]">
+          <div className={`bg-[#c4a667] ${compactDesktop ? "mt-1.5 h-px w-6" : "mt-2 h-px w-7"}`} />
+          <p className={`font-medium text-[#718277] ${compactDesktop ? "mt-1.5 text-[12px]" : "mt-2 text-[13px]"}`}>
             Refined living. Curated for you.
           </p>
         </div>
@@ -2583,16 +2619,16 @@ function MasterPlanFiltersCard({
             <button
               type="button"
               onClick={onBack}
-              className="inline-flex items-center gap-1 rounded-full border border-[#ded8c9] bg-[#fbfaf4] px-3 py-2 text-[11px] font-semibold text-[#456859] shadow-[0_10px_24px_rgba(33,50,35,0.10)] transition hover:bg-white"
+              className={`inline-flex items-center gap-1 rounded-full border border-[#ded8c9] bg-[#fbfaf4] font-semibold text-[#456859] shadow-[0_10px_24px_rgba(33,50,35,0.10)] transition hover:bg-white ${compactDesktop ? "px-2.5 py-1.5 text-[10px]" : "px-3 py-2 text-[11px]"}`}
             >
-              <ArrowLeft className="h-3.5 w-3.5" />
+              <ArrowLeft className={compactDesktop ? "h-3 w-3" : "h-3.5 w-3.5"} />
               Back
             </button>
 
             <button
               type="button"
               onClick={onClosePanel ?? onReset}
-              className="rounded-full border border-[#ded8c9] bg-[#fbfaf4] px-3 py-2 cursor-pointer text-[11px] font-semibold text-[#456859] shadow-[0_10px_24px_rgba(33,50,35,0.10)] transition hover:bg-white"
+              className={`cursor-pointer rounded-full border border-[#ded8c9] bg-[#fbfaf4] font-semibold text-[#456859] shadow-[0_10px_24px_rgba(33,50,35,0.10)] transition hover:bg-white ${compactDesktop ? "px-2.5 py-1.5 text-[10px]" : "px-3 py-2 text-[11px]"}`}
             >
               {onClosePanel ? "Close" : "Reset"}
             </button>
@@ -2600,71 +2636,76 @@ function MasterPlanFiltersCard({
           <button
             type="button"
             onClick={() => setIsDesktopFilterOpen((value) => !value)}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#ded8c9] bg-[#fbfaf4] text-[#456859] shadow-[0_12px_24px_rgba(33,50,35,0.14)] transition hover:bg-white"
+            className={`inline-flex items-center justify-center rounded-full border border-[#ded8c9] bg-[#fbfaf4] text-[#456859] shadow-[0_12px_24px_rgba(33,50,35,0.14)] transition hover:bg-white ${compactDesktop ? "h-9 w-9" : "h-11 w-11"}`}
             aria-label={
               isDesktopFilterOpen ? "Collapse filters" : "Expand filters"
             }
             aria-expanded={isDesktopFilterOpen}
           >
             {isDesktopFilterOpen ? (
-              <ChevronUp className="h-4 w-4" />
+              <ChevronUp className={compactDesktop ? "h-3.5 w-3.5" : "h-4 w-4"} />
             ) : (
-              <ChevronDown className="h-4 w-4" />
+              <ChevronDown className={compactDesktop ? "h-3.5 w-3.5" : "h-4 w-4"} />
             )}
           </button>
         </div>
       </div>
 
-      <div className={`relative z-10 ${compact ? "space-y-3" : "space-y-5"}`}>
-        <FilterBlock label="Search Unit">
+      <div className={`relative z-10 ${compact ? "space-y-3" : compactDesktop ? "space-y-4" : "space-y-5"}`}>
+        <FilterBlock label="Search Unit" compactDesktop={compactDesktop}>
           {searchControl}
         </FilterBlock>
 
         {isDesktopFilterOpen ? (
           <>
-            <FilterBlock label="Tower">
+            <FilterBlock label="Tower" compactDesktop={compactDesktop}>
               <FilterPillGroup
                 options={towerOptions}
                 value={selectedTower}
                 onChange={onTowerChange}
                 getLabel={(item) => item}
+                compactDesktop={compactDesktop}
               />
             </FilterBlock>
 
-            <FilterBlock label="BHK">
+            <FilterBlock label="BHK" compactDesktop={compactDesktop}>
               <FilterPillGroup
                 options={bhkOptions}
                 value={bhk}
                 onChange={onBhkChange}
                 getLabel={(item) => (item === "All" ? "All" : `${item} BHK`)}
+                compactDesktop={compactDesktop}
               />
             </FilterBlock>
 
-            <FilterBlock label="Floor">
+            <FilterBlock label="Floor" compactDesktop={compactDesktop}>
               <FilterDropdown
                 value={floor}
                 options={floorOptions}
                 onChange={onFloorChange}
+                compactDesktop={compactDesktop}
               />
             </FilterBlock>
 
-            <FilterBlock label="Facing">
+            <FilterBlock label="Facing" compactDesktop={compactDesktop}>
               <FilterPillGroup
                 options={facingOptions}
                 value={facing}
                 onChange={onFacingChange}
+                compactDesktop={compactDesktop}
               />
             </FilterBlock>
 
-            <FilterBlock label="Status">
+            <FilterBlock label="Status" compactDesktop={compactDesktop}>
               <FilterPillGroup
                 options={statusOptions}
                 value={status}
                 onChange={onStatusChange}
+                compactDesktop={compactDesktop}
               />
             </FilterBlock>
 
-            <FilterBlock label={`Area Range: 0 - 1745 sqft`}>
+            <FilterBlock label={`Area Range: 0 - 1745 sqft`} compactDesktop={compactDesktop}>
               <div className="">
                 <input
                   type="range"
@@ -2676,7 +2717,7 @@ function MasterPlanFiltersCard({
                   className="h-3 w-full cursor-pointer appearance-auto accent-[#466f46]"
                   style={{ accentColor: "#466f46" }}
                 />
-                <div className="mt-2 flex items-center justify-between text-[9px] font-semibold uppercase tracking-[0.14em] text-[#718277] dark:text-emerald-50/60">
+                <div className={`mt-2 flex items-center justify-between font-semibold uppercase text-[#718277] dark:text-emerald-50/60 ${compactDesktop ? "text-[8px] tracking-[0.12em]" : "text-[9px] tracking-[0.14em]"}`}>
                   <span>0 sqft</span>
                   <span>1745 sqft</span>
                 </div>
@@ -2711,6 +2752,7 @@ function MasterPlanResultsCard({
   onApartmentSelect,
   selectedApartmentId,
   compact = false,
+  compactDesktop = false,
 }: {
   filteredApartments: InventoryApartment[];
   isInventoryLoading: boolean;
@@ -2718,6 +2760,7 @@ function MasterPlanResultsCard({
   onApartmentSelect: (apartment: InventoryApartment) => void;
   selectedApartmentId: string | null;
   compact?: boolean;
+  compactDesktop?: boolean;
 }) {
   const scrollableId = useId();
   const paginationKey = useMemo(
@@ -2758,18 +2801,18 @@ function MasterPlanResultsCard({
   return (
     <motion.div
       className={`surface-contain flex min-h-0 flex-col rounded-[30px] border border-[#ded8c9] bg-[#f3f2ea]/95 text-[#1f3f2b] shadow-[0_28px_80px_rgba(25,43,30,0.20),inset_0_1px_0_rgba(255,255,255,0.94)] backdrop-blur-xl dark:border-emerald-100/10 dark:bg-emerald-950/45 dark:text-white dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] ${
-        compact ? "min-h-0 flex-1 overflow-hidden p-3" : "flex-1 p-4"
+        compact ? "min-h-0 flex-1 overflow-hidden p-3" : compactDesktop ? "flex-1 p-3.5" : "flex-1 p-4"
       }`}
     >
-      <div className={`flex items-center justify-between ${compact ? "mb-3" : "mb-4"}`}>
+      <div className={`flex items-center justify-between ${compact ? "mb-3" : compactDesktop ? "mb-3.5" : "mb-4"}`}>
         <div>
-          <h3 className={`${masterPlanSerif.className} ${compact ? "text-[1.65rem]" : "text-[1.8rem]"} font-medium leading-none text-[#21492f]`}>
+          <h3 className={`${masterPlanSerif.className} ${compact ? "text-[1.65rem]" : compactDesktop ? "text-[1.55rem]" : "text-[1.8rem]"} font-medium leading-none text-[#21492f]`}>
             Matching Flats
           </h3>
         </div>
         <span
           className={`rounded-full border border-[#ded8c9] bg-[#fbfaf4] font-semibold text-[#456f49] shadow-[0_10px_22px_rgba(33,50,35,0.10),inset_0_1px_0_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-white/5 dark:text-white ${
-            compact ? "px-3 py-1 text-[11px]" : "px-3 py-1 text-xs"
+            compact ? "px-3 py-1 text-[11px]" : compactDesktop ? "px-2.5 py-1 text-[11px]" : "px-3 py-1 text-xs"
           }`}
         >
           {filteredApartments.length} units
@@ -2781,12 +2824,12 @@ function MasterPlanResultsCard({
         initial="hidden"
         animate="visible"
         className={`custom-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain [overflow-anchor:none] [-webkit-overflow-scrolling:touch] touch-pan-y ${
-          compact ? "pr-1" : "pr-2"
+          compact ? "pr-1" : compactDesktop ? "pr-1.5" : "pr-2"
         }`}
         id={scrollableId}
         data-scroll-area="results"
       >
-        <div className={compact ? "space-y-3 pb-1" : "space-y-3"}>
+        <div className={compact ? "space-y-3 pb-1" : compactDesktop ? "space-y-2.5" : "space-y-3"}>
           <AnimatePresence initial={false}>
             {isInventoryLoading ? (
               <motion.div
@@ -2794,7 +2837,7 @@ function MasterPlanResultsCard({
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="flex h-[220px] items-center justify-center rounded-[22px] border border-dashed border-emerald-100/55 bg-emerald-50/38 px-4 text-center dark:border-white/10 dark:bg-white/5"
+                className={`flex items-center justify-center rounded-[22px] border border-dashed border-emerald-100/55 bg-emerald-50/38 px-4 text-center dark:border-white/10 dark:bg-white/5 ${compactDesktop ? "h-[190px]" : "h-[220px]"}`}
               >
                 <div>
                   <p className="text-sm font-semibold">Loading flats</p>
@@ -2809,7 +2852,7 @@ function MasterPlanResultsCard({
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="flex h-[220px] items-center justify-center rounded-[22px] border border-dashed border-rose-200 bg-rose-50/80 px-4 text-center"
+                className={`flex items-center justify-center rounded-[22px] border border-dashed border-rose-200 bg-rose-50/80 px-4 text-center ${compactDesktop ? "h-[190px]" : "h-[220px]"}`}
               >
                 <div>
                   <p className="text-sm font-semibold text-rose-700">
@@ -2825,7 +2868,7 @@ function MasterPlanResultsCard({
                 hasMore={hasMoreApartments}
                 scrollableTarget={scrollableId}
                 loader={<MatchingFlatsInlineLoader compact={compact} />}
-                className={compact ? "space-y-2.5 pb-1" : "space-y-3"}
+                className={compact ? "space-y-2.5 pb-1" : compactDesktop ? "space-y-2.5" : "space-y-3"}
                 style={{ overflow: "visible" }}
               >
                 {visibleApartments.map((apartment) => {
@@ -2851,21 +2894,23 @@ function MasterPlanResultsCard({
                       } ${
                         compact
                           ? "grid-cols-[minmax(0,1fr)_5.4rem] items-stretch rounded-[18px] border"
-                          : "grid-cols-[minmax(0,1fr)_6rem] items-stretch rounded-[22px] border"
+                          : compactDesktop
+                            ? "grid-cols-[minmax(0,1fr)_5.3rem] items-stretch rounded-[20px] border"
+                            : "grid-cols-[minmax(0,1fr)_6rem] items-stretch rounded-[22px] border"
                       }`}
                     >
-                      <div className="min-w-0 w-full cursor-pointer px-4 py-3">
-                        <div className={`flex flex-wrap items-center ${compact ? "gap-2" : "gap-2.5"}`}>
+                      <div className={`min-w-0 w-full cursor-pointer ${compact ? "px-4 py-3" : compactDesktop ? "px-3.5 py-2.5" : "px-4 py-3"}`}>
+                        <div className={`flex flex-wrap items-center ${compact ? "gap-2" : compactDesktop ? "gap-2" : "gap-2.5"}`}>
                           <p
                             className={`${masterPlanSerif.className} font-semibold text-[#21492f] dark:text-white ${
-                              compact ? "text-[1.55rem] leading-none" : "text-[1.45rem] leading-none"
+                              compact ? "text-[1.55rem] leading-none" : compactDesktop ? "text-[1.28rem] leading-none" : "text-[1.45rem] leading-none"
                             }`}
                           >
                             {apartment.title}
                           </p>
                           <span
                             className={`rounded-full font-semibold ${
-                              compact ? "px-2 py-0.5 text-[9px]" : "px-2 py-0.5 text-[10px]"
+                              compact ? "px-2 py-0.5 text-[9px]" : compactDesktop ? "px-1.5 py-0.5 text-[9px]" : "px-2 py-0.5 text-[10px]"
                             } ${
                               apartment.status === "Available"
                                 ? "bg-[#d8f7de] text-[#087144] ring-1 ring-[#b6ecc6]"
@@ -2889,39 +2934,39 @@ function MasterPlanResultsCard({
 
                         <div
                           className={`mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-[#617568] dark:text-zinc-400 ${
-                            compact ? "text-[10px]" : "text-xs"
+                            compact ? "text-[10px]" : compactDesktop ? "text-[11px]" : "text-xs"
                           }`}
                         >
                           <span
                             className="inline-flex items-center gap-1.5"
                           >
-                            <Building2 className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+                            <Building2 className={compact ? "h-3 w-3" : compactDesktop ? "h-3 w-3" : "h-3.5 w-3.5"} />
                             {apartment.tower}
                           </span>
                           <span
                             className="inline-flex items-center gap-1.5"
                           >
-                            <BedDouble className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+                            <BedDouble className={compact ? "h-3 w-3" : compactDesktop ? "h-3 w-3" : "h-3.5 w-3.5"} />
                             {apartment.bhk} BHK
                           </span>
                           <span className="inline-flex items-center gap-1.5">
-                            <MapPin className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+                            <MapPin className={compact ? "h-3 w-3" : compactDesktop ? "h-3 w-3" : "h-3.5 w-3.5"} />
                             {apartment.facing}
                           </span>
                           <span className="inline-flex items-center gap-1.5">
-                            <Ruler className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+                            <Ruler className={compact ? "h-3 w-3" : compactDesktop ? "h-3 w-3" : "h-3.5 w-3.5"} />
                             Floor {apartment.floorLabel}
                           </span>
                         </div>
                       </div>
 
                       <div
-                        className="flex flex-col items-center justify-center border-l border-[#e2ddcf] bg-[#f6f4eb] px-2 text-center text-[#557568]"
+                        className={`flex flex-col items-center justify-center border-l border-[#e2ddcf] bg-[#f6f4eb] text-center text-[#557568] ${compactDesktop ? "px-1.5" : "px-2"}`}
                       >
-                        <p className={`${masterPlanSerif.className} text-[1.7rem] font-semibold leading-none text-[#456f49]`}>
+                        <p className={`${masterPlanSerif.className} ${compactDesktop ? "text-[1.45rem]" : "text-[1.7rem]"} font-semibold leading-none text-[#456f49]`}>
                           {apartment.areaSqft}
                         </p>
-                        <p className="mt-1 text-[8px] font-bold uppercase tracking-[0.32em] text-[#718277]">
+                        <p className={`mt-1 font-bold uppercase text-[#718277] ${compactDesktop ? "text-[7px] tracking-[0.24em]" : "text-[8px] tracking-[0.32em]"}`}>
                           Sqft
                         </p>
                       </div>
@@ -2935,7 +2980,7 @@ function MasterPlanResultsCard({
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="flex h-[220px] items-center justify-center rounded-[22px] border border-dashed border-emerald-100/55 bg-emerald-50/38 px-4 text-center dark:border-white/10 dark:bg-white/5"
+                className={`flex items-center justify-center rounded-[22px] border border-dashed border-emerald-100/55 bg-emerald-50/38 px-4 text-center dark:border-white/10 dark:bg-white/5 ${compactDesktop ? "h-[190px]" : "h-[220px]"}`}
               >
                 <div>
                   <p className="text-sm font-semibold">No flats found</p>
@@ -2996,6 +3041,10 @@ function LiquidGlassFilterStyles() {
       }
 
       .mp-liquid-switcher--compact {
+        height: 40px;
+      }
+
+      .mp-liquid-switcher--desktop-compact {
         height: 40px;
       }
 
@@ -3099,6 +3148,18 @@ function LiquidGlassFilterStyles() {
         }
       }
 
+      .mp-liquid-switcher--desktop-compact .mp-liquid-switcher__label {
+        gap: 4px;
+        padding: 0 6px;
+        font-size: 9px;
+        letter-spacing: 0.11em;
+      }
+
+      .mp-liquid-switcher--desktop-compact .mp-liquid-switcher__icon {
+        width: 11px;
+        height: 11px;
+      }
+
       @keyframes mpLiquidToggle {
         0% {
           scale: 1 1;
@@ -3120,12 +3181,14 @@ function FilterPillGroup<T extends string>({
   onChange,
   getLabel = (item) => item,
   compactDark = false,
+  compactDesktop = false,
 }: {
   options: readonly T[];
   value: T;
   onChange: (value: T) => void;
   getLabel?: (value: T) => string;
   compactDark?: boolean;
+  compactDesktop?: boolean;
 }) {
   const name = useId();
   const activeIndex = Math.max(0, options.findIndex((item) => item === value));
@@ -3139,7 +3202,7 @@ function FilterPillGroup<T extends string>({
 
   return (
     <fieldset
-      className={`mp-liquid-switcher ${compactDark ? "mp-liquid-switcher--compact" : ""}`}
+      className={`mp-liquid-switcher ${compactDark ? "mp-liquid-switcher--compact" : ""} ${compactDesktop ? "mp-liquid-switcher--desktop-compact" : ""}`}
       style={switcherStyle}
     >
       <legend className="mp-liquid-switcher__legend">Choose filter</legend>
@@ -3179,18 +3242,22 @@ function FilterDropdown({
   options,
   onChange,
   compactDark = false,
+  compactDesktop = false,
 }: {
   value: string;
   options: FloorFilterOption[];
   onChange: (value: string) => void;
   compactDark?: boolean;
+  compactDesktop?: boolean;
 }) {
   return (
     <div className="relative">
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={`h-9 w-full appearance-none rounded-full border px-3 pr-8 text-[11px] font-semibold outline-none transition ${
+        className={`w-full appearance-none rounded-full border px-3 pr-8 font-semibold outline-none transition ${
+          compactDesktop ? "h-10 text-[10px]" : "h-9 text-[11px]"
+        } ${
           compactDark
             ? "border-[#ded8c9] bg-[#fbfaf4] text-[#1f3f2b] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_10px_22px_rgba(33,50,35,0.08)] focus:border-[#cfd9c6] focus:bg-white"
             : "border-[#ded8c9] bg-[#fbfaf4] text-[#1f3f2b] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_10px_22px_rgba(33,50,35,0.08)] focus:border-[#cfd9c6] focus:bg-white dark:border-white/10 dark:bg-white/8 dark:text-white"
@@ -3216,21 +3283,27 @@ function FilterBlock({
   children,
   compact = false,
   compactDark = false,
+  compactDesktop = false,
   className = "",
 }: {
   label: string;
   children: React.ReactNode;
   compact?: boolean;
   compactDark?: boolean;
+  compactDesktop?: boolean;
   className?: string;
 }) {
   return (
-    <div className={`${compact ? "space-y-1.5" : "space-y-2"} ${className}`}>
+    <div className={`${compact ? "space-y-1.5" : compactDesktop ? "space-y-1.5" : "space-y-2"} ${className}`}>
       <label
         className={`block font-semibold ${
           compactDark ? "text-[#58715f]" : "text-[#58715f] dark:text-zinc-300"
         } ${
-          compact ? "text-[9px] uppercase tracking-[0.18em]" : "text-[10px] uppercase tracking-[0.22em]"
+          compact
+            ? "text-[9px] uppercase tracking-[0.18em]"
+            : compactDesktop
+              ? "text-[9px] uppercase tracking-[0.18em]"
+              : "text-[10px] uppercase tracking-[0.22em]"
         }`}
       >
         {label}
