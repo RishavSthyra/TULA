@@ -11,6 +11,8 @@ This design changes the project overview brochure flow in:
 - `components/deck/FlipBookDeck.tsx`
 - `components/deck/MobileDeckLanding.tsx`
 - `app/project-overview/page.tsx`
+- `components/RouteChrome.tsx`
+- `components/UpperLayoutCTA.tsx`
 - small supporting deck utilities if needed for image ordering or preload orchestration
 
 In scope:
@@ -21,6 +23,9 @@ In scope:
 - updating mobile and tablet brochure rendering to use the same brochure image source set
 - preloading `Last.jpg` as the true final closing page
 - progressive image warmup for all devices without harming interaction smoothness
+- merging brochure desktop route navigation into the top bar
+- hiding the left desktop site rail on the brochure route
+- moving desktop brochure pagination controls into a centered bottom bar below the book
 
 Out of scope:
 
@@ -35,11 +40,13 @@ The current brochure flow is split between:
 
 - a desktop flipbook composed from React page components such as `CoverPage`, `OverviewLeftPage`, `OverviewRightPage`, unit plan pages, a spread page, and a closing page
 - a separate mobile/tablet landing flow that uses editorial sections rather than brochure page images
+- a shared route chrome where desktop route navigation lives in the left `DesktopSiteRail` while contact/brochure/quote actions live in the top CTA bar
 
 This creates two problems for the requested change:
 
 1. The live brochure is not page-image-driven end to end.
 2. The current deck dimensions were tuned around prior component layouts rather than the real brochure image ratio.
+3. The brochure desktop layout spends horizontal space on a left rail and side arrows that should instead be returned to the book.
 
 The brochure image assets in `public/brochure` already share the desired native size of `2011 x 1299`, including `Last.jpg`.
 
@@ -95,7 +102,42 @@ What changes is the page content:
 
 Existing controls such as left/right navigation can stay, but they should operate against the new image page count.
 
-### 4. Replace the mobile/tablet brochure flow with the same image source set
+### 4. Merge brochure desktop route chrome into the top bar
+
+On the brochure route only, the desktop left `DesktopSiteRail` should be hidden and its route navigation should be represented inside the existing top CTA bar.
+
+This should reuse the existing merged route-link pattern already supported by shared chrome rather than creating a separate brochure-only header implementation.
+
+The brochure desktop top bar should:
+
+- include the horizontal route icons/nav items
+- keep the existing top-right action buttons
+- act as the single desktop chrome surface for `/project-overview`
+
+Other routes should keep their existing chrome behavior unless they already use merged route links.
+
+### 5. Move desktop page controls below the book
+
+The desktop brochure page-turn controls should move from the left and right sides of the book to a centered bottom control bar placed below the book.
+
+This bottom control bar should:
+
+- sit centered under the book
+- contain previous and next controls within one compact shared surface
+- preserve existing page-turn behavior
+- free horizontal space so the book can grow larger
+
+### 6. Reallocate freed layout space to the desktop book
+
+After removing the left rail and side arrows from the brochure route, the freed horizontal space should be returned to the desktop book while preserving the same `2011 / 1299` ratio.
+
+Desktop sizing should be recalculated using:
+
+- safe spacing for the merged top bar
+- safe spacing for the new centered bottom pager
+- the remaining width and height for the largest possible centered book that still fits without cropping
+
+### 7. Replace the mobile/tablet brochure flow with the same image source set
 
 Mobile and tablet should stop using the current editorial landing layout for the brochure route.
 
@@ -159,6 +201,8 @@ Primary files:
 - `components/deck/FlipBookDeck.tsx`
 - `components/deck/MobileDeckLanding.tsx`
 - `app/project-overview/page.tsx`
+- `components/RouteChrome.tsx`
+- `components/UpperLayoutCTA.tsx`
 
 Likely support additions:
 
@@ -171,6 +215,12 @@ Likely support additions:
 3. A brochure image preload helper
    This encapsulates staged preload, dedicated `Last.jpg` warming, queueing, and cleanup.
 
+4. A brochure-route chrome condition
+   This hides the left desktop rail only for `/project-overview` and enables merged top-bar route links there.
+
+5. A bottom pager surface for the desktop book
+   This replaces the side arrows while keeping page-flip controls simple and centered.
+
 ## Expected Outcome
 
 After the change:
@@ -182,6 +232,10 @@ After the change:
 - brochure images are not cropped while placed in the book
 - `Last.jpg` is the true final closing page and is ready when the user reaches it
 - preload happens progressively without visibly harming deck smoothness
+- the brochure desktop route has no left sidebar rail
+- brochure route navigation is merged into the top bar
+- brochure page arrows sit centered below the book
+- the book uses the recovered sidebar/side-arrow space to render larger on desktop
 
 ## Risks
 
@@ -214,6 +268,16 @@ Mitigation:
 - define the order in one place
 - verify opening, middle, and closing pages manually
 
+### Shared chrome regression risk
+
+Because the top bar and desktop rail are shared components, a broad change could unintentionally affect routes outside the brochure.
+
+Mitigation:
+
+- scope the merge behavior explicitly to `/project-overview`
+- reuse existing merged-route-link logic instead of duplicating new chrome behavior globally
+- verify non-brochure routes still render their current chrome
+
 ## Testing Plan
 
 Manual verification:
@@ -227,15 +291,24 @@ Manual verification:
 3. Final page reachability
    `Last.jpg` should appear as the real final closing page and should already be ready when reached.
 
-4. Mobile and tablet rendering
+4. Desktop chrome layout
+   `/project-overview` should show merged top navigation, no left rail, and a centered bottom pager below the book.
+
+5. Desktop sizing
+   The book should render larger than before while preserving the native brochure ratio and avoiding cropping.
+
+6. Mobile and tablet rendering
    The route should show the same brochure page images with the same ratio and without reverting to the old editorial layout.
 
-5. Slow-network style check
+7. Slow-network style check
    The brochure should still become interactive quickly, even if later pages continue warming in the background.
 
-6. Failure tolerance
+8. Failure tolerance
    A failed page request should degrade gracefully rather than breaking the whole brochure flow.
+
+9. Route regression check
+   Other routes should keep their existing chrome behavior.
 
 ## Decision
 
-Proceed with a shared image-driven brochure architecture across all devices, using the native `2011 / 1299` page ratio, retaining desktop flipbook behavior, replacing mobile/tablet editorial brochure rendering with the same image source set, and adding a staged preload queue that prioritizes the first pages and `Last.jpg` without harming smoothness.
+Proceed with a shared image-driven brochure architecture across all devices, using the native `2011 / 1299` page ratio, retaining desktop flipbook behavior, replacing mobile/tablet editorial brochure rendering with the same image source set, adding a staged preload queue that prioritizes the first pages and `Last.jpg` without harming smoothness, hiding the brochure route’s left desktop rail, merging brochure route navigation into the shared top bar, and moving desktop page controls into a centered bottom pager below the book so the book can render larger.
