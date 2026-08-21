@@ -62,6 +62,28 @@ function formatViewerLocalTime(date: Date) {
   }).format(date);
 }
 
+function HeroMagneticButton({
+  onClick,
+}: {
+  onClick: () => void;
+}) {
+  return (
+    <div className="hero-liquid-wrap ml-auto">
+      <button
+        className="hero-liquid-button"
+        onClick={onClick}
+        type="button"
+      >
+        <span className="hero-liquid-text">
+          Explore The Project
+          <BsArrowRight className="text-[1.05rem]" aria-hidden />
+        </span>
+        <span aria-hidden className="hero-liquid-wave" />
+      </button>
+    </div>
+  );
+}
+
 type HeroSectionProps = {
   heroLogoSrc?: string | null;
   heroPosterSrc?: string | null;
@@ -834,65 +856,16 @@ export default function HeroSection({
           -webkit-appearance: none !important;
         }
 
-        @property --hero-liquid-angle-1 {
-          syntax: "<angle>";
-          inherits: false;
-          initial-value: -75deg;
-        }
-
-        @property --hero-liquid-angle-2 {
-          syntax: "<angle>";
-          inherits: false;
-          initial-value: -45deg;
-        }
-
         .hero-liquid-wrap {
-          --anim-hover-time: 400ms;
-          --anim-hover-ease: cubic-bezier(0.25, 1, 0.5, 1);
           position: relative;
           z-index: 2;
           display: inline-flex;
-          border-radius: 999vw;
-          background: transparent;
-          pointer-events: none;
-          transition: transform var(--anim-hover-time) var(--anim-hover-ease);
-        }
-
-        .hero-liquid-shadow {
-          --shadow-cutoff-fix: 2em;
-          position: absolute;
-          left: calc(0% - var(--shadow-cutoff-fix) / 2);
-          top: calc(0% - var(--shadow-cutoff-fix) / 2);
-          width: calc(100% + var(--shadow-cutoff-fix));
-          height: calc(100% + var(--shadow-cutoff-fix));
-          filter: blur(8px);
           overflow: visible;
-          pointer-events: none;
-        }
-
-        .hero-liquid-shadow::after {
-          content: "";
-          position: absolute;
-          inset: 0;
-          left: calc(var(--shadow-cutoff-fix) - 0.875em);
-          top: calc(var(--shadow-cutoff-fix) - 0.5em);
-          width: calc(100% - var(--shadow-cutoff-fix) - 0.25em);
-          height: calc(100% - var(--shadow-cutoff-fix) - 0.25em);
-          box-sizing: border-box;
-          border-radius: 999vw;
-          padding: 0.125em;
-          background: linear-gradient(180deg, rgba(38, 69, 42, 0.38), rgba(20, 39, 24, 0.14));
-          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-          mask-composite: exclude;
-          opacity: 0.9;
-          transition: all var(--anim-hover-time) var(--anim-hover-ease);
         }
 
         .hero-liquid-button {
-          --border-width: 1px;
           all: unset;
           position: relative;
-          z-index: 3;
           display: inline-flex;
           min-width: 14.5rem;
           height: 52px;
@@ -902,91 +875,77 @@ export default function HeroSection({
           gap: 0.75rem;
           overflow: hidden;
           border-radius: 999vw;
+          border: 1px solid rgba(196, 178, 129, 0.44);
           background:
+            radial-gradient(
+              120% 180% at 100% 50%,
+              rgba(241, 232, 201, 0.2) 0%,
+              rgba(241, 232, 201, 0.05) 16%,
+              rgba(241, 232, 201, 0) 36%
+            ),
             linear-gradient(
-              135deg,
-              rgba(55, 87, 50, 0.96),
-              rgba(35, 61, 40, 0.98),
-              rgba(22, 41, 29, 0.98)
+              180deg,
+              rgba(60, 93, 64, 0.98) 0%,
+              rgba(39, 67, 45, 0.995) 56%,
+              rgba(24, 45, 30, 0.998) 100%
             );
           box-shadow:
-            inset 0 0.125em 0.125em rgba(0, 0, 0, 0.16),
-            inset 0 -0.125em 0.125em rgba(255, 247, 222, 0.16),
-            0 0.25em 0.125em -0.125em rgba(0, 0, 0, 0.34),
-            0 0 0.1em 0.18em inset rgba(215, 187, 112, 0.18),
-            0 14px 34px rgba(0, 0, 0, 0.2);
-          -webkit-backdrop-filter: blur(4px) saturate(1.35);
-          backdrop-filter: blur(4px) saturate(1.35);
-          pointer-events: auto;
-          transition: all var(--anim-hover-time) var(--anim-hover-ease);
-        }
-
-        .hero-liquid-button:hover {
-          transform: scale(0.975);
-          -webkit-backdrop-filter: blur(0.5px) saturate(1.45);
-          backdrop-filter: blur(0.5px) saturate(1.45);
-          box-shadow:
-            inset 0 0.125em 0.125em rgba(0, 0, 0, 0.16),
-            inset 0 -0.125em 0.125em rgba(255, 247, 222, 0.28),
-            0 0.15em 0.05em -0.1em rgba(0, 0, 0, 0.36),
-            0 0 0.05em 0.12em inset rgba(237, 214, 152, 0.26),
-            0 12px 30px rgba(0, 0, 0, 0.18);
+            inset 0 1px 0 rgba(250, 245, 230, 0.18),
+            inset 0 -1px 0 rgba(8, 18, 11, 0.36),
+            0 16px 34px rgba(6, 14, 8, 0.26),
+            0 0 0 1px rgba(247, 231, 190, 0.05);
+          transition:
+            border-color 260ms ease,
+            box-shadow 260ms ease,
+            transform 260ms ease;
         }
 
         .hero-liquid-button::before {
           content: "";
           position: absolute;
-          z-index: 1;
-          inset: 0;
-          border-radius: 999vw;
-          background:
-            linear-gradient(
-              var(--hero-liquid-angle-2),
-              rgba(255, 255, 255, 0) 0%,
-              rgba(255, 239, 198, 0.22) 40% 50%,
-              rgba(255, 255, 255, 0) 55%
-            );
-          background-size: 200% 200%;
-          background-position: 0% 50%;
-          mix-blend-mode: screen;
+          inset: 1px;
+          border-radius: inherit;
+          background: linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.12) 0%,
+            rgba(255, 255, 255, 0.03) 24%,
+            rgba(255, 255, 255, 0) 44%
+          );
           pointer-events: none;
-          transition:
-            background-position 500ms var(--anim-hover-ease),
-            --hero-liquid-angle-2 500ms var(--anim-hover-ease);
+          z-index: 0;
         }
 
-        .hero-liquid-button:hover::before {
-          background-position: 25% 50%;
+        .hero-liquid-button:hover {
+          border-color: rgba(210, 193, 145, 0.58);
+          box-shadow:
+            inset 0 1px 0 rgba(250, 245, 230, 0.22),
+            inset 0 -1px 0 rgba(8, 18, 11, 0.4),
+            0 20px 38px rgba(6, 14, 8, 0.3),
+            0 0 0 1px rgba(247, 231, 190, 0.08);
+          transform: translateY(-1px);
         }
 
-        .hero-liquid-button::after {
-          content: "";
+        .hero-liquid-wave {
           position: absolute;
-          z-index: 2;
-          inset: calc(var(--border-width) / -2);
-          border-radius: 999vw;
-          padding: var(--border-width);
-          box-sizing: border-box;
+          left: 0;
+          top: 100%;
+          width: 100%;
+          height: 100%;
           background:
-            conic-gradient(
-              from var(--hero-liquid-angle-1) at 50% 50%,
-              rgba(95, 76, 28, 0.9),
-              rgba(203, 170, 93, 0) 5% 40%,
-              rgba(242, 220, 164, 0.62) 50%,
-              rgba(203, 170, 93, 0) 60% 95%,
-              rgba(95, 76, 28, 0.9)
-            ),
-            linear-gradient(180deg, rgba(241, 221, 173, 0.52), rgba(108, 88, 43, 0.34));
-          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-          mask-composite: exclude;
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 120' preserveAspectRatio='none'%3E%3Cdefs%3E%3Cfilter id='g'%3E%3CfeGaussianBlur stdDeviation='3.2'/%3E%3C/filter%3E%3C/defs%3E%3Cpath d='M0 60C54 66 100 72 150 62C205 50 250 40 320 52V120H0Z' fill='%23ffffff' fill-opacity='0.72' filter='url(%23g)'/%3E%3Cpath d='M0 68C54 74 100 78 150 68C205 56 250 46 320 58V120H0Z' fill='%23eef7ef'/%3E%3C/svg%3E")
+              center top / 100% 100% no-repeat;
+          opacity: 0.98;
           pointer-events: none;
-          transition:
-            all var(--anim-hover-time) var(--anim-hover-ease),
-            --hero-liquid-angle-1 500ms ease;
+          transition: top 520ms cubic-bezier(0.22, 1, 0.36, 1);
+          animation: hero-wave 1.3s ease-in-out infinite alternate;
+          filter:
+            drop-shadow(0 0 14px rgba(255, 255, 255, 0.42))
+            drop-shadow(0 0 28px rgba(255, 255, 255, 0.22));
+          z-index: 1;
         }
 
-        .hero-liquid-button:hover::after {
-          --hero-liquid-angle-1: -125deg;
+        .hero-liquid-button:hover .hero-liquid-wave {
+          top: 8%;
         }
 
         .hero-liquid-text {
@@ -999,19 +958,27 @@ export default function HeroSection({
           font-size: 11px;
           font-weight: 700;
           letter-spacing: 0.2em;
-          color: rgba(247, 239, 219, 0.96);
-          text-shadow: 0 0.25em 0.08em rgba(0, 0, 0, 0.16);
+          color: rgba(241, 247, 239, 0.96);
+          text-shadow: 0 1px 0 rgba(7, 16, 10, 0.22);
           text-transform: uppercase;
           user-select: none;
-          transition: all var(--anim-hover-time) var(--anim-hover-ease);
+          transition:
+            color 260ms ease,
+            text-shadow 260ms ease;
         }
 
-        .hero-liquid-wrap:has(.hero-liquid-button:hover) .hero-liquid-shadow {
-          filter: blur(4px);
+        .hero-liquid-button:hover .hero-liquid-text {
+          color: rgba(28, 56, 34, 0.96);
+          text-shadow: 0 1px 0 rgba(255, 255, 255, 0.18);
         }
 
-        .hero-liquid-wrap:has(.hero-liquid-button:hover) .hero-liquid-shadow::after {
-          top: calc(var(--shadow-cutoff-fix) - 0.875em);
+        @keyframes hero-wave {
+          from {
+            transform: translateY(0);
+          }
+          to {
+            transform: translateY(-3px);
+          }
         }
 
         .hero-bottom-dock {
@@ -1240,19 +1207,7 @@ export default function HeroSection({
           </motion.p>
 
           <motion.div variants={contentItem} className="mt-7">
-            <div className="hero-liquid-wrap ml-auto">
-              <button
-                className="hero-liquid-button"
-                onClick={goToProjectOverview}
-                type="button"
-              >
-                <span className="hero-liquid-text">
-                  Explore The Project
-                  <BsArrowRight className="text-[1.05rem]" aria-hidden />
-                </span>
-              </button>
-              <span className="hero-liquid-shadow" aria-hidden />
-            </div>
+            <HeroMagneticButton onClick={goToProjectOverview} />
           </motion.div>
         </motion.div>
       </div>

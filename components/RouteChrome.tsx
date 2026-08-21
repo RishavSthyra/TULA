@@ -50,6 +50,7 @@ export default function RouteChrome() {
   const isHomeRoute = pathname === "/";
   const isAmenitiesRoute = pathname === "/amenities";
   const isAreaMapRoute = pathname === "/area-map";
+  const isProjectOverviewRoute = pathname === "/project-overview";
   const isWalkthroughRoute = isAnyWalkthroughPath(pathname);
   const isImmersiveRoute =
     pathname === "/tower-hover-test" ||
@@ -57,7 +58,7 @@ export default function RouteChrome() {
     pathname === "/landscape-free-roam";
   const isDocklessRoute = pathname === "/test";
   const shouldMergeLinksForRoute =
-    shouldMergeDockIntoCta || isWalkthroughRoute;
+    shouldMergeDockIntoCta || isWalkthroughRoute || isProjectOverviewRoute;
   const shouldHideDock =
     isHomeRoute ||
     isDocklessRoute ||
