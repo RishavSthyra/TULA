@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
 import {
   Euler,
   Matrix4,
@@ -146,21 +144,7 @@ function buildTrialTowerTransform(trial: TrialData) {
   };
 }
 
-export function getLocalThreeDsMaxTrialMasterPlanConfig() {
-  if (process.env.NODE_ENV === "production") {
-    return null;
-  }
-
-  const publicModelPath = path.join(
-    process.cwd(),
-    "public",
-    trialData.modelAssetKey.replace(/^local:/, "").replace(/^\/+/, ""),
-  );
-
-  if (!fs.existsSync(publicModelPath)) {
-    return null;
-  }
-
+export function getThreeDsMaxMasterPlanConfig(): MasterPlanDeveloperConfig {
   const camera = buildCameraConfig(trialData);
   const trialTransform = buildTrialTowerTransform(trialData);
   const towerWorldDummies = {

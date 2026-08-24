@@ -2,6 +2,7 @@ import HomePageClient from "@/components/HomePageClient";
 import { getPublishedDeveloperRuntimeConfig } from "@/lib/developer-config";
 import { buildPageMetadata } from "@/lib/metadata";
 import { signR2AssetKeys } from "@/lib/server/r2-signed-assets";
+import trialData from "@/data/master-plan-3dsmax-trial.json";
 
 export const metadata = buildPageMetadata({
   title: "TULA",
@@ -17,7 +18,10 @@ export const metadata = buildPageMetadata({
 
 export default async function HomePage() {
   const runtimeConfig = await getPublishedDeveloperRuntimeConfig();
-  const home = runtimeConfig.home;
+  const home = {
+    ...runtimeConfig.home,
+    masterPlanWarmupVideoKey: trialData.video.assetKey,
+  };
   const signedHomeCriticalAssets = signR2AssetKeys(Object.values(home));
 
   return <HomePageClient config={home} initialSignedAssetUrls={signedHomeCriticalAssets} />;

@@ -7,9 +7,8 @@ import {
   getAssetWorkerDomain,
   signR2AssetKeys,
 } from "@/lib/server/r2-signed-assets";
-import { getPublishedDeveloperRuntimeConfig } from "@/lib/developer-config";
 import { filterSignableAssetKeys } from "@/lib/master-plan-asset-keys";
-import { getLocalThreeDsMaxTrialMasterPlanConfig } from "@/lib/master-plan-3dsmax-trial";
+import { getThreeDsMaxMasterPlanConfig } from "@/lib/master-plan-3dsmax-trial";
 
 export const metadata = buildPageMetadata({
   title: "Master Plan",
@@ -44,9 +43,7 @@ export default async function MasterPlanPage() {
   }
 
   const workerDomain = getAssetWorkerDomain();
-  const runtimeConfig = await getPublishedDeveloperRuntimeConfig();
-  const masterPlan =
-    getLocalThreeDsMaxTrialMasterPlanConfig() ?? runtimeConfig.masterPlan;
+  const masterPlan = getThreeDsMaxMasterPlanConfig();
   const criticalAssetKeys = filterSignableAssetKeys([
     masterPlan.fallbackImageKey,
     masterPlan.scrubVideoKey,
