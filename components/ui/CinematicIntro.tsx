@@ -63,10 +63,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
 
   const revealRef = useRef<HTMLDivElement>(null);
   const revealWelcomeRef = useRef<HTMLSpanElement>(null);
-  const revealTulaRef = useRef<HTMLHeadingElement>(null);
-  const revealLineRef = useRef<HTMLDivElement>(null);
-  const revealRhythmRef = useRef<HTMLSpanElement>(null);
-  const revealLocationRef = useRef<HTMLSpanElement>(null);
+  const revealBrandRef = useRef<HTMLDivElement>(null);
 
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
   const audioRef = useRef<Howl | null>(null);
@@ -99,7 +96,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
     sessionStorage.setItem(SESSION_KEY, "1");
     setIsActive(false);
     onCompleteRef.current?.();
-  }, []);
+  }, [onCompleteRef]);
 
   const fadeOutWhenReady = useCallback(() => {
     if (!readyToCompleteRef.current) {
@@ -303,10 +300,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           screen3Line1Ref.current,
           screen3Line2Ref.current,
           revealWelcomeRef.current,
-          revealTulaRef.current,
-          revealLineRef.current,
-          revealRhythmRef.current,
-          revealLocationRef.current,
+          revealBrandRef.current,
         ],
         { opacity: 0 },
         0
@@ -322,9 +316,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           screen3Line1Ref.current,
           screen3Line2Ref.current,
           revealWelcomeRef.current,
-          revealTulaRef.current,
-          revealRhythmRef.current,
-          revealLocationRef.current,
+          revealBrandRef.current,
         ],
         { willChange: "transform, opacity, filter" },
         0
@@ -542,63 +534,22 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
       );
 
       tl.fromTo(
-        revealTulaRef.current,
+        revealBrandRef.current,
         {
           opacity: 0,
           filter: "blur(9px)",
-          y: 22,
-          scale: 0.985,
-          letterSpacing: "0.24em",
+          y: 18,
+          scale: 0.94,
         },
         {
-          opacity: 0.96,
+          opacity: 1,
           filter: "blur(0px)",
           y: 0,
           scale: 1,
-          letterSpacing: "0.18em",
-          duration: 1.45,
-          ease: "power3.out",
-        },
-        revealStart + 1.35
-      );
-
-      tl.fromTo(
-        revealLineRef.current,
-        { opacity: 0, scaleX: 0 },
-        {
-          opacity: 1,
-          scaleX: 1,
           duration: 1.4,
           ease: "power3.out",
         },
-        revealStart + 2.15
-      );
-
-      tl.fromTo(
-        revealRhythmRef.current,
-        { opacity: 0, filter: "blur(6px)", y: 12, scale: 0.99 },
-        {
-          opacity: 1,
-          filter: "blur(0px)",
-          y: 0,
-          scale: 1,
-          duration: 1.25,
-          ease: "power2.out",
-        },
-        revealStart + 2.75
-      );
-
-      tl.fromTo(
-        revealLocationRef.current,
-        { opacity: 0, filter: "blur(5px)", y: 8 },
-        {
-          opacity: 1,
-          filter: "blur(0px)",
-          y: 0,
-          duration: 1,
-          ease: "power2.out",
-        },
-        revealStart + 3.25
+        revealStart + 1.95
       );
 
       tl.call(fadeOutWhenReady, undefined, 14.15);
@@ -612,9 +563,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           screen3Line1Ref.current,
           screen3Line2Ref.current,
           revealWelcomeRef.current,
-          revealTulaRef.current,
-          revealRhythmRef.current,
-          revealLocationRef.current, 
+          revealBrandRef.current,
         ],
         { willChange: "auto" },
         14.2
@@ -801,41 +750,21 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
             ref={revealWelcomeRef}
             className="cinematic-serif cinematic-reveal__welcome"
           >
-            Welcome to
+            WELCOME TO
           </span>
 
-          <h1
-            ref={revealTulaRef}
-            className="cinematic-serif cinematic-reveal__title"
-          >
-            TULA
-          </h1>
-
-          <div
-            ref={revealLineRef}
-            style={{
-              width: "clamp(80px, 20vw, 160px)",
-              height: "1px",
-              background:
-                "linear-gradient(90deg, transparent, #c8a96a, transparent)",
-              marginTop: "0.9em",
-              transformOrigin: "center",
-            }}
-          />
-
-          <span
-            ref={revealRhythmRef}
-            className="cinematic-serif cinematic-reveal__rhythm"
-          >
-            Rhythm of Trees
-          </span>
-
-          <span
-            ref={revealLocationRef}
-            className="cinematic-serif cinematic-reveal__location"
-          >
-            Bangalore
-          </span>
+          <div ref={revealBrandRef} className="cinematic-reveal__brand">
+            {/* The logo is mounted from the start so the browser can load it before its reveal. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="cinematic-reveal__logo"
+              src="https://cdn.sthyra.com/TULA/Images/Whisper_of_Tree_Logo_Gold%201_01.png"
+              alt="TULA — Whisper of Trees"
+            />
+            <span className="cinematic-reveal__byline">
+              By Tula Properties
+            </span>
+          </div>
         </div>
       </div>
 
@@ -942,58 +871,49 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
         .cinematic-reveal__welcome {
           position: absolute;
           left: 50%;
-          top: calc(50% - clamp(3.9rem, 8vw, 7rem));
+          top: 50%;
           width: min(92vw, 980px);
-          color: rgba(235, 238, 232, 0.74);
+          color: rgba(216, 190, 132, 0.88);
           font-size: clamp(1.05rem, 1.9vw, 2rem);
           font-weight: 500;
           line-height: 1;
-          letter-spacing: clamp(0.16rem, 0.5vw, 0.42rem);
+          letter-spacing: 0.32em;
           text-align: center;
-          text-indent: clamp(0.16rem, 0.5vw, 0.42rem);
-          text-shadow: 0 16px 38px rgba(0, 0, 0, 0.72);
+          text-indent: 0.32em;
+          text-shadow:
+            0 16px 38px rgba(0, 0, 0, 0.72),
+            0 0 34px rgba(200, 169, 106, 0.14);
           transform: translate(-50%, -50%);
           will-change: transform, opacity;
         }
 
-        .cinematic-reveal__title {
-          margin: 0;
-          padding-left: 0.18em;
-          color: #f6f7ef;
-          font-size: clamp(4.8rem, 14vw, 13rem);
-          font-weight: 600;
-          line-height: 0.8;
-          letter-spacing: 0.18em;
-          text-align: center;
-          text-shadow:
-            0 20px 52px rgba(0, 0, 0, 0.72),
-            0 0 68px rgba(224, 232, 218, 0.12);
+        .cinematic-reveal__brand {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          width: min(70vw, 520px);
           transform-origin: 50% 50%;
-          will-change: transform, opacity, letter-spacing;
+          will-change: transform, opacity, filter;
         }
 
-        .cinematic-reveal__rhythm {
-          margin-top: clamp(0.8rem, 1.9vh, 1.35rem);
-          color: rgba(246, 247, 239, 0.78);
-          font-size: clamp(1.18rem, 2.2vw, 2.35rem);
-          font-weight: 500;
-          line-height: 1;
-          letter-spacing: clamp(0.08rem, 0.32vw, 0.24rem);
-          text-align: center;
-          text-shadow:
-            0 14px 34px rgba(0, 0, 0, 0.68),
-            0 0 36px rgba(200, 169, 106, 0.07);
-          will-change: transform, opacity;
+        .cinematic-reveal__logo {
+          display: block;
+          width: 100%;
+          max-height: 54vh;
+          height: auto;
+          object-fit: contain;
+          filter: drop-shadow(0 20px 52px rgba(0, 0, 0, 0.72));
         }
 
-        .cinematic-reveal__location {
-          margin-top: clamp(0.55rem, 1.25vh, 0.9rem);
-          color: rgba(200, 169, 106, 0.66);
-          font-size: clamp(0.72rem, 1.05vw, 0.9rem);
-          font-weight: 500;
-          letter-spacing: clamp(0.14rem, 0.52vw, 0.38rem);
+        .cinematic-reveal__byline {
+          margin-top: clamp(0.8rem, 1.8vh, 1.25rem);
+          color: rgba(238, 231, 215, 0.76);
+          font-family: var(--font-sans, system-ui);
+          font-size: clamp(0.78rem, 1.05vw, 0.98rem);
+          font-weight: 400;
+          line-height: 1.2;
+          letter-spacing: 0.08em;
           text-align: center;
-          text-indent: clamp(0.14rem, 0.52vw, 0.38rem);
         }
 
         .cinematic-copy {
@@ -1083,14 +1003,17 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
             text-align: center;
           }
 
-          .cinematic-reveal__title {
-            font-size: clamp(4rem, 22vw, 6.4rem);
+          .cinematic-reveal__brand {
+            width: min(82vw, 420px);
+          }
+
+          .cinematic-reveal__logo {
+            width: 100%;
+            max-height: 46vh;
           }
 
           .cinematic-copy,
-          .cinematic-reveal__title,
           .cinematic-reveal__welcome,
-          .cinematic-reveal__rhythm,
           .cinematic-copy--final {
             text-shadow: 0 10px 26px rgba(0, 0, 0, 0.7);
           }
@@ -1103,9 +1026,8 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           }
 
           .cinematic-copy,
-          .cinematic-reveal__title,
           .cinematic-reveal__welcome,
-          .cinematic-reveal__rhythm {
+          .cinematic-reveal__brand {
             will-change: opacity, transform;
           }
         }

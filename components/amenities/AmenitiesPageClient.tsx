@@ -1,27 +1,41 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Cormorant_Garamond } from "next/font/google";
+import {
+  type ChangeEvent,
+  type RefObject,
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { Cormorant_Garamond, Montserrat } from "next/font/google";
+import { AnimatePresence, motion, MotionConfig } from "framer-motion";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
-  ArrowUpRight,
   ChevronLeft,
   ChevronRight,
-  ImageIcon,
-  Leaf,
-  Menu,
-  Sparkles,
-  Trees,
-  X,
+  Map,
+  Maximize2,
+  Minimize2,
+  Orbit,
+  Pause,
+  Play,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { scheduleAmenityVideoWarmup } from "@/lib/amenity-video-warmup";
-import { useSnapListViewport } from "@/lib/useSnapListViewport";
-import PhoneRotatePortraitIcon from "../ui/PhoneRotateIcon";
 
 const displaySerif = Cormorant_Garamond({
   subsets: ["latin"],
   weight: ["500", "600", "700"],
+});
+
+const interfaceSans = Montserrat({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export type AmenityPageItem = {
@@ -47,6 +61,9 @@ export type AmenitiesPageData = {
 
 type AmenitiesPageClientProps = {
   data: AmenitiesPageData;
+  brandName?: string;
+  brandSubline?: string;
+  onExplore3D?: (amenity: AmenityPageItem) => void;
 };
 
 type OrientationLockValue =
@@ -63,182 +80,627 @@ type ScreenOrientationWithLock = ScreenOrientation & {
   lock?: (orientation: OrientationLockValue) => Promise<void>;
 };
 
+type CarouselItem = {
+  amenity: AmenityPageItem;
+  offset: number;
+  dataIndex: number;
+};
+
+type VideoWithFrameCallback = HTMLVideoElement & {
+  requestVideoFrameCallback?: (
+    callback: (now: number, metadata: unknown) => void,
+  ) => number;
+  cancelVideoFrameCallback?: (handle: number) => void;
+};
+
+const CAROUSEL_OFFSETS = [-3, -2, -1, 0, 1, 2, 3] as const;
+const CAROUSEL_TRANSITION_MS = 580;
+
 function hasMediaSource(value?: string) {
   return Boolean(value && value.trim().length > 0);
 }
 
-function AmenityPlaceholder({ title }: { title: string }) {
+function formatTime(value: number) {
+  if (!Number.isFinite(value) || value < 0) {
+    return "00:00";
+  }
+
+  const totalSeconds = Math.floor(value);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(
+    2,
+    "0",
+  )}`;
+}
+
+function getFiniteMediaDuration(video: HTMLVideoElement) {
+  if (Number.isFinite(video.duration) && video.duration > 0) {
+    return video.duration;
+  }
+
+  if (video.seekable.length > 0) {
+    const seekableEnd = video.seekable.end(video.seekable.length - 1);
+    return Number.isFinite(seekableEnd) && seekableEnd > 0 ? seekableEnd : 0;
+  }
+
+  return 0;
+}
+
+function twoDigits(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+function BrandTreeMark() {
   return (
-    <div className="absolute inset-0 flex items-center justify-center overflow-hidden bg-white text-zinc-950">
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(24,24,27,0.055)_1px,transparent_1px),linear-gradient(90deg,rgba(24,24,27,0.055)_1px,transparent_1px)] bg-[size:42px_42px]" />
-      <div className="absolute left-[16%] top-[18%] h-32 w-32 rounded-full bg-emerald-100/70 blur-3xl" />
-      <div className="absolute bottom-[18%] right-[20%] h-36 w-36 rounded-full bg-amber-100/80 blur-3xl" />
-      <div className="relative px-6 text-center">
-        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.10)]">
-          <Sparkles className="h-7 w-7 text-emerald-700" />
-        </div>
-        <p className="text-xs font-semibold uppercase tracking-[0.34em] text-zinc-500">
-          Media placeholder
-        </p>
-        <h1 className="mt-3 max-w-2xl text-4xl font-semibold tracking-tight sm:text-6xl">
-          {title}
-        </h1>
-      </div>
-    </div>
+    <svg
+      viewBox="0 0 58 70"
+      aria-hidden="true"
+      fill="none"
+      className="h-[46px] w-[38px] shrink-0 drop-shadow-[0_5px_18px_rgba(0,0,0,0.34)] sm:h-[58px] sm:w-[48px]"
+    >
+      <path d="M29 66V17" stroke="currentColor" strokeWidth="1.2" />
+      <path
+        d="M29 15C24 21 20 27 18 34M29 15C34 21 38 27 40 34M29 23C20 26 13 31 8 38M29 23C38 26 45 31 50 38M29 31C18 35 10 42 5 50M29 31C40 35 48 42 53 50M29 39C18 43 11 50 8 58M29 39C40 43 47 50 50 58"
+        stroke="currentColor"
+        strokeWidth="1.1"
+        strokeLinecap="round"
+      />
+      <path
+        d="M29 5C24 9 22 13 22 18M29 5C34 9 36 13 36 18M21 11C16 14 13 18 12 23M37 11C42 14 45 18 46 23M14 19C9 23 7 28 7 33M44 19C49 23 51 28 51 33"
+        stroke="currentColor"
+        strokeWidth="1"
+        strokeLinecap="round"
+      />
+      <path
+        d="M14 62C20 59 24 58 29 58C34 58 38 59 44 62"
+        stroke="currentColor"
+        strokeWidth="1.1"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 
-function AmenityCard({
+function AmenityThumbnail({
   amenity,
-  active,
+  priority = false,
 }: {
   amenity: AmenityPageItem;
-  active: boolean;
+  priority?: boolean;
 }) {
-  return (
-    <div
-      className={`group overflow-hidden rounded-[1.1rem] border ${
-        active
-          ? "border-[#e8d38c]/40 bg-[rgba(15,34,19,0.88)]"
-          : "border-white/8 bg-[rgba(10,22,13,0.68)]"
-      } shadow-[0_16px_34px_rgba(0,0,0,0.18)] transition duration-300`}
-    >
-      <div className="p-2.5">
-        <div className="relative aspect-[16/9] overflow-hidden rounded-[0.95rem] border border-white/10 bg-[#17301d]">
-          {hasMediaSource(amenity.thumbnailSrc) ? (
-            <Image
-              src={amenity.thumbnailSrc as string}
-              alt={amenity.title}
-              fill
-              unoptimized
-              sizes="(max-width: 1024px) 78vw, 280px"
-              className="object-cover transition duration-500 group-hover:scale-[1.04]"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-[#f5f0e3]">
-              <ImageIcon className="h-7 w-7 text-[#76806d]" />
-            </div>
-          )}
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,14,9,0.04),rgba(7,14,9,0.12)_44%,rgba(7,14,9,0.74)_100%)]" />
-          <div className="absolute inset-x-3 bottom-3 flex items-end justify-end gap-3">
-            <span
-              className={`shrink-0 rounded-full px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] ${
-                active
-                  ? "bg-[#ecd38b] text-[#163121]"
-                  : "bg-[rgba(14,39,21,0.82)] text-[#f4e8ba] backdrop-blur-md"
-              }`}
-            >
-              View
-            </span>
-          </div>
-        </div>
+  if (!hasMediaSource(amenity.thumbnailSrc)) {
+    return (
+      <span
+        aria-hidden="true"
+        className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_65%_26%,rgba(219,191,112,0.23),transparent_38%),linear-gradient(135deg,#263229,#0a110d)] text-2xl text-[#e5d39b]"
+      >
+        {amenity.title.slice(0, 1).toUpperCase()}
+      </span>
+    );
+  }
 
-        <div className="flex items-center justify-between gap-3 px-1 pb-0.5 pt-3">
-          <div className="min-w-0">
-            <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#efdfab]/62">
-              {amenity.category}
-            </p>
-            <p className="mt-1 truncate text-[15px] font-semibold text-[#fff7df]">
-              {amenity.title}
-            </p>
-          </div>
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/6 text-[#f0dd9b]">
-            <ArrowUpRight className="h-3.5 w-3.5" />
-          </div>
-        </div>
+  return (
+    <Image
+      src={amenity.thumbnailSrc as string}
+      alt={amenity.title}
+      fill
+      priority={priority}
+      unoptimized
+      sizes="(max-width: 767px) 150px, 190px"
+      className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035]"
+    />
+  );
+}
+
+function FilmstripThumbnail({
+  item,
+  onSelect,
+}: {
+  item: CarouselItem;
+  onSelect: (id: string) => void;
+}) {
+  const distance = Math.abs(item.offset);
+  const isActive = item.offset === 0;
+
+  const visibilityClass =
+    distance === 3
+      ? "hidden lg:block"
+      : distance === 2
+        ? "hidden md:block"
+        : "block";
+
+  const sizeClass = isActive
+    ? "h-[96px] w-[168px] sm:h-[110px] sm:w-[196px] xl:h-[124px] xl:w-[222px]"
+    : distance === 1
+      ? "h-[62px] w-[90px] sm:h-[76px] sm:w-[114px] xl:h-[84px] xl:w-[124px]"
+      : distance === 2
+        ? "h-[72px] w-[108px] xl:h-[80px] xl:w-[118px]"
+        : "h-[70px] w-[104px] xl:h-[76px] xl:w-[112px]";
+
+  const slotClass =
+    item.offset === 0
+      ? "[--deck-x:0px]"
+      : item.offset === -1
+        ? "[--deck-x:-139px] sm:[--deck-x:-167px] xl:[--deck-x:-187px]"
+        : item.offset === 1
+          ? "[--deck-x:139px] sm:[--deck-x:167px] xl:[--deck-x:187px]"
+          : item.offset === -2
+            ? "[--deck-x:-248px] sm:[--deck-x:-290px] xl:[--deck-x:-322px]"
+            : item.offset === 2
+              ? "[--deck-x:248px] sm:[--deck-x:290px] xl:[--deck-x:322px]"
+              : item.offset < 0
+                ? "[--deck-x:-354px] sm:[--deck-x:-408px] xl:[--deck-x:-451px]"
+                : "[--deck-x:354px] sm:[--deck-x:408px] xl:[--deck-x:451px]";
+
+  const targetOpacity = isActive
+    ? 1
+    : distance === 1
+      ? 0.9
+      : distance === 2
+        ? 0.65
+        : 0.4;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: targetOpacity }}
+      exit={{ opacity: 0 }}
+      className={`absolute bottom-0 left-1/2 will-change-transform ${visibilityClass} ${slotClass}`}
+      style={{
+        transform: "translate3d(var(--deck-x), 0, 0)",
+        transition: "transform 580ms cubic-bezier(0.22, 1, 0.36, 1)",
+      }}
+    >
+      <div className="-translate-x-1/2">
+        <motion.button
+          whileHover={{ y: -4, opacity: 1 }}
+          type="button"
+          onClick={() => onSelect(item.amenity.id)}
+          aria-current={isActive ? "true" : undefined}
+          aria-label={
+            isActive
+              ? `Currently showing ${item.amenity.title}`
+              : `Open ${item.amenity.title}`
+          }
+          className={`group relative block shrink-0 overflow-hidden rounded-[7px] bg-[#101712] text-left transition-[width,height,border-color,box-shadow] duration-[580ms] ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e4c56e] ${sizeClass} ${
+            isActive
+              ? "z-10 border border-[#e8ca72]/95 shadow-[0_0_0_1px_rgba(239,213,132,0.18),0_16px_34px_rgba(0,0,0,0.46),0_0_24px_rgba(220,188,95,0.13)]"
+              : "border border-white/10 shadow-[0_12px_26px_rgba(0,0,0,0.32)]"
+          }`}
+        >
+          <AmenityThumbnail amenity={item.amenity} priority={isActive} />
+          <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),transparent_42%,rgba(1,4,2,0.36)_100%)]" />
+        </motion.button>
       </div>
+    </motion.div>
+  );
+}
+
+const VideoPlayerControls = memo(function VideoPlayerControls({
+  videoRef,
+  mediaKey,
+  hasVideo,
+  isPlaying,
+  isMuted,
+  onTogglePlayback,
+  onToggleMuted,
+}: {
+  videoRef: RefObject<HTMLVideoElement | null>;
+  mediaKey: string;
+  hasVideo: boolean;
+  isPlaying: boolean;
+  isMuted: boolean;
+  onTogglePlayback: () => void;
+  onToggleMuted: () => void;
+}) {
+  const progressFillRef = useRef<HTMLSpanElement | null>(null);
+  const seekInputRef = useRef<HTMLInputElement | null>(null);
+  const lastRenderedSecondRef = useRef(-1);
+  const lastRenderedDurationRef = useRef(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  const syncPlaybackProgress = useCallback((time: number, total: number) => {
+    const safeTotal = Number.isFinite(total) && total > 0 ? total : 0;
+    const safeTime = Number.isFinite(time)
+      ? Math.min(Math.max(time, 0), safeTotal || 0)
+      : 0;
+    const progress = safeTotal > 0 ? safeTime / safeTotal : 0;
+
+    if (progressFillRef.current) {
+      progressFillRef.current.style.transform = `scaleX(${progress})`;
+    }
+
+    if (seekInputRef.current) {
+      const progressPercent = progress * 100;
+      seekInputRef.current.max = String(Math.max(safeTotal, 0.01));
+      seekInputRef.current.value = String(safeTime);
+      seekInputRef.current.style.background = `linear-gradient(to right, #d7b767 0%, #d7b767 ${progressPercent}%, rgba(255,255,255,0.16) ${progressPercent}%, rgba(255,255,255,0.16) 100%) center / 100% 2px no-repeat`;
+    }
+  }, []);
+
+  const syncRenderedPlaybackState = useCallback(
+    (video: HTMLVideoElement, force = false) => {
+      const nextTime = video.currentTime || 0;
+      const nextDuration = getFiniteMediaDuration(video);
+      syncPlaybackProgress(nextTime, nextDuration);
+
+      if (
+        force ||
+        Math.abs(nextDuration - lastRenderedDurationRef.current) > 0.01
+      ) {
+        lastRenderedDurationRef.current = nextDuration;
+        setDuration(nextDuration);
+      }
+
+      const nextSecond = Math.floor(nextTime);
+      if (force || nextSecond !== lastRenderedSecondRef.current) {
+        lastRenderedSecondRef.current = nextSecond;
+        setCurrentTime(nextTime);
+      }
+    },
+    [syncPlaybackProgress],
+  );
+
+  const handleSeek = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const nextTime = Number(event.target.value);
+      const video = videoRef.current;
+
+      if (!video || !Number.isFinite(nextTime)) {
+        return;
+      }
+
+      video.currentTime = nextTime;
+      lastRenderedSecondRef.current = Math.floor(nextTime);
+      setCurrentTime(nextTime);
+      syncPlaybackProgress(nextTime, getFiniteMediaDuration(video));
+    },
+    [syncPlaybackProgress, videoRef],
+  );
+
+  useEffect(() => {
+    const video = videoRef.current as VideoWithFrameCallback | null;
+    let videoFrameHandle: number | null = null;
+    let animationFrameHandle: number | null = null;
+    let cancelled = false;
+
+    const cancelScheduledFrame = () => {
+      if (
+        videoFrameHandle !== null &&
+        typeof video?.cancelVideoFrameCallback === "function"
+      ) {
+        video.cancelVideoFrameCallback(videoFrameHandle);
+        videoFrameHandle = null;
+      }
+
+      if (animationFrameHandle !== null) {
+        window.cancelAnimationFrame(animationFrameHandle);
+        animationFrameHandle = null;
+      }
+    };
+
+    const scheduleNextFrame = () => {
+      if (cancelled || !isPlaying || !video) {
+        return;
+      }
+
+      if (typeof video.requestVideoFrameCallback === "function") {
+        videoFrameHandle = video.requestVideoFrameCallback(() => {
+          videoFrameHandle = null;
+          syncRenderedPlaybackState(video);
+          scheduleNextFrame();
+        });
+        return;
+      }
+
+      animationFrameHandle = window.requestAnimationFrame(() => {
+        animationFrameHandle = null;
+        syncRenderedPlaybackState(video);
+        scheduleNextFrame();
+      });
+    };
+
+    const syncFromMediaEvent = () => {
+      if (video) {
+        syncRenderedPlaybackState(video, true);
+      }
+    };
+
+    const syncPausedTime = () => {
+      if (video?.paused) {
+        syncRenderedPlaybackState(video, true);
+      }
+    };
+
+    if (video) {
+      video.addEventListener("loadedmetadata", syncFromMediaEvent);
+      video.addEventListener("durationchange", syncFromMediaEvent);
+      video.addEventListener("seeked", syncFromMediaEvent);
+      video.addEventListener("timeupdate", syncPausedTime);
+    }
+
+    const initialSyncFrame = window.requestAnimationFrame(() => {
+      lastRenderedSecondRef.current = -1;
+      lastRenderedDurationRef.current = 0;
+
+      if (video && hasVideo) {
+        syncRenderedPlaybackState(video, true);
+        scheduleNextFrame();
+      } else {
+        setCurrentTime(0);
+        setDuration(0);
+        syncPlaybackProgress(0, 0);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(initialSyncFrame);
+      cancelScheduledFrame();
+
+      if (video) {
+        video.removeEventListener("loadedmetadata", syncFromMediaEvent);
+        video.removeEventListener("durationchange", syncFromMediaEvent);
+        video.removeEventListener("seeked", syncFromMediaEvent);
+        video.removeEventListener("timeupdate", syncPausedTime);
+      }
+    };
+  }, [
+    hasVideo,
+    isPlaying,
+    mediaKey,
+    syncPlaybackProgress,
+    syncRenderedPlaybackState,
+    videoRef,
+  ]);
+
+  return (
+    <div className="absolute bottom-[12px] left-4 right-4 z-30 grid grid-cols-[48px_minmax(0,1fr)_48px] items-center gap-3 sm:bottom-[17px] sm:left-[34px] sm:right-[38px] sm:grid-cols-[56px_126px_minmax(0,1fr)_56px] sm:gap-4">
+      <button
+        type="button"
+        onClick={onTogglePlayback}
+        disabled={!hasVideo}
+        aria-label={isPlaying ? "Pause video" : "Play video"}
+        className="grid h-[48px] w-[48px] place-items-center rounded-full border border-[#e7d397]/[0.52] bg-[#0d130e]/[0.25] text-[#ead59a] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl transition hover:border-[#f5e09e]/[0.85] hover:bg-[#182118]/[0.50] disabled:cursor-default disabled:opacity-[0.45] sm:h-[56px] sm:w-[56px]"
+      >
+        {isPlaying ? (
+          <Pause className="h-5 w-5 fill-current stroke-[1.5]" aria-hidden="true" />
+        ) : (
+          <Play className="ml-0.5 h-5 w-5 fill-current stroke-[1.5]" aria-hidden="true" />
+        )}
+      </button>
+
+      <div className="hidden items-center gap-2 whitespace-nowrap text-[14px] tabular-nums text-[#f7efd8]/[0.92] sm:flex">
+        <span>{formatTime(currentTime)}</span>
+        <span className="text-[#f7efd8]/[0.30]">/</span>
+        <span className="text-[#f7efd8]/[0.42]">{formatTime(duration)}</span>
+      </div>
+
+      <div className="relative h-6 min-w-0">
+        <span
+          aria-hidden="true"
+          className="absolute left-0 top-1/2 z-[1] h-[2px] w-full -translate-y-1/2 overflow-hidden rounded-full bg-white/[0.16]"
+        >
+          <span
+            ref={progressFillRef}
+            className="absolute inset-0 origin-left scale-x-0 bg-[#d7b767] will-change-transform"
+          />
+        </span>
+        <input
+          ref={seekInputRef}
+          type="range"
+          min={0}
+          max={Math.max(duration, 0.01)}
+          step={0.01}
+          defaultValue={0}
+          onChange={handleSeek}
+          disabled={!hasVideo}
+          aria-label="Video progress"
+          className="absolute inset-0 z-[2] h-full w-full cursor-pointer appearance-none bg-transparent disabled:cursor-default disabled:opacity-[0.45] [&::-moz-range-thumb]:h-[10px] [&::-moz-range-thumb]:w-[10px] [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-[#d9b968] [&::-moz-range-thumb]:shadow-[0_0_0_4px_rgba(215,183,103,0.08),0_0_14px_rgba(215,183,103,0.34)] [&::-moz-range-track]:h-[2px] [&::-moz-range-track]:bg-transparent [&::-webkit-slider-runnable-track]:h-[2px] [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:mt-[-4px] [&::-webkit-slider-thumb]:h-[10px] [&::-webkit-slider-thumb]:w-[10px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#d9b968] [&::-webkit-slider-thumb]:shadow-[0_0_0_4px_rgba(215,183,103,0.08),0_0_14px_rgba(215,183,103,0.34)]"
+        />
+      </div>
+
+      <button
+        type="button"
+        onClick={onToggleMuted}
+        disabled={!hasVideo}
+        aria-label={isMuted ? "Unmute video" : "Mute video"}
+        className="grid h-[48px] w-[48px] place-items-center rounded-full border border-[#e7d397]/[0.52] bg-[#0d130e]/[0.25] text-[#ead59a] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl transition hover:border-[#f5e09e]/[0.85] hover:bg-[#182118]/[0.50] disabled:cursor-default disabled:opacity-[0.45] sm:h-[56px] sm:w-[56px]"
+      >
+        {isMuted ? (
+          <VolumeX className="h-5 w-5 stroke-[1.6]" aria-hidden="true" />
+        ) : (
+          <Volume2 className="h-5 w-5 stroke-[1.6]" aria-hidden="true" />
+        )}
+      </button>
     </div>
   );
-}
+});
 
-function AmenityTagPill({ label }: { label: string }) {
-  return (
-    <span className="rounded-full border border-[#f0dd9b]/24 bg-[rgba(13,31,18,0.54)] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#f2e4b2] backdrop-blur-xl">
-      {label}
-    </span>
-  );
-}
-
-export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) {
+export default function AmenitiesPageClient({
+  data,
+  brandName = "Whispers",
+  brandSubline = "of the Pines",
+  onExplore3D,
+}: AmenitiesPageClientProps) {
   const router = useRouter();
+  const stageRef = useRef<HTMLElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const transitionTokenRef = useRef(0);
+  const carouselTransitionLockedRef = useRef(false);
+  const carouselUnlockTimerRef = useRef<number | null>(null);
+
   const [activeId, setActiveId] = useState(data.items[0]?.id ?? "");
   const [displayedAmenityId, setDisplayedAmenityId] = useState(
     data.items[0]?.id ?? "",
   );
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
-  const [isLandscape, setIsLandscape] = useState(false);
-  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
-  const transitionTokenRef = useRef(0);
-  const {
-    setFirstItemNode: setDesktopAmenitiesFirstItemNode,
-    setListNode: setDesktopAmenitiesListNode,
-    setScrollAreaNode: setDesktopAmenitiesScrollAreaNode,
-    viewportHeight: desktopAmenitiesViewportHeight,
-  } = useSnapListViewport({
-    itemCount: data.items.length,
-    targetVisibleCards: 2.1,
-  });
-  const {
-    setFirstItemNode: setMobileAmenitiesFirstItemNode,
-    setListNode: setMobileAmenitiesListNode,
-    setScrollAreaNode: setMobileAmenitiesScrollAreaNode,
-    viewportHeight: mobileAmenitiesViewportHeight,
-  } = useSnapListViewport({
-    itemCount: data.items.length,
-    targetVisibleCards: 2.1,
-  });
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isMuted, setIsMuted] = useState(true);
 
-  const activeIndex = useMemo(
-    () => Math.max(0, data.items.findIndex((item) => item.id === activeId)),
-    [activeId, data.items],
-  );
+  const activeIndex = useMemo(() => {
+    const index = data.items.findIndex((item) => item.id === activeId);
+    return index >= 0 ? index : 0;
+  }, [activeId, data.items]);
+
   const activeAmenity = data.items[activeIndex] ?? data.items[0];
   const displayedAmenity =
     data.items.find((item) => item.id === displayedAmenityId) ?? activeAmenity;
-  const desktopAmenitiesViewportHeightWithBuffer = desktopAmenitiesViewportHeight
-    ? Math.ceil(desktopAmenitiesViewportHeight) + 18
-    : null;
-  const mobileAmenitiesViewportHeightWithBuffer = mobileAmenitiesViewportHeight
-    ? Math.ceil(mobileAmenitiesViewportHeight) + 18
-    : null;
 
-  const selectAmenity = (id: string) => {
-    setActiveId(id);
-    setIsPanelOpen(false);
-  };
+  const carouselItems = useMemo<CarouselItem[]>(() => {
+    const total = data.items.length;
 
-  const goToRelativeAmenity = (offset: number) => {
-    if (!data.items.length) {
+    if (!total) {
+      return [];
+    }
+
+    if (total >= CAROUSEL_OFFSETS.length) {
+      return CAROUSEL_OFFSETS.map((offset) => {
+        const dataIndex = (activeIndex + offset + total) % total;
+        return {
+          amenity: data.items[dataIndex],
+          offset,
+          dataIndex,
+        };
+      });
+    }
+
+    const half = Math.floor(total / 2);
+    return Array.from({ length: total }, (_, position) => {
+      const offset = position - half;
+      const dataIndex = (activeIndex + offset + total) % total;
+
+      return {
+        amenity: data.items[dataIndex],
+        offset,
+        dataIndex,
+      };
+    });
+  }, [activeIndex, data.items]);
+
+  const beginCarouselTransition = useCallback(() => {
+    if (carouselTransitionLockedRef.current) {
+      return false;
+    }
+
+    carouselTransitionLockedRef.current = true;
+    carouselUnlockTimerRef.current = window.setTimeout(() => {
+      carouselTransitionLockedRef.current = false;
+      carouselUnlockTimerRef.current = null;
+    }, CAROUSEL_TRANSITION_MS);
+
+    return true;
+  }, []);
+
+  const selectAmenity = useCallback(
+    (id: string) => {
+      if (id === activeId || !beginCarouselTransition()) {
+        return;
+      }
+
+      setActiveId(id);
+    },
+    [activeId, beginCarouselTransition],
+  );
+
+  const goToRelativeAmenity = useCallback(
+    (offset: number) => {
+      if (!data.items.length) {
+        return;
+      }
+
+      if (!beginCarouselTransition()) {
+        return;
+      }
+
+      const nextIndex =
+        (activeIndex + offset + data.items.length) % data.items.length;
+      setActiveId(data.items[nextIndex].id);
+    },
+    [activeIndex, beginCarouselTransition, data.items],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (carouselUnlockTimerRef.current !== null) {
+        window.clearTimeout(carouselUnlockTimerRef.current);
+      }
+    };
+  }, []);
+
+  const toggleFullscreen = useCallback(async () => {
+    if (typeof document === "undefined") {
       return;
     }
 
-    const nextIndex =
-      (activeIndex + offset + data.items.length) % data.items.length;
-    setActiveId(data.items[nextIndex].id);
-  };
-
-  const shouldForceLandscape =
-    isLandscape && viewportSize.height > viewportSize.width;
-
-  const toggleLandscape = async () => {
-    if (isLandscape) {
+    try {
       if (document.fullscreenElement) {
-        await document.exitFullscreen().catch(() => {});
+        await document.exitFullscreen();
+        return;
       }
-      setIsLandscape(false);
-    } else {
-      const elem = document.documentElement;
-      if (elem.requestFullscreen) {
-        await elem.requestFullscreen().catch(() => {});
-      }
-      const orientation = screen.orientation as ScreenOrientationWithLock | undefined;
-      if (orientation?.lock) {
-        await orientation.lock("landscape").catch(() => {});
-      }
-      setIsLandscape(true);
+
+      const element = stageRef.current ?? document.documentElement;
+      await element.requestFullscreen();
+
+      const orientation = screen.orientation as
+        | ScreenOrientationWithLock
+        | undefined;
+      await orientation?.lock?.("landscape").catch(() => undefined);
+    } catch {
+      // Fullscreen and orientation locking are browser/permission dependent.
     }
-  };
+  }, []);
+
+  const togglePlayback = useCallback(async () => {
+    const video = videoRef.current;
+
+    if (!video) {
+      return;
+    }
+
+    if (video.paused) {
+      try {
+        await video.play();
+        setIsPlaying(true);
+      } catch {
+        setIsPlaying(false);
+      }
+      return;
+    }
+
+    video.pause();
+    setIsPlaying(false);
+  }, []);
+
+  const toggleMuted = useCallback(() => {
+    const video = videoRef.current;
+    const nextMuted = !isMuted;
+
+    setIsMuted(nextMuted);
+    if (video) {
+      video.muted = nextMuted;
+    }
+  }, [isMuted]);
+
+  const handleExplore3D = useCallback(() => {
+    if (!activeAmenity) {
+      return;
+    }
+
+    if (onExplore3D) {
+      onExplore3D(activeAmenity);
+      return;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent("amenity:explore3d", {
+        detail: activeAmenity,
+      }),
+    );
+  }, [activeAmenity, onExplore3D]);
 
   useEffect(() => {
     scheduleAmenityVideoWarmup({
@@ -248,10 +710,6 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
   }, [activeId]);
 
   useEffect(() => {
-    if (typeof document === "undefined") {
-      return;
-    }
-
     const previousHtmlOverflow = document.documentElement.style.overflow;
     const previousBodyOverflow = document.body.style.overflow;
     const previousBodyHeight = document.body.style.height;
@@ -268,33 +726,40 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const updateViewportSize = () => {
-      setViewportSize({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
+    const onFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
     };
 
-    updateViewportSize();
-    window.addEventListener("resize", updateViewportSize);
-    window.addEventListener("orientationchange", updateViewportSize);
-
+    document.addEventListener("fullscreenchange", onFullscreenChange);
     return () => {
-      window.removeEventListener("resize", updateViewportSize);
-      window.removeEventListener("orientationchange", updateViewportSize);
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
     };
   }, []);
 
   useEffect(() => {
-    if (!activeAmenity) {
-      return;
-    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "ArrowLeft") {
+        goToRelativeAmenity(-1);
+      }
 
-    if (activeAmenity.id === displayedAmenityId) {
+      if (event.key === "ArrowRight") {
+        goToRelativeAmenity(1);
+      }
+
+      if (event.code === "Space" && event.target === document.body) {
+        event.preventDefault();
+        void togglePlayback();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [goToRelativeAmenity, togglePlayback]);
+
+  useEffect(() => {
+    if (!activeAmenity || activeAmenity.id === displayedAmenityId) {
       return;
     }
 
@@ -323,26 +788,14 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
     preloadVideo.src = activeAmenity.videoSrc as string;
 
     const revealAmenity = () => {
-      if (transitionTokenRef.current !== token) {
-        return;
+      if (transitionTokenRef.current === token) {
+        setDisplayedAmenityId(activeAmenity.id);
       }
-
-      setDisplayedAmenityId(activeAmenity.id);
     };
 
     preloadVideo.addEventListener("loadeddata", revealAmenity, { once: true });
     preloadVideo.addEventListener("canplay", revealAmenity, { once: true });
-    preloadVideo.addEventListener(
-      "error",
-      () => {
-        if (transitionTokenRef.current !== token) {
-          return;
-        }
-
-        setDisplayedAmenityId(activeAmenity.id);
-      },
-      { once: true },
-    );
+    preloadVideo.addEventListener("error", revealAmenity, { once: true });
     preloadVideo.load();
 
     return () => {
@@ -352,338 +805,270 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
     };
   }, [activeAmenity, displayedAmenityId]);
 
-  if (!activeAmenity) {
+  useEffect(() => {
+    const frameId = window.requestAnimationFrame(() => {
+      const video = videoRef.current;
+
+      if (!video) {
+        setIsPlaying(false);
+        return;
+      }
+
+      void video
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch(() => setIsPlaying(false));
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [displayedAmenityId]);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.muted = isMuted;
+    }
+  }, [isMuted]);
+
+  if (!activeAmenity || !displayedAmenity) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-white text-zinc-950">
-        No amenities found.
+      <main className="grid min-h-[100dvh] place-items-center bg-[#050907] text-[#f7efd8]">
+        <p>No amenities found.</p>
       </main>
     );
   }
 
+  const activePosition = twoDigits(activeIndex + 1);
+  const totalPosition = twoDigits(data.items.length);
+  const heroEyebrow = activeAmenity.category || data.eyebrow || "Amenity";
+  const hasVideo = hasMediaSource(displayedAmenity.videoSrc);
+
   return (
-    <main className="relative h-[100dvh] max-h-[100dvh] min-h-[100dvh] overflow-hidden overscroll-none bg-[#040805] text-white">
-      <div
-        className="relative h-full w-full overflow-hidden bg-[#040805]"
-        style={
-          shouldForceLandscape
-            ? {
-                position: "absolute",
-                top: 0,
-                left: "100dvw",
-                width: "100dvh",
-                height: "100dvw",
-                transform: "rotate(90deg)",
-                transformOrigin: "top left",
-              }
-            : undefined
-        }
-      >
-      {hasMediaSource(displayedAmenity.videoSrc) ? (
-        <video
-          key={displayedAmenity.videoSrc}
-          className="absolute inset-0 h-full w-full object-cover"
-          src={displayedAmenity.videoSrc}
-          poster={
-            hasMediaSource(displayedAmenity.thumbnailSrc)
-              ? displayedAmenity.thumbnailSrc
-              : undefined
-          }
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-        />
-      ) : hasMediaSource(displayedAmenity.thumbnailSrc) ? (
-        <Image
-          src={displayedAmenity.thumbnailSrc as string}
-          alt={displayedAmenity.title}
-          fill
-          sizes="100vw"
-          unoptimized
-          className="object-cover"
-          priority
-        />
-      ) : (
-        <AmenityPlaceholder title={displayedAmenity.title} />
-      )}
-
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[38vh] bg-[linear-gradient(180deg,rgba(4,8,5,0)_0%,rgba(4,8,5,0.16)_34%,rgba(4,8,5,0.72)_100%)]" />
-
-      <button
-        type="button"
-        onClick={() => router.back()}
-        className="fixed left-3 top-3 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-[#f0dd9b]/16 bg-[rgba(8,22,12,0.66)] text-[#f6edd0] shadow-[0_12px_28px_rgba(0,0,0,0.22)] backdrop-blur-xl transition hover:bg-[rgba(12,28,16,0.82)] sm:left-4 sm:top-4"
-        aria-label="Go back"
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </button>
-
-      <div className="fixed right-3 top-3 z-50 flex items-center gap-2 sm:right-4 sm:top-4 xl:hidden">
-        <button
-          type="button"
-          onClick={toggleLandscape}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-[#f0dd9b]/16 bg-[rgba(8,22,12,0.66)] text-[#f7e7b5] shadow-[0_12px_28px_rgba(0,0,0,0.22)] backdrop-blur-xl transition hover:bg-[rgba(12,28,16,0.82)]"
-          aria-label={isLandscape ? "Exit landscape mode" : "Enter landscape mode"}
-        >
-          <PhoneRotatePortraitIcon size={17} />
-        </button>
-        <button
-          type="button"
-          onClick={() => setIsPanelOpen(true)}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-[#f0dd9b]/16 bg-[rgba(8,22,12,0.66)] text-[#f7e7b5] shadow-[0_12px_28px_rgba(0,0,0,0.22)] backdrop-blur-xl transition hover:bg-[rgba(12,28,16,0.82)]"
-          aria-label="Open amenities guide"
-        >
-          <Menu className="h-4.5 w-4.5" />
-        </button>
+    <main
+      ref={stageRef}
+      className={`${interfaceSans.className} relative isolate h-[100dvh] min-h-[100dvh] w-full overflow-hidden bg-[#050907] text-[#f7efd8]`}
+    >
+      {/* Full-screen amenity media */}
+      <div className="absolute inset-0" aria-hidden="true">
+        {hasMediaSource(displayedAmenity.videoSrc) ? (
+          <video
+            ref={videoRef}
+            key={displayedAmenity.videoSrc}
+            className="h-full w-full object-cover object-center"
+            src={displayedAmenity.videoSrc}
+            poster={
+              hasMediaSource(displayedAmenity.thumbnailSrc)
+                ? displayedAmenity.thumbnailSrc
+                : undefined
+            }
+            autoPlay
+            muted={isMuted}
+            loop
+            playsInline
+            preload="auto"
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
+          />
+        ) : hasMediaSource(displayedAmenity.thumbnailSrc) ? (
+          <Image
+            key={displayedAmenity.thumbnailSrc}
+            src={displayedAmenity.thumbnailSrc as string}
+            alt=""
+            fill
+            priority
+            unoptimized
+            sizes="100vw"
+            className="object-cover object-center"
+          />
+        ) : (
+          <div className="grid h-full w-full place-items-center bg-[radial-gradient(circle_at_72%_26%,rgba(178,153,83,0.18),transparent_31%),linear-gradient(135deg,#142118,#050907_58%)]">
+            <span className={`${displaySerif.className} text-5xl text-[#f3e7c4]/80 sm:text-8xl`}>
+              {displayedAmenity.title}
+            </span>
+          </div>
+        )}
       </div>
 
-      <section className="pointer-events-none fixed bottom-[5.25rem] left-4 right-4 z-20 sm:bottom-24 sm:left-5 sm:right-auto xl:bottom-5 xl:left-5 xl:right-auto 2xl:left-6">
-        <div className="w-full rounded-[1.35rem] border border-[#dfcf9b]/14 bg-[linear-gradient(180deg,rgba(8,24,13,0.58),rgba(8,24,13,0.3))] p-4 shadow-[0_22px_60px_rgba(0,0,0,0.26)] backdrop-blur-[18px] sm:w-[28rem] sm:p-5 2xl:w-[29rem]">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#f0dd9b]/18 bg-[rgba(14,33,20,0.54)] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.22em] text-[#f1deb0]">
-              <Leaf className="h-3 w-3 text-[#efcf73]" />
-              {displayedAmenity.category}
-            </span>
-            <span className="rounded-full border border-white/8 bg-white/6 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-white/70">
-              {activeIndex + 1} of {data.items.length}
-            </span>
-            {displayedAmenity.statLabel && displayedAmenity.statValue ? (
-              <span className="rounded-full border border-white/8 bg-white/6 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-white/70">
-                {displayedAmenity.statLabel}: {displayedAmenity.statValue}
-              </span>
-            ) : null}
-          </div>
+      {/* Cinematic gradients: no visible UI container */}
+      <div className="pointer-events-none absolute inset-0 z-[1] bg-[linear-gradient(180deg,rgba(2,5,3,0.64)_0%,rgba(2,5,3,0.15)_15%,transparent_34%)]" />
+      <div className="pointer-events-none absolute inset-0 z-[1] bg-[linear-gradient(90deg,rgba(2,5,3,0.82)_0%,rgba(2,5,3,0.55)_18%,rgba(2,5,3,0.12)_34%,transparent_51%)]" />
+      <div className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(ellipse_at_50%_112%,rgba(0,0,0,0.96)_0%,rgba(0,0,0,0.48)_39%,transparent_66%),linear-gradient(180deg,transparent_53%,rgba(2,5,3,0.12)_66%,rgba(2,5,3,0.86)_100%)]" />
 
-          <h2 className="mt-3 max-w-3xl text-[2rem] leading-[0.94] text-[#fff7df] drop-shadow-[0_10px_24px_rgba(0,0,0,0.28)] sm:text-[2.65rem]">
-            <span className={displaySerif.className}>{displayedAmenity.title}</span>
-          </h2>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-[#f7f2e4]/82">
-            {displayedAmenity.shortDescription}
-          </p>
+      {/* Header */}
+      <header className="absolute left-5 right-5 top-4 z-20 flex min-h-[58px] items-center sm:left-[34px] sm:right-[38px] sm:top-[24px]">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          aria-label="Go back"
+          className="inline-flex items-center gap-2.5 bg-transparent p-0 text-[#efdda5] transition hover:text-[#fff0bd] sm:gap-3"
+        >
+          <BrandTreeMark />
+          <span className="flex min-w-[104px] flex-col items-start leading-[0.86] text-left sm:min-w-[136px]">
+            <span
+              className={`${displaySerif.className} text-[24px] tracking-[0.01em] drop-shadow-[0_4px_18px_rgba(0,0,0,0.4)] sm:text-[31px]`}
+            >
+              {brandName}
+            </span>
+            <span
+              className={`${displaySerif.className} mt-[6px] text-[13px] tracking-[0.035em] drop-shadow-[0_4px_18px_rgba(0,0,0,0.4)] sm:mt-[7px] sm:text-[17px]`}
+            >
+              {brandSubline}
+            </span>
+          </span>
+        </button>
 
-          {displayedAmenity.tags?.length ? (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {displayedAmenity.tags.slice(0, 3).map((tag) => (
-                <AmenityTagPill key={tag} label={tag} />
+        <span className="mx-4 h-[40px] w-px bg-[linear-gradient(180deg,transparent,rgba(234,217,166,0.46),transparent)] sm:ml-[26px] sm:mr-[38px] sm:h-[51px]" />
+
+        <span
+          className={`${displaySerif.className} hidden text-[28px] italic tracking-[0.015em] text-[#d9bd73] drop-shadow-[0_4px_18px_rgba(0,0,0,0.38)] sm:block lg:text-[32px]`}
+        >
+          {data.title || "Amenities"}
+        </span>
+
+        <div className="ml-auto flex items-center gap-2.5 sm:gap-[13px]">
+          <button
+            type="button"
+            onClick={() => router.push("/master-plan")}
+            aria-label="View masterplan"
+            className="inline-flex h-[44px] items-center gap-2 rounded-full border border-[#e7d397]/50 bg-[#0d130e]/[0.25] px-4 text-[13px] font-medium text-[#ead59a] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_34px_rgba(0,0,0,0.21)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-[#f5e09e]/80 hover:bg-[#182118]/[0.50] sm:h-[48px] sm:gap-2.5 sm:px-[21px] sm:text-[14px]"
+          >
+            <Map className="h-[18px] w-[18px] sm:h-5 sm:w-5" aria-hidden="true" />
+            <span className="hidden sm:inline">View Masterplan</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+            className="grid h-[44px] w-[44px] place-items-center rounded-full border border-[#e7d397]/50 bg-[#0d130e]/[0.25] text-[#ead59a] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_34px_rgba(0,0,0,0.21)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-[#f5e09e]/80 hover:bg-[#182118]/[0.50] sm:h-[48px] sm:w-[48px]"
+          >
+            {isFullscreen ? (
+              <Minimize2 className="h-[18px] w-[18px]" aria-hidden="true" />
+            ) : (
+              <Maximize2 className="h-[18px] w-[18px]" aria-hidden="true" />
+            )}
+          </button>
+        </div>
+      </header>
+
+      {/* Hero copy — directly on media, no card/container */}
+      <section
+        className="absolute bottom-[280px] left-5 z-10 w-[calc(100vw-40px)] sm:bottom-auto sm:left-[34px] sm:top-[33.5%] sm:w-[calc(100vw-72px)]"
+        aria-live="polite"
+      >
+        <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#f2ead5]/[0.88] drop-shadow-[0_4px_18px_rgba(0,0,0,0.7)] sm:mb-[17px] sm:text-[13px]">
+          {heroEyebrow}
+        </p>
+
+        <h1
+          className="m-0 whitespace-nowrap text-[clamp(2.05rem,7.6vw,4.75rem)] font-medium leading-[0.95] tracking-[-0.04em] text-[#efdda2] drop-shadow-[0_18px_48px_rgba(0,0,0,0.48)] sm:text-[clamp(3.25rem,4.6vw,5.6rem)]"
+        >
+          {activeAmenity.title}
+        </h1>
+
+        <span className="mt-6 block h-[2px] w-[39px] bg-[#d7b767] shadow-[0_0_12px_rgba(215,183,103,0.25)] sm:mt-[27px]" />
+
+        <p className="mt-5 max-w-[440px] text-[14px] leading-[1.55] text-[#faf5e7]/[0.92] drop-shadow-[0_4px_16px_rgba(0,0,0,0.62)] sm:mt-[20px] sm:text-[17px]">
+          {activeAmenity.shortDescription}
+        </p>
+
+        <button
+          type="button"
+          onClick={handleExplore3D}
+          className="mt-6 inline-flex items-center gap-3 bg-transparent p-0 text-[14px] font-medium text-[#e7cb79] drop-shadow-[0_4px_15px_rgba(0,0,0,0.6)] transition hover:-translate-y-0.5 hover:text-[#ffe6a0] sm:mt-[27px] sm:text-[15px]"
+        >
+          <Orbit className="h-[24px] w-[24px] stroke-[1.5]" aria-hidden="true" />
+          <span>Explore in 3D</span>
+        </button>
+      </section>
+
+      {/* Flat filmstrip carousel — replaces the old rounded 3D deck */}
+      <section
+        className="absolute bottom-[72px] left-1/2 z-20 h-[204px] w-[calc(100vw-20px)] -translate-x-1/2 sm:bottom-[76px] sm:w-[min(1120px,88vw)] xl:w-[min(1320px,90vw)]"
+        aria-label="Amenity carousel"
+      >
+        <button
+          type="button"
+          onClick={() => goToRelativeAmenity(-1)}
+          aria-label="Previous carousel item"
+          className="absolute left-1/2 top-[62px] z-20 -ml-4 grid h-8 w-8 -translate-x-[190px] place-items-center bg-transparent text-[#e6c86e] transition hover:scale-110 hover:text-[#ffe6a0] sm:-translate-x-[515px] xl:-translate-x-[565px]"
+        >
+          <ChevronLeft className="h-[22px] w-[22px] stroke-[1.65]" aria-hidden="true" />
+        </button>
+
+        <MotionConfig
+          reducedMotion="user"
+          transition={{
+            opacity: { duration: 0.28 },
+          }}
+        >
+          <div className="absolute left-10 right-10 top-0 h-[132px] sm:left-12 sm:right-12 xl:left-16 xl:right-16">
+            <AnimatePresence initial={false}>
+              {carouselItems.map((item) => (
+                <FilmstripThumbnail
+                  key={item.amenity.id}
+                  item={item}
+                  onSelect={selectAmenity}
+                />
               ))}
-            </div>
-          ) : null}
+            </AnimatePresence>
+          </div>
+        </MotionConfig>
+
+        <button
+          type="button"
+          onClick={() => goToRelativeAmenity(1)}
+          aria-label="Next carousel item"
+          className="absolute left-1/2 top-[62px] z-20 -ml-4 grid h-8 w-8 translate-x-[190px] place-items-center bg-transparent text-[#e6c86e] transition hover:scale-110 hover:text-[#ffe6a0] sm:translate-x-[515px] xl:translate-x-[565px]"
+        >
+          <ChevronRight className="h-[22px] w-[22px] stroke-[1.65]" aria-hidden="true" />
+        </button>
+
+        <div className="absolute left-1/2 top-[134px] -translate-x-1/2 text-center drop-shadow-[0_4px_16px_rgba(0,0,0,0.72)] sm:top-[136px]">
+          <p className="text-[10px] font-medium tracking-[0.12em] text-[#e8d18c]/[0.90] sm:text-[11px]">
+            {activePosition}
+            <span className="mx-2 text-[#f5ead2]/[0.35]">/</span>
+            {totalPosition}
+          </p>
+          <p
+            className="mt-[2px] max-w-[320px] truncate text-[17px] font-medium leading-none text-[#f5ead1] sm:text-[19px]"
+          >
+            {activeAmenity.title}
+          </p>
+        </div>
+
+        <div className="absolute bottom-[2px] left-1/2 flex max-w-[88vw] -translate-x-1/2 items-center justify-center gap-[7px] sm:gap-[8px]">
+          {data.items.map((item, index) => {
+            const isActive = index === activeIndex;
+
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => selectAmenity(item.id)}
+                aria-label={`Open ${item.title}`}
+                aria-current={isActive ? "true" : undefined}
+                className={`h-[3px] rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#f0d27d] ${
+                  isActive
+                    ? "w-[16px] bg-[#e6c86d] shadow-[0_0_10px_rgba(230,200,109,0.5)]"
+                    : "w-[13px] bg-white/[0.16] hover:bg-white/[0.32]"
+                }`}
+              />
+            );
+          })}
         </div>
       </section>
 
-      <div className="pointer-events-none fixed inset-x-0 bottom-4 z-20 flex justify-center px-4 sm:bottom-5 sm:px-5 xl:px-[22rem] 2xl:px-[23rem]">
-        <div className="pointer-events-auto flex w-full max-w-[28rem] items-center gap-2 rounded-[999px] border border-[#dfcf9b]/16 bg-[linear-gradient(180deg,rgba(9,25,14,0.72),rgba(9,25,14,0.46))] px-2.5 py-2.5 shadow-[0_20px_44px_rgba(0,0,0,0.24)] backdrop-blur-[18px] sm:gap-2.5 sm:px-3">
-          <button
-            type="button"
-            onClick={() => goToRelativeAmenity(-1)}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#f0dd9b]/18 bg-[rgba(15,34,20,0.62)] text-[#f7e7b5] transition hover:bg-[rgba(22,46,29,0.82)]"
-            aria-label="Previous amenity"
-          >
-            <ChevronLeft className="h-4.5 w-4.5" />
-          </button>
-
-          <div className="min-w-0 flex-1 px-1 text-center">
-            <div className={`${displaySerif.className} truncate text-[1.05rem] text-[#fff7df] sm:text-[1.2rem]`}>
-              {displayedAmenity.title}
-            </div>
-            <div className="mt-1.5 flex items-center justify-center gap-1.5">
-              {data.items.map((item, index) => (
-                <span
-                  key={item.id}
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    index === activeIndex
-                      ? "w-6 bg-[#efcf73] shadow-[0_0_12px_rgba(239,207,115,0.42)]"
-                      : "w-1.5 bg-white/24"
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => goToRelativeAmenity(1)}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#f0dd9b]/18 bg-[rgba(15,34,20,0.62)] text-[#f7e7b5] transition hover:bg-[rgba(22,46,29,0.82)]"
-            aria-label="Next amenity"
-          >
-            <ChevronRight className="h-4.5 w-4.5" />
-          </button>
-        </div>
-      </div>
-
-      {isPanelCollapsed ? (
-        <button
-          type="button"
-          onClick={() => setIsPanelCollapsed(false)}
-          className="fixed right-5 top-5 z-40 hidden h-10 w-10 items-center justify-center rounded-full border border-[#f0dd9b]/16 bg-[rgba(9,25,14,0.72)] text-[#f7e7b5] shadow-[0_14px_30px_rgba(0,0,0,0.24)] backdrop-blur-[14px] transition hover:bg-[rgba(14,34,20,0.88)] xl:flex"
-          aria-label="Open amenities sidebar"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-      ) : (
-        <aside className="fixed right-5 top-1/2 z-30 hidden w-[18.75rem] -translate-y-1/2 xl:block 2xl:w-[19.5rem]">
-          <div className="relative max-h-[min(70vh,36rem)] overflow-hidden rounded-[1.55rem] border border-[#dfcf9b]/14 bg-[linear-gradient(180deg,rgba(8,24,13,0.76),rgba(8,24,13,0.42))] text-white shadow-[0_24px_60px_rgba(0,0,0,0.28)] backdrop-blur-[18px] 2xl:max-h-[min(74vh,39rem)]">
-            <div className="relative px-4 pb-3 pt-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.28em] text-[#efdfab]/68">
-                    <Trees className="h-3.5 w-3.5 text-[#efcf73]" />
-                    Field Guide
-                  </div>
-                  <h3 className={`${displaySerif.className} mt-2 text-[1.55rem] leading-none text-[#fff7df]`}>
-                    Amenities
-                  </h3>
-                  <p className="mt-2 text-[13px] leading-5 text-[#f6f0de]/62">
-                    A calmer guide to the green spaces.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setIsPanelCollapsed(true)}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#f0dd9b]/16 bg-[rgba(15,34,20,0.58)] text-[#f7e7b5] transition hover:bg-[rgba(22,46,29,0.82)]"
-                  aria-label="Collapse amenities sidebar"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="mt-4 rounded-[1.15rem] border border-white/8 bg-[rgba(7,20,11,0.34)] p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#efdfab]/56">
-                      Now Showing
-                    </p>
-                    <p className={`${displaySerif.className} mt-1 text-[1.2rem] text-[#fff7df]`}>
-                      {activeAmenity.title}
-                    </p>
-                  </div>
-                  <div className="rounded-full border border-white/8 bg-white/6 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/70">
-                    {activeIndex + 1}/{data.items.length}
-                  </div>
-                </div>
-                <p className="mt-2 text-[13px] leading-5 text-[#f6f0de]/64">
-                  {activeAmenity.shortDescription}
-                </p>
-              </div>
-            </div>
-
-            <div
-              ref={setDesktopAmenitiesScrollAreaNode}
-              className="custom-scrollbar overflow-y-auto overscroll-contain px-3.5 pb-3 snap-y snap-mandatory"
-              style={
-                desktopAmenitiesViewportHeightWithBuffer
-                  ? { height: `${desktopAmenitiesViewportHeightWithBuffer}px` }
-                  : undefined
-              }
-            >
-              <div
-                ref={setDesktopAmenitiesListNode}
-                className="space-y-2.5 pb-2"
-              >
-                {data.items.map((amenity, index) => {
-                  const active = amenity.id === activeAmenity.id;
-
-                  return (
-                    <button
-                      key={amenity.id}
-                      ref={
-                        index === 0
-                          ? setDesktopAmenitiesFirstItemNode
-                          : undefined
-                      }
-                      type="button"
-                      onClick={() => selectAmenity(amenity.id)}
-                      className={`w-full snap-start snap-always rounded-[1.1rem] border p-2 text-left transition ${
-                        active
-                          ? "border-[#efcf73]/32 bg-[rgba(13,31,18,0.74)] shadow-[0_14px_28px_rgba(0,0,0,0.18)]"
-                          : "border-white/8 bg-[rgba(7,18,10,0.44)] hover:border-[#f0dd9b]/16 hover:bg-[rgba(9,23,13,0.62)]"
-                      }`}
-                    >
-                      <AmenityCard amenity={amenity} active={active} />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </aside>
-      )}
-
-      <div
-        className={`fixed inset-0 z-40 bg-[rgba(2,7,4,0.56)] backdrop-blur-md transition xl:hidden ${
-          isPanelOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
-        }`}
-        onClick={() => setIsPanelOpen(false)}
+      <VideoPlayerControls
+        videoRef={videoRef}
+        mediaKey={displayedAmenity.id}
+        hasVideo={hasVideo}
+        isPlaying={isPlaying}
+        isMuted={isMuted}
+        onTogglePlayback={togglePlayback}
+        onToggleMuted={toggleMuted}
       />
-      {isPanelOpen ? (
-        <aside className="fixed inset-x-3 bottom-3 z-50 overflow-hidden rounded-[1.25rem] border border-[#dfcf9b]/16 bg-[linear-gradient(180deg,rgba(8,24,13,0.9),rgba(8,24,13,0.68))] text-white shadow-[0_22px_70px_rgba(0,0,0,0.34)] backdrop-blur-[20px] sm:inset-x-4 sm:bottom-4 md:left-auto md:right-4 md:top-1/2 md:w-[18.75rem] md:max-h-[min(70dvh,38rem)] md:-translate-y-1/2 md:rounded-[1.45rem]">
-          <div className="flex h-full flex-col">
-            <div className="flex items-start justify-between gap-3 px-4 pb-3 pt-4">
-              <div>
-                <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-[#efdfab]/66">
-                  {data.eyebrow}
-                </p>
-                <p className={`${displaySerif.className} mt-2 text-[1.45rem] leading-none text-[#fff7df]`}>
-                  Amenities
-                </p>
-                <p className="mt-2 text-[13px] leading-5 text-[#f6f0de]/62">
-                  Choose the next space.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsPanelOpen(false)}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-[#f0dd9b]/16 bg-[rgba(15,34,20,0.6)] text-[#f7e7b5]"
-                aria-label="Close amenities"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div
-              ref={setMobileAmenitiesScrollAreaNode}
-              className="custom-scrollbar overflow-y-auto overscroll-contain px-3.5 pb-3 snap-y snap-mandatory"
-              style={
-                mobileAmenitiesViewportHeightWithBuffer
-                  ? { height: `${mobileAmenitiesViewportHeightWithBuffer}px` }
-                  : undefined
-              }
-            >
-              <div
-                ref={setMobileAmenitiesListNode}
-                className="space-y-2.5 pb-2"
-              >
-                {data.items.map((amenity, index) => {
-                  const active = amenity.id === activeAmenity.id;
-
-                  return (
-                    <button
-                      key={amenity.id}
-                      ref={
-                        index === 0
-                          ? setMobileAmenitiesFirstItemNode
-                          : undefined
-                      }
-                      type="button"
-                      onClick={() => selectAmenity(amenity.id)}
-                      className={`w-full snap-start snap-always rounded-[1.05rem] border p-2 text-left transition ${
-                        active
-                          ? "border-[#efcf73]/32 bg-[rgba(13,31,18,0.78)]"
-                          : "border-white/8 bg-[rgba(7,18,10,0.52)]"
-                      }`}
-                    >
-                      <AmenityCard amenity={amenity} active={active} />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </aside>
-      ) : null}
-      </div>
     </main>
   );
 }

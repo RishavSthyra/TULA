@@ -61,6 +61,7 @@ export default function RouteChrome() {
     shouldMergeDockIntoCta || isWalkthroughRoute || isProjectOverviewRoute;
   const shouldHideDock =
     isHomeRoute ||
+    isAmenitiesRoute ||
     isDocklessRoute ||
     shouldMergeLinksForRoute ||
     (pathname === "/master-plan" &&

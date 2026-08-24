@@ -8,6 +8,8 @@ import {
   signR2AssetKeys,
 } from "@/lib/server/r2-signed-assets";
 import { getPublishedDeveloperRuntimeConfig } from "@/lib/developer-config";
+import { filterSignableAssetKeys } from "@/lib/master-plan-asset-keys";
+import { getLocalThreeDsMaxTrialMasterPlanConfig } from "@/lib/master-plan-3dsmax-trial";
 
 export const metadata = buildPageMetadata({
   title: "Master Plan",
@@ -43,8 +45,9 @@ export default async function MasterPlanPage() {
 
   const workerDomain = getAssetWorkerDomain();
   const runtimeConfig = await getPublishedDeveloperRuntimeConfig();
-  const masterPlan = runtimeConfig.masterPlan;
-  const signedMasterPlanCriticalAssets = signR2AssetKeys([
+  const masterPlan =
+    getLocalThreeDsMaxTrialMasterPlanConfig() ?? runtimeConfig.masterPlan;
+  const criticalAssetKeys = filterSignableAssetKeys([
     masterPlan.fallbackImageKey,
     masterPlan.scrubVideoKey,
     masterPlan.interactionVideoKey,
@@ -53,6 +56,8 @@ export default async function MasterPlanPage() {
       video.reverseKey,
     ]),
   ]);
+  const signedMasterPlanCriticalAssets =
+    criticalAssetKeys.length > 0 ? signR2AssetKeys(criticalAssetKeys) : {};
 
   return (
     <div className="relative app-shell bg-black">

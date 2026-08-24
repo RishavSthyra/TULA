@@ -1,0 +1,46 @@
+{
+  "dummy": {
+    "x": 90.098,
+    "y": 57.59,
+    "z": 1.284
+  },
+  "video": {
+    "assetKey": "https://cdn.sthyra.com/TULA/Videos/360_4K_30FPS_GOP3_COMPRESSED.mp4",
+    "fps": 30,
+    "height": 2160,
+    "totalFrames": 360,
+    "width": 3840
+  },
+  "fallbackImageKey": "local:images/first_frame_again.png",
+  "modelAssetKey": "local:models/without balcony.glb",
+  "hotspot": {
+    "frame": 1,
+    "key": "A1"
+  },
+  "secondaryDummy": {
+    "x": -72.062,
+    "y": 77.919,
+    "z": 1.284
+  },
+  "camera": {
+    "fov": 75,
+    "filmGateMm": 36,
+    "position": {
+      "x": 20.782,
+      "y": -159.331,
+      "z": 50
+    },
+    "target": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "rotationDegrees": {
+      "x": 82.467,
+      "y": 0,
+      "z": 0.006
+    },
+    "dollyDistance": 190.706,
+    "targetDistance": 190.708
+  }
+}

@@ -165,7 +165,7 @@ export default function FlipBookDeck() {
       {!useStackedDeck ? (
         <div className="absolute inset-0">
           <Image
-            src={OverviewBg}
+            src={"/brochure 2 (1).avif"}
             alt="Overview background"
             fill
             priority
