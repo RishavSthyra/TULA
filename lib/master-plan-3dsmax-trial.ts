@@ -5,6 +5,7 @@ import {
   Vector3,
 } from "three";
 import trialData from "@/data/master-plan-3dsmax-trial.json";
+import { MASTER_PLAN_SCRUB_VIDEO_FPS } from "@/data/masterPlanFrameCdnUrls";
 import type {
   MasterPlanCameraConfig,
   MasterPlanDeveloperConfig,
@@ -160,7 +161,7 @@ export function getThreeDsMaxMasterPlanConfig(): MasterPlanDeveloperConfig {
     interactionVideoKey: trialData.video.assetKey,
     fallbackImageKey: trialData.fallbackImageKey,
     totalFrames: trialData.video.totalFrames,
-    fps: trialData.video.fps,
+    fps: MASTER_PLAN_SCRUB_VIDEO_FPS,
     aspectRatio: trialData.video.width / trialData.video.height,
     hotspotFrames: [...MASTER_PLAN_HOTSPOT_FRAMES],
     hotspots: MASTER_PLAN_HOTSPOT_KEYS.map((key, index) => ({

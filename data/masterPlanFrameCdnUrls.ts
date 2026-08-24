@@ -13,7 +13,11 @@ export const MASTER_PLAN_SCRUB_INTERACTION_HLS_PATH =
   MASTER_PLAN_SCRUB_HQ_HLS_PATH;
   
 export const MASTER_PLAN_SCRUB_VIDEO_PATH = MASTER_PLAN_SCRUB_HQ_VIDEO_PATH;
-export const MASTER_PLAN_SCRUB_VIDEO_FPS = 60;
+
+// Flip this to `true` when the production scrub asset is replaced by 60 fps media.
+export const USE_60_FPS_MASTER_PLAN_SCRUB = false;
+export const MASTER_PLAN_SCRUB_VIDEO_FPS: 30 | 60 =
+  USE_60_FPS_MASTER_PLAN_SCRUB ? 60 : 30;
 
 const MASTER_PLAN_FRAME_CDN_BASE_URL =
   "https://res.cloudinary.com/dlhfbu3kh/image/upload";
