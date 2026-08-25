@@ -1,10 +1,12 @@
 import mongoose from "mongoose";
+import { ServerApiVersion } from "mongodb";
 
-const MONGODB_URI = process.env.MONGODB_URI;
-const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME;
+const TULA_MONGODB_URI = process.env.TULA_MONGO_DB;
+const TULA_MONGODB_DB_NAME =
+  process.env.TULA_MONGO_DB_NAME || process.env.MONGODB_DB_NAME || "tula";
 
-if (!MONGODB_URI) {
-  throw new Error("Missing MONGODB_URI environment variable.");
+if (!TULA_MONGODB_URI) {
+  throw new Error("Missing TULA_MONGO_DB environment variable.");
 }
 
 type MongooseCache = {
@@ -13,15 +15,15 @@ type MongooseCache = {
 };
 
 declare global {
-  var mongooseCache: MongooseCache | undefined;
+  var tulaMongooseCache: MongooseCache | undefined;
 }
 
-const cache: MongooseCache = global.mongooseCache ?? {
+const cache: MongooseCache = global.tulaMongooseCache ?? {
   conn: null,
   promise: null,
 };
 
-global.mongooseCache = cache;
+global.tulaMongooseCache = cache;
 
 export async function connectToDatabase() {
   if (cache.conn) {
@@ -29,9 +31,14 @@ export async function connectToDatabase() {
   }
 
   if (!cache.promise) {
-    cache.promise = mongoose.connect(MONGODB_URI!, {
-      dbName: MONGODB_DB_NAME,
+    cache.promise = mongoose.connect(TULA_MONGODB_URI!, {
+      dbName: TULA_MONGODB_DB_NAME,
       bufferCommands: false,
+      serverApi: {
+        version: ServerApiVersion.v1,
+        strict: true,
+        deprecationErrors: true,
+      },
     });
   }
 

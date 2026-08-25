@@ -1480,14 +1480,14 @@ function inferTowerFromApartmentId(
   }
 
   if (parsedApartmentId.scope === "tower") {
-    return parsedApartmentId.code === "B" ? "Tower B" : "Tower A";
+    return (["A", "B", "C", "D"].includes(parsedApartmentId.code)
+      ? `Tower ${parsedApartmentId.code}`
+      : fallbackTower ?? "Tower A") as TowerType;
   }
 
-  return parsedApartmentId.code === "B"
-    ? "Tower B"
-    : parsedApartmentId.code === "A"
-      ? "Tower A"
-      : fallbackTower ?? "Tower A";
+  return (["A", "B", "C", "D"].includes(parsedApartmentId.code)
+    ? `Tower ${parsedApartmentId.code}`
+    : fallbackTower ?? "Tower A") as TowerType;
 }
 
 function formatApartmentLabel(
@@ -1500,7 +1500,7 @@ function formatApartmentLabel(
     return {
       floor: null,
       tower: resolvedTower,
-      towerCode: resolvedTower.endsWith("B") ? "B" : "A",
+      towerCode: resolvedTower.slice(-1),
       unit: null,
       title: "Hover a flat",
     };
@@ -1512,7 +1512,7 @@ function formatApartmentLabel(
     return {
       floor: null,
       tower: resolvedTower,
-      towerCode: resolvedTower.endsWith("B") ? "B" : "A",
+      towerCode: resolvedTower.slice(-1),
       unit: apartmentId,
       title: `Flat ${apartmentId}`,
     };
@@ -1680,7 +1680,7 @@ function buildInventoryApartmentIndex(
     const titleDigitsToken = normalizeFlatToken(
       apartment.title.replace(/[^0-9]/g, ""),
     );
-    const towerCode = apartment.tower === "Tower B" ? "B" : "A";
+    const towerCode = apartment.tower.slice(-1);
     const floorToken = String(apartment.floor).replace(/[^0-9]/g, "").padStart(2, "0");
     const numericVariants = new Set(
       [flatDigitsToken, titleDigitsToken].filter(Boolean),
@@ -2239,6 +2239,7 @@ const HighlightOverlay = memo(function HighlightOverlay({
   const renderFill = renderMode !== "light";
   const renderInnerEdges = !isMobileHighlightProfile;
   const renderOuterEdges = renderMode === "full" && !isTouchHighlightProfile;
+  const renderSelectedOuterEdge = renderMode !== "light";
   const edgeThickness =
     isTabletHighlightProfile ? 1 : renderMode === "light" ? 1 : 2;
   const filteredEdgeScaleMultiplier = isTouchHighlightProfile ? 1.003 : 1.006;
@@ -2313,17 +2314,7 @@ const HighlightOverlay = memo(function HighlightOverlay({
               renderOrder={14}
             />
           ) : null}
-          {renderInnerEdges ? (
-            <HighlightEdgeLines
-              color={meshData.palette.innerEdge}
-              geometry={meshData.meshData.geometry}
-              matrix={meshData.meshData.matrix}
-              renderOrder={15}
-              scaleMultiplier={focusedEdgeScaleMultiplier}
-              thickness={edgeThickness}
-            />
-          ) : null}
-          {renderOuterEdges ? (
+          {renderSelectedOuterEdge ? (
             <HighlightEdgeLines
               color={meshData.palette.outerEdge}
               geometry={meshData.meshData.geometry}

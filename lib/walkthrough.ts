@@ -52,7 +52,13 @@ export function getWalkthroughContext(
   return {
     apartmentId: searchParams.get("apartmentId"),
     flatNumber: searchParams.get("flatNumber"),
-    tower: tower === "Tower A" || tower === "Tower B" ? tower : null,
+    tower:
+      tower === "Tower A" ||
+      tower === "Tower B" ||
+      tower === "Tower C" ||
+      tower === "Tower D"
+        ? tower
+        : null,
     floorLabel: searchParams.get("floorLabel"),
     bhk: Number.isFinite(bhkValue) && bhkValue > 0 ? bhkValue : null,
   };

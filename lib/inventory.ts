@@ -1,11 +1,13 @@
 import { connectToDatabase } from "@/lib/mongodb";
+import {
+  resolveMappedApartment,
+  type MappedApartment,
+} from "@/lib/floor-plan-mapping";
 import type { InventoryDocument } from "@/models/Inventory";
 import type {
   InventoryAdminRow,
   InventoryApartment,
-  InventoryFacing,
   InventoryStatus,
-  TowerType,
 } from "@/types/inventory";
 
 type InventoryRawDocument = Partial<InventoryDocument> & {
@@ -13,25 +15,13 @@ type InventoryRawDocument = Partial<InventoryDocument> & {
   tower?: string;
   floor?: string | number;
   unit?: string;
-  type?: string;
-  facing?: string;
-  area?: string | number;
-  rooms?: string;
   status?: InventoryStatus | "Booked" | string;
 };
 
 type NormalizedInventoryRecord = {
   id: string;
-  flatNumber: string;
-  tower: TowerType;
-  bhk: number;
-  bhkLabel: string;
-  areaSqft: number;
-  floor: number;
-  floorLabel: string;
-  facing: InventoryFacing;
+  mapped: MappedApartment;
   status: InventoryStatus;
-  roomDimensions: string;
 };
 
 const loggedInventoryIssues = new Set<string>();
@@ -46,9 +36,7 @@ function getFirstStringValue(
   for (const value of values) {
     if (typeof value === "string") {
       const trimmed = value.trim();
-      if (trimmed) {
-        return trimmed;
-      }
+      if (trimmed) return trimmed;
       continue;
     }
 
@@ -58,14 +46,6 @@ function getFirstStringValue(
   }
 
   return "";
-}
-
-function normalizeTower(value?: string): TowerType | null {
-  if (value === "Tower A" || value === "Tower B") {
-    return value;
-  }
-
-  return null;
 }
 
 export function normalizeStatus(
@@ -89,41 +69,6 @@ export function parseInventoryStatusInput(value: unknown): InventoryStatus | nul
   return null;
 }
 
-function normalizeFacing(value?: string): InventoryFacing | null {
-  if (value === "North" || value === "South" || value === "East" || value === "West") {
-    return value;
-  }
-
-  return null;
-}
-
-function parseBhk(value: string) {
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-}
-
-function parseArea(value: string | number) {
-  const parsed =
-    typeof value === "number" ? value : Number.parseInt(String(value), 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-}
-
-function parseFloorValue(value: string | number) {
-  if (typeof value === "number") {
-    return Number.isFinite(value) && value >= 0 ? value : null;
-  }
-
-  const normalizedValue = value.trim();
-  if (!normalizedValue) {
-    return null;
-  }
-
-  if (normalizedValue.toUpperCase() === "G") return 0;
-
-  const parsed = Number.parseInt(normalizedValue, 10);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
-}
-
 function estimatePriceLakhs(areaSqft: number, bhk: number) {
   const rateByBhk = bhk >= 3 ? 0.074 : bhk === 2 ? 0.066 : 0.061;
   return Math.max(45, Math.round(areaSqft * rateByBhk));
@@ -133,187 +78,158 @@ function reportInvalidInventoryDoc(
   doc: InventoryRawDocument,
   issues: string[],
 ) {
-  if (issues.length === 0) {
-    return;
-  }
+  if (issues.length === 0) return;
 
   const docId = getDocumentId(doc);
   const issueKey = `${docId}:${issues.join("|")}`;
-
-  if (loggedInventoryIssues.has(issueKey)) {
-    return;
-  }
+  if (loggedInventoryIssues.has(issueKey)) return;
 
   loggedInventoryIssues.add(issueKey);
   console.warn(
-    `Skipping invalid inventory record ${docId}: ${issues.join("; ")}`,
+    `Skipping invalid TULA inventory record ${docId}: ${issues.join("; ")}`,
   );
 }
 
 function normalizeInventoryDoc(
   doc: InventoryRawDocument,
 ): NormalizedInventoryRecord | null {
+  const tower = getFirstStringValue(doc.Tower, doc.tower);
+  const floor = getFirstStringValue(doc.Floor, doc.floor);
   const flatNumber = getFirstStringValue(doc.Flat_Number, doc.unit);
-  const towerValue = getFirstStringValue(doc.Tower, doc.tower);
-  const bhkLabel = getFirstStringValue(doc.BHK, doc.type);
-  const floorLabel = getFirstStringValue(doc.Floor, doc.floor);
-  const facingValue = getFirstStringValue(doc.Facing, doc.facing);
-  const areaValue = doc.Super_Built_Up_Area_sqft ?? doc.area ?? "";
-  const roomDimensions = getFirstStringValue(doc.Room_Dimensions, doc.rooms);
-
-  const tower = normalizeTower(towerValue || undefined);
-  const bhk = parseBhk(bhkLabel);
-  const areaSqft = parseArea(areaValue);
-  const floor = parseFloorValue(floorLabel);
-  const facing = normalizeFacing(facingValue || undefined);
   const status = normalizeStatus(doc.status);
+  const mapped = resolveMappedApartment({ tower, floor, flatNumber });
   const issues: string[] = [];
 
-  if (!flatNumber) {
-    issues.push("missing flat number");
+  if (!tower) issues.push("missing tower");
+  if (!floor) issues.push("missing floor");
+  if (!flatNumber) issues.push("missing flat number");
+  if (!status) issues.push(`invalid status \"${String(doc.status)}\"`);
+  if (tower && floor && flatNumber && !mapped) {
+    issues.push(`no floor-plan mapping for ${tower}/${floor}/${flatNumber}`);
   }
 
-  if (!tower) {
-    issues.push(`invalid tower "${towerValue || "empty"}"`);
-  }
-
-  if (bhk === null) {
-    issues.push(`invalid BHK "${bhkLabel || "empty"}"`);
-  }
-
-  if (areaSqft === null) {
-    issues.push(`invalid area "${String(areaValue || "empty")}"`);
-  }
-
-  if (floor === null) {
-    issues.push(`invalid floor "${floorLabel || "empty"}"`);
-  }
-
-  if (!facing) {
-    issues.push(`invalid facing "${facingValue || "empty"}"`);
-  }
-
-  if (!status) {
-    issues.push(`invalid status "${String(doc.status || "empty")}"`);
-  }
-
-  if (
-    issues.length > 0 ||
-    !tower ||
-    bhk === null ||
-    areaSqft === null ||
-    floor === null ||
-    !facing ||
-    !status
-  ) {
+  if (!mapped || !status) {
     reportInvalidInventoryDoc(doc, issues);
     return null;
   }
 
+  return { id: getDocumentId(doc), mapped, status };
+}
+
+function toApartment(record: NormalizedInventoryRecord): InventoryApartment {
+  const { id, mapped, status } = record;
   return {
-    id: getDocumentId(doc),
-    flatNumber,
-    tower,
-    bhk,
-    bhkLabel,
-    areaSqft,
-    floor,
-    floorLabel,
-    facing,
+    id,
+    unitKey: mapped.unitKey,
+    title: mapped.unitLabel,
+    flatNumber: mapped.flat,
+    tower: mapped.tower,
+    bhk: mapped.bhk,
+    unitType: mapped.unitType,
+    priceLakhs: estimatePriceLakhs(mapped.saleableAreaSqft, mapped.bhk),
+    areaSqft: mapped.saleableAreaSqft,
+    carpetAreaSqft: mapped.carpetAreaSqft,
+    balconyAreaSqft: mapped.balconyAreaSqft,
+    floor: mapped.floor,
+    floorLabel: mapped.floorLabel,
+    floorRange: mapped.floorRange,
+    facing: mapped.facing,
     status,
-    roomDimensions,
+    roomDimensions: mapped.roomDimensions,
+    floorPlanId: mapped.floorPlanId,
+    floorPlanImage: mapped.floorPlanImage,
+    floorPlanR2Key: mapped.floorPlanR2Key,
+    floorPlanSourcePath: mapped.floorPlanSourcePath,
   };
 }
 
-export function mapInventoryDocToApartment(
-  doc: InventoryRawDocument,
-): InventoryApartment | null {
-  const normalized = normalizeInventoryDoc(doc);
-  if (!normalized) {
-    return null;
-  }
-
+function toAdminRow(record: NormalizedInventoryRecord): InventoryAdminRow {
+  const { id, mapped, status } = record;
   return {
-    id: normalized.id,
-    title: normalized.flatNumber.toUpperCase(),
-    flatNumber: normalized.flatNumber,
-    tower: normalized.tower,
-    bhk: normalized.bhk,
-    priceLakhs: estimatePriceLakhs(normalized.areaSqft, normalized.bhk),
-    areaSqft: normalized.areaSqft,
-    floor: normalized.floor,
-    floorLabel: normalized.floorLabel,
-    facing: normalized.facing,
-    status: normalized.status,
-    roomDimensions: normalized.roomDimensions,
+    id,
+    unitKey: mapped.unitKey,
+    tower: mapped.tower,
+    floor: mapped.floorLabel,
+    flatNumber: mapped.unitLabel,
+    bhk: mapped.bhkLabel,
+    unitType: mapped.unitType,
+    facing: mapped.facing,
+    areaSqft: mapped.saleableAreaSqft,
+    carpetAreaSqft: mapped.carpetAreaSqft,
+    balconyAreaSqft: mapped.balconyAreaSqft,
+    floorRange: mapped.floorRange,
+    roomDimensions: mapped.roomDimensions,
+    floorPlanId: mapped.floorPlanId,
+    floorPlanImage: mapped.floorPlanImage,
+    status,
   };
 }
 
-export function mapInventoryDocToAdminRow(
-  doc: InventoryRawDocument,
-): InventoryAdminRow | null {
-  const normalized = normalizeInventoryDoc(doc);
-  if (!normalized) {
-    return null;
+function normalizeAndDeduplicate(inventoryDocs: InventoryRawDocument[]) {
+  const records = new Map<string, NormalizedInventoryRecord>();
+
+  for (const doc of inventoryDocs) {
+    const normalized = normalizeInventoryDoc(doc);
+    if (!normalized) continue;
+
+    const existing = records.get(normalized.mapped.unitKey);
+    if (!existing || existing.status === "Available") {
+      records.set(normalized.mapped.unitKey, normalized);
+    }
   }
 
-  return {
-    id: normalized.id,
-    tower: normalized.tower,
-    floor: normalized.floorLabel,
-    flatNumber: normalized.flatNumber,
-    bhk: normalized.bhkLabel,
-    facing: normalized.facing,
-    areaSqft: normalized.areaSqft,
-    roomDimensions: normalized.roomDimensions,
-    status: normalized.status,
-  };
+  return Array.from(records.values());
+}
+
+async function getNormalizedInventory() {
+  const connection = await connectToDatabase();
+  const inventoryDocs = await connection.connection.db!
+    .collection("inventory")
+    .find({})
+    .toArray();
+
+  return normalizeAndDeduplicate(
+    inventoryDocs as unknown as InventoryRawDocument[],
+  );
 }
 
 export async function getInventoryApartments() {
-  const connection = await connectToDatabase();
-  const inventoryDocs = await connection.connection.db!
-    .collection("inventory")
-    .find({})
-    .toArray();
+  const records = await getNormalizedInventory();
 
-  return inventoryDocs
-    .map((doc) => mapInventoryDocToApartment(doc as InventoryRawDocument))
-    .filter((doc): doc is InventoryApartment => Boolean(doc))
-    .sort((left, right) => {
-      if (left.tower !== right.tower) {
-        return left.tower.localeCompare(right.tower);
-      }
+  return records.map(toApartment).sort((left, right) => {
+    if (left.tower !== right.tower) {
+      return left.tower.localeCompare(right.tower);
+    }
 
-      if (left.floor !== right.floor) {
-        return left.floor - right.floor;
-      }
-
-      return left.flatNumber.localeCompare(right.flatNumber);
-    });
+    if (left.floor !== right.floor) return left.floor - right.floor;
+    return left.flatNumber.localeCompare(right.flatNumber);
+  });
 }
 
 export async function getInventoryAdminRows() {
-  const connection = await connectToDatabase();
-  const inventoryDocs = await connection.connection.db!
-    .collection("inventory")
-    .find({})
-    .toArray();
+  const records = await getNormalizedInventory();
 
-  return inventoryDocs
-    .map((doc) => mapInventoryDocToAdminRow(doc as InventoryRawDocument))
-    .filter((doc): doc is InventoryAdminRow => Boolean(doc))
-    .sort((left, right) => {
-      if (left.tower !== right.tower) {
-        return left.tower.localeCompare(right.tower);
-      }
+  return records.map(toAdminRow).sort((left, right) => {
+    if (left.tower !== right.tower) {
+      return left.tower.localeCompare(right.tower);
+    }
 
-      const leftFloor = parseFloorValue(left.floor) ?? Number.MAX_SAFE_INTEGER;
-      const rightFloor = parseFloorValue(right.floor) ?? Number.MAX_SAFE_INTEGER;
-      if (leftFloor !== rightFloor) {
-        return leftFloor - rightFloor;
-      }
-
-      return left.flatNumber.localeCompare(right.flatNumber);
+    const leftMapped = resolveMappedApartment({
+      tower: left.tower,
+      floor: left.floor,
+      flatNumber: left.flatNumber,
     });
+    const rightMapped = resolveMappedApartment({
+      tower: right.tower,
+      floor: right.floor,
+      flatNumber: right.flatNumber,
+    });
+    if (leftMapped && rightMapped && leftMapped.floor !== rightMapped.floor) {
+      return leftMapped.floor - rightMapped.floor;
+    }
+
+    return left.flatNumber.localeCompare(right.flatNumber, undefined, {
+      numeric: true,
+    });
+  });
 }

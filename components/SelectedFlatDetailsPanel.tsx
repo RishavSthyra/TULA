@@ -28,8 +28,6 @@ type SelectedFlatDetailsPanelProps = {
   onClose: () => void;
 };
 
-const PANEL_PREVIEW_IMAGE = "/frames_webp_full_q35/frame_00121.webp";
-
 const selectedFlatSerif = Cormorant_Garamond({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
@@ -135,12 +133,12 @@ const SelectedFlatDetailsPanel = forwardRef<
     {
       key: "config",
       label: "Configuration",
-      value: `${apartment.bhk} BHK`,
+      value: apartment.unitType,
       icon: BedDouble,
     },
     {
       key: "area",
-      label: "Surface",
+      label: "Saleable Area",
       value: `${apartment.areaSqft} sqft`,
       icon: Expand,
     },
@@ -435,6 +433,9 @@ const SelectedFlatDetailsPanel = forwardRef<
                   <div className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-[#1f3f2b]">
                     <BedDouble className="h-4 w-4 text-[#a88a45]" />
                     {apartment.bhk} BHK
+                    <span className="block text-[10px] font-medium text-[#687468]">
+                      {apartment.unitType}
+                    </span>
                   </div>
                 </div>
 
@@ -450,11 +451,14 @@ const SelectedFlatDetailsPanel = forwardRef<
 
                 <div className={metaCardClassName}>
                   <p className="text-[10px] uppercase tracking-[0.24em] text-[#9a8054]">
-                    Area
+                    Saleable Area
                   </p>
                   <div className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-[#1f3f2b]">
                     <Expand className="h-4 w-4 text-[#a88a45]" />
                     {apartment.areaSqft} sqft
+                    <span className="block text-[10px] font-medium text-[#687468]">
+                      Carpet {apartment.carpetAreaSqft} · Balcony {apartment.balconyAreaSqft}
+                    </span>
                   </div>
                 </div>
 
@@ -531,10 +535,10 @@ const SelectedFlatDetailsPanel = forwardRef<
               <div className="overflow-hidden rounded-[28px] border border-[#d8bd78]/55 bg-[#f8f4e8]/68 shadow-[0_14px_32px_rgba(39,47,34,0.10),inset_0_1px_0_rgba(255,255,255,0.94)] backdrop-blur-md">
                 <div className="border-b border-[#d8bd78]/40 px-5 py-4">
                   <p className="text-[10px] uppercase tracking-[0.26em] text-[#9a8054]">
-                    Private Preview
+                    Mapped Residence
                   </p>
                   <h4 className={`${selectedFlatSerif.className} mt-1.5 text-2xl font-semibold leading-none text-[#21462d]`}>
-                    Curated walkthrough teaser
+                    Floor-plan preview
                   </h4>
                 </div>
 
@@ -553,11 +557,11 @@ const SelectedFlatDetailsPanel = forwardRef<
                   >
                     <div className="relative aspect-[16/10] w-full">
                       <NextImage
-                        src={PANEL_PREVIEW_IMAGE}
-                        alt={`${apartment.title} preview`}
+                        src={apartment.floorPlanImage}
+                        alt={`${apartment.title} mapped floor plan`}
                         fill
                         sizes="(max-width: 1280px) 100vw, 480px"
-                        className="object-cover transition duration-700 group-hover:scale-[1.025]"
+                        className="bg-[#f7f3e8] object-contain p-2 transition duration-700 group-hover:scale-[1.015]"
                       />
 
                       <div className="absolute inset-0 flex items-center justify-center">

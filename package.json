@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "generate:panos": "tsx scripts/generate-panos.ts",
-    "seed:admin": "tsx scripts/seed-admin-user.ts"
+    "seed:admin": "tsx scripts/seed-admin-user.ts",
+    "seed:inventory": "tsx scripts/seed-tula-inventory.ts"
   },
   "dependencies": {
     "@babylonjs/core": "^8.56.2",

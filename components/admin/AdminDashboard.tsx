@@ -68,7 +68,13 @@ type InventorySummary = {
 type AdminView = "inventory" | "admins";
 
 const statusOptions: InventoryStatus[] = ["Available", "Reserved", "Sold"];
-const towerFilters: Array<"All" | TowerType> = ["All", "Tower A", "Tower B"];
+const towerFilters: Array<"All" | TowerType> = [
+  "All",
+  "Tower A",
+  "Tower B",
+  "Tower C",
+  "Tower D",
+];
 
 const statusTheme: Record<
   InventoryStatus,

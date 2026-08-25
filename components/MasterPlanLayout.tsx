@@ -37,7 +37,6 @@ import {
 } from "lucide-react";
 import { Cormorant_Garamond } from "next/font/google";
 import TowerSelect from "./TowerSelect";
-import { unitPlans } from "@/data/unitPlans";
 import { scheduleAmenityVideoWarmup } from "@/lib/amenity-video-warmup";
 import {
   getNearestMasterPlanHotspot,
@@ -51,10 +50,12 @@ import { useSignedAssetUrls } from "@/src/lib/use-signed-assets";
 
 const facingOptions = ["All", "North", "South", "East", "West"] as const;
 const statusOptions = ["All", "Available", "Reserved", "Sold"] as const;
-const bhkOptions = ["All", "2", "3"] as const;
+const bhkOptions = ["All", "2", "3", "3.5", "4"] as const;
 const FLOOR_ALL_VALUE = "All";
 const INVENTORY_REFRESH_INTERVAL = 15000;
 const MATCHING_FLATS_PAGE_SIZE = 24;
+const FALLBACK_AREA_RANGE = { min: 1376.73, max: 2801.81 } as const;
+const AREA_RANGE_STEP = 0.01;
 const TOTAL_MASTER_PLAN_FRAMES = 360;
 const MASTER_PLAN_SNAP_FRAMES = [1, 61, 121, 181, 241, 301] as const;
 const SPECIAL_UNIT_VIDEO_TOWER: TowerType = "Tower B";
@@ -82,6 +83,25 @@ const HOTSPOT_NAVIGATION_MAX_DURATION_MS = 720;
 const HOTSPOT_NAVIGATION_MS_PER_FRAME = 6.8;
 const smoothEase: Easing = [0.22, 1, 0.36, 1];
 let sharedInventoryRequest: Promise<InventoryApartment[]> | null = null;
+
+type AreaRange = {
+  min: number;
+  max: number;
+};
+
+type SelectedAreaRange = {
+  min: number | null;
+  max: number | null;
+};
+
+const areaFormatter = new Intl.NumberFormat("en-IN", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
+function formatAreaSqft(value: number) {
+  return areaFormatter.format(value);
+}
 
 const masterPlanSerif = Cormorant_Garamond({
   subsets: ["latin"],
@@ -139,7 +159,7 @@ const itemAnim: Variants = {
 };
 
 function getApartmentMeshId(apartment: InventoryApartment) {
-  const towerCode = apartment.tower === "Tower B" ? "B" : "A";
+  const towerCode = apartment.tower.slice(-1);
   const floorCode = String(apartment.floor)
     .replace(/[^0-9]/g, "")
     .padStart(2, "0");
@@ -245,6 +265,7 @@ function getApartmentSignature(apartments: InventoryApartment[]) {
         facing,
         status,
         floorLabel,
+        floorPlanId,
       }) =>
         [
           id,
@@ -256,6 +277,7 @@ function getApartmentSignature(apartments: InventoryApartment[]) {
           facing,
           status,
           floorLabel,
+          floorPlanId,
         ].join(":"),
     )
     .join("|");
@@ -307,21 +329,6 @@ function compareMasterPlanApartments(
     numeric: true,
     sensitivity: "base",
   });
-}
-
-function getUnitPlanForApartment(apartment: InventoryApartment) {
-  const flatToken = getApartmentFlatToken(apartment);
-  const unitEnding = Number(flatToken.at(-1));
-  const unitPlanByEnding =
-    Number.isFinite(unitEnding) && unitEnding > 0
-      ? unitPlans[unitEnding - 1]
-      : null;
-
-  return (
-    unitPlanByEnding ??
-    unitPlans.find((plan) => plan.bhk === `${apartment.bhk} BHK`) ??
-    unitPlans[0]
-  );
 }
 
 function wrapMasterPlanFrame(frame: number, totalFrames = TOTAL_MASTER_PLAN_FRAMES) {
@@ -442,12 +449,6 @@ function SelectedFlatPlanPanel({
     () => getRoomDimensionItems(apartment.roomDimensions),
     [apartment.roomDimensions],
   );
-  const unitPlan = useMemo(() => getUnitPlanForApartment(apartment), [apartment]);
-
-  if (!unitPlan) {
-    return null;
-  }
-
   return (
     <div
       className="pointer-events-auto custom-scrollbar relative max-h-[min(82dvh,48rem)] w-[clamp(19rem,28vw,27rem)] overflow-y-auto bg-transparent p-0 text-[#1f3f2b] 2xl:w-[29rem]"
@@ -487,7 +488,7 @@ function SelectedFlatPlanPanel({
 
           <div className="relative z-10 mx-auto mt-7 aspect-[4/4.55] w-[78%] max-w-[20rem] 2xl:mt-8 2xl:w-[80%]">
             <NextImage
-              src={unitPlan.image2D}
+              src={apartment.floorPlanImage}
               alt={`${apartment.title} floor plan`}
               fill
               sizes="(min-width: 1536px) 380px, 320px"
@@ -653,7 +654,8 @@ export default function MasterPlanLayout({
   const [facing, setFacing] = useState<(typeof facingOptions)[number]>("All");
   const [status, setStatus] = useState<(typeof statusOptions)[number]>("All");
   const [floor, setFloor] = useState(FLOOR_ALL_VALUE);
-  const [minArea, setMinArea] = useState(0);
+  const [selectedAreaRange, setSelectedAreaRange] =
+    useState<SelectedAreaRange>({ min: null, max: null });
 
   const isLeaving = false;
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(true);
@@ -1070,10 +1072,51 @@ export default function MasterPlanLayout({
     () => (bhk === "All" ? null : Number(bhk)),
     [bhk],
   );
+  const areaBounds = useMemo<AreaRange>(() => {
+    const validAreas = apartments
+      .map((apartment) => apartment.areaSqft)
+      .filter((area) => Number.isFinite(area) && area > 0);
+
+    if (validAreas.length === 0) {
+      return FALLBACK_AREA_RANGE;
+    }
+
+    return {
+      min: Math.min(...validAreas),
+      max: Math.max(...validAreas),
+    };
+  }, [apartments]);
+  const minArea = Math.min(
+    Math.max(selectedAreaRange.min ?? areaBounds.min, areaBounds.min),
+    areaBounds.max,
+  );
+  const maxArea = Math.max(
+    Math.min(selectedAreaRange.max ?? areaBounds.max, areaBounds.max),
+    minArea,
+  );
+  const isAreaFiltered =
+    selectedAreaRange.min !== null || selectedAreaRange.max !== null;
+  const handleAreaRangeChange = useCallback(
+    (nextRange: AreaRange) => {
+      setSelectedAreaRange({
+        min:
+          nextRange.min <= areaBounds.min + AREA_RANGE_STEP / 2
+            ? null
+            : nextRange.min,
+        max:
+          nextRange.max >= areaBounds.max - AREA_RANGE_STEP / 2
+            ? null
+            : nextRange.max,
+      });
+    },
+    [areaBounds],
+  );
   const filterableApartmentsByTower = useMemo(() => {
     const next = new Map<TowerType, FilterableApartmentRow[]>([
       ["Tower A", []],
       ["Tower B", []],
+      ["Tower C", []],
+      ["Tower D", []],
     ]);
 
     apartments.forEach((apartment) => {
@@ -1112,7 +1155,8 @@ export default function MasterPlanLayout({
         selectedBhkNumber === null || apartment.bhk === selectedBhkNumber;
       const matchesFacing = facing === "All" || apartment.facing === facing;
       const matchesStatus = status === "All" || apartment.status === status;
-      const matchesArea = apartment.areaSqft >= minArea;
+      const matchesArea =
+        apartment.areaSqft >= minArea && apartment.areaSqft <= maxArea;
 
       if (
         matchesFloor &&
@@ -1136,6 +1180,7 @@ export default function MasterPlanLayout({
     status,
     floor,
     minArea,
+    maxArea,
   ]);
   const floorOptions = useMemo<FloorFilterOption[]>(() => {
     if (!selectedTower) {
@@ -1200,8 +1245,8 @@ export default function MasterPlanLayout({
       facing !== "All" ||
       status !== "All" ||
       floor !== FLOOR_ALL_VALUE ||
-      minArea > 0,
-    [normalizedDeferredSearch, bhk, facing, status, floor, minArea],
+      isAreaFiltered,
+    [normalizedDeferredSearch, bhk, facing, status, floor, isAreaFiltered],
   );
 
   const resetFilters = () => {
@@ -1210,7 +1255,7 @@ export default function MasterPlanLayout({
     setFacing("All");
     setStatus("All");
     setFloor(FLOOR_ALL_VALUE);
-    setMinArea(0);
+    setSelectedAreaRange({ min: null, max: null });
   };
 
   const handleTowerSelect = (tower: TowerType) => {
@@ -1899,8 +1944,11 @@ export default function MasterPlanLayout({
                     floor={floor}
                     floorOptions={floorOptions}
                     onFloorChange={setFloor}
+                    areaBounds={areaBounds}
                     minArea={minArea}
-                    onMinAreaChange={setMinArea}
+                    maxArea={maxArea}
+                    isAreaFiltered={isAreaFiltered}
+                    onAreaRangeChange={handleAreaRangeChange}
                     onReset={resetFilters}
                     onBack={handleBackToTowerSelect}
                     compact
@@ -2067,8 +2115,11 @@ export default function MasterPlanLayout({
                           floor={floor}
                           floorOptions={floorOptions}
                           onFloorChange={setFloor}
+                          areaBounds={areaBounds}
                           minArea={minArea}
-                          onMinAreaChange={setMinArea}
+                          maxArea={maxArea}
+                          isAreaFiltered={isAreaFiltered}
+                          onAreaRangeChange={handleAreaRangeChange}
                           onClosePanel={() => setIsDesktopSidebarOpen(false)}
                           onReset={resetFilters}
                           onBack={handleBackToTowerSelect}
@@ -2203,8 +2254,11 @@ export default function MasterPlanLayout({
                         floor={floor}
                         floorOptions={floorOptions}
                         onFloorChange={setFloor}
+                        areaBounds={areaBounds}
                         minArea={minArea}
-                        onMinAreaChange={setMinArea}
+                        maxArea={maxArea}
+                        isAreaFiltered={isAreaFiltered}
+                        onAreaRangeChange={handleAreaRangeChange}
                         onReset={resetFilters}
                         onBack={handleBackToTowerSelect}
                         compact
@@ -2355,8 +2409,11 @@ function MasterPlanFiltersCard({
   floor,
   floorOptions,
   onFloorChange,
+  areaBounds,
   minArea,
-  onMinAreaChange,
+  maxArea,
+  isAreaFiltered,
+  onAreaRangeChange,
   onClosePanel,
   onReset,
   onBack,
@@ -2376,8 +2433,11 @@ function MasterPlanFiltersCard({
   floor: string;
   floorOptions: FloorFilterOption[];
   onFloorChange: (value: string) => void;
+  areaBounds: AreaRange;
   minArea: number;
-  onMinAreaChange: (value: number) => void;
+  maxArea: number;
+  isAreaFiltered: boolean;
+  onAreaRangeChange: (range: AreaRange) => void;
   onClosePanel?: () => void;
   onReset: () => void;
   onBack: () => void;
@@ -2390,13 +2450,18 @@ function MasterPlanFiltersCard({
     Number(facing !== "All") +
     Number(status !== "All") +
     Number(floor !== FLOOR_ALL_VALUE) +
-    Number(minArea > 0);
+    Number(isAreaFiltered);
   const [isCompactOpen, setIsCompactOpen] = useState(compact);
   const [isDesktopFilterOpen, setIsDesktopFilterOpen] = useState(true);
   const handleSearchInputChange = (value: string) => {
     onSearchChange(value.replace(/\D+/g, ""));
   };
-  const towerOptions: TowerType[] = ["Tower A", "Tower B"];
+  const towerOptions: TowerType[] = [
+    "Tower A",
+    "Tower B",
+    "Tower C",
+    "Tower D",
+  ];
   const searchControl = (
     <div
       className={`group flex items-center rounded-full border transition ${
@@ -2507,7 +2572,11 @@ function MasterPlanFiltersCard({
             ) : null}
             {facing !== "All" ? <FilterChip label={facing} /> : null}
             {status !== "All" ? <FilterChip label={status} /> : null}
-            {minArea > 0 ? <FilterChip label={`${minArea}+ sqft`} /> : null}
+            {isAreaFiltered ? (
+              <FilterChip
+                label={`${formatAreaSqft(minArea)}–${formatAreaSqft(maxArea)} sqft`}
+              />
+            ) : null}
           </div>
         ) : null}
 
@@ -2560,23 +2629,17 @@ function MasterPlanFiltersCard({
               />
             </FilterBlock>
 
-            <FilterBlock compact compactDark label={`Min Area: ${minArea} sqft`}>
-              <div className="">
-                <input
-                  type="range"
-                  min={0}
-                  max={1745}
-                  step={45}
-                  value={minArea}
-                  onChange={(e) => onMinAreaChange(Number(e.target.value))}
-                  className="h-3 w-full cursor-pointer appearance-auto accent-emerald-950"
-                  style={{ accentColor: "#123b27" }}
-                />
-                <div className="mt-2 flex items-center justify-between text-[9px] font-semibold uppercase tracking-[0.14em] text-emerald-950/52">
-                  <span>0 sqft</span>
-                  <span>1745 sqft</span>
-                </div>
-              </div>
+            <FilterBlock
+              compact
+              compactDark
+              label={`Area Range: ${formatAreaSqft(minArea)} – ${formatAreaSqft(maxArea)} sqft`}
+            >
+              <AreaRangeSlider
+                bounds={areaBounds}
+                value={{ min: minArea, max: maxArea }}
+                onChange={onAreaRangeChange}
+                compact
+              />
             </FilterBlock>
           </div>
         ) : null}
@@ -2705,23 +2768,16 @@ function MasterPlanFiltersCard({
               />
             </FilterBlock>
 
-            <FilterBlock label={`Area Range: 0 - 1745 sqft`} compactDesktop={compactDesktop}>
-              <div className="">
-                <input
-                  type="range"
-                  min={0}
-                  max={1745}
-                  step={5}
-                  value={minArea}
-                  onChange={(e) => onMinAreaChange(Number(e.target.value))}
-                  className="h-3 w-full cursor-pointer appearance-auto accent-[#466f46]"
-                  style={{ accentColor: "#466f46" }}
-                />
-                <div className={`mt-2 flex items-center justify-between font-semibold uppercase text-[#718277] dark:text-emerald-50/60 ${compactDesktop ? "text-[8px] tracking-[0.12em]" : "text-[9px] tracking-[0.14em]"}`}>
-                  <span>0 sqft</span>
-                  <span>1745 sqft</span>
-                </div>
-              </div>
+            <FilterBlock
+              label={`Area Range: ${formatAreaSqft(minArea)} – ${formatAreaSqft(maxArea)} sqft`}
+              compactDesktop={compactDesktop}
+            >
+              <AreaRangeSlider
+                bounds={areaBounds}
+                value={{ min: minArea, max: maxArea }}
+                onChange={onAreaRangeChange}
+                compactDesktop={compactDesktop}
+              />
             </FilterBlock>
           </>
         ) : activeFilterCount > 0 ? (
@@ -2737,7 +2793,11 @@ function MasterPlanFiltersCard({
             ) : null}
             {facing !== "All" ? <FilterChip label={facing} /> : null}
             {status !== "All" ? <FilterChip label={status} /> : null}
-            {minArea > 0 ? <FilterChip label={`${minArea}+ sqft`} /> : null}
+            {isAreaFiltered ? (
+              <FilterChip
+                label={`${formatAreaSqft(minArea)}–${formatAreaSqft(maxArea)} sqft`}
+              />
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -2997,6 +3057,94 @@ function MasterPlanResultsCard({
   );
 }
 
+function AreaRangeSlider({
+  bounds,
+  value,
+  onChange,
+  compact = false,
+  compactDesktop = false,
+}: {
+  bounds: AreaRange;
+  value: AreaRange;
+  onChange: (range: AreaRange) => void;
+  compact?: boolean;
+  compactDesktop?: boolean;
+}) {
+  const totalRange = Math.max(bounds.max - bounds.min, AREA_RANGE_STEP);
+  const minPosition = ((value.min - bounds.min) / totalRange) * 100;
+  const maxPosition = ((value.max - bounds.min) / totalRange) * 100;
+  const normalizeValue = (nextValue: number) =>
+    Math.round(nextValue / AREA_RANGE_STEP) * AREA_RANGE_STEP;
+
+  return (
+    <div>
+      <div className="mp-area-range relative h-7 w-full">
+        <div className="pointer-events-none absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 rounded-full border border-[#b9beb5] bg-[#e7e7e3] shadow-[inset_0_1px_2px_rgba(30,56,38,0.14)] dark:border-white/20 dark:bg-white/10" />
+        <div
+          className="pointer-events-none absolute top-1/2 h-2 -translate-y-1/2 rounded-full bg-[#466f46] shadow-[inset_0_1px_0_rgba(255,255,255,0.24)]"
+          style={{
+            left: `${Math.max(0, Math.min(100, minPosition))}%`,
+            width: `${Math.max(0, Math.min(100, maxPosition - minPosition))}%`,
+          }}
+        />
+        <input
+          type="range"
+          min={bounds.min}
+          max={bounds.max}
+          step={AREA_RANGE_STEP}
+          value={value.min}
+          onChange={(event) =>
+            onChange({
+              min: Math.min(
+                normalizeValue(Number(event.target.value)),
+                value.max,
+              ),
+              max: value.max,
+            })
+          }
+          aria-label="Minimum flat area"
+          aria-valuetext={`${formatAreaSqft(value.min)} square feet`}
+          className="mp-area-range__input"
+          style={{ zIndex: value.min >= value.max - totalRange * 0.08 ? 4 : 3 }}
+        />
+        <input
+          type="range"
+          min={bounds.min}
+          max={bounds.max}
+          step={AREA_RANGE_STEP}
+          value={value.max}
+          onChange={(event) =>
+            onChange({
+              min: value.min,
+              max: Math.max(
+                normalizeValue(Number(event.target.value)),
+                value.min,
+              ),
+            })
+          }
+          aria-label="Maximum flat area"
+          aria-valuetext={`${formatAreaSqft(value.max)} square feet`}
+          className="mp-area-range__input"
+          style={{ zIndex: 3 }}
+        />
+      </div>
+
+      <div
+        className={`mt-1 flex items-center justify-between font-semibold uppercase text-[#718277] dark:text-emerald-50/60 ${
+          compact
+            ? "text-[9px] tracking-[0.12em] text-emerald-950/52"
+            : compactDesktop
+              ? "text-[8px] tracking-[0.12em]"
+              : "text-[9px] tracking-[0.14em]"
+        }`}
+      >
+        <span>{formatAreaSqft(bounds.min)} sqft</span>
+        <span>{formatAreaSqft(bounds.max)} sqft</span>
+      </div>
+    </div>
+  );
+}
+
 function MatchingFlatsInlineLoader({ compact = false }: { compact?: boolean }) {
   return (
     <div
@@ -3171,6 +3319,72 @@ function LiquidGlassFilterStyles() {
           scale: 1 1;
         }
       }
+
+      .mp-area-range__input {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 28px;
+        margin: 0;
+        appearance: none;
+        background: transparent;
+        pointer-events: none;
+        outline: none;
+      }
+
+      .mp-area-range__input::-webkit-slider-runnable-track {
+        height: 8px;
+        background: transparent;
+      }
+
+      .mp-area-range__input::-moz-range-track {
+        height: 8px;
+        background: transparent;
+        border: 0;
+      }
+
+      .mp-area-range__input::-webkit-slider-thumb {
+        width: 20px;
+        height: 20px;
+        margin-top: -6px;
+        appearance: none;
+        border: 2px solid #f7f6ef;
+        border-radius: 999px;
+        background: #466f46;
+        box-shadow:
+          0 0 0 1px rgba(38, 77, 44, 0.24),
+          0 3px 8px rgba(25, 63, 32, 0.3);
+        cursor: grab;
+        pointer-events: auto;
+      }
+
+      .mp-area-range__input::-moz-range-thumb {
+        width: 17px;
+        height: 17px;
+        border: 2px solid #f7f6ef;
+        border-radius: 999px;
+        background: #466f46;
+        box-shadow:
+          0 0 0 1px rgba(38, 77, 44, 0.24),
+          0 3px 8px rgba(25, 63, 32, 0.3);
+        cursor: grab;
+        pointer-events: auto;
+      }
+
+      .mp-area-range__input:active::-webkit-slider-thumb,
+      .mp-area-range__input:active::-moz-range-thumb {
+        cursor: grabbing;
+      }
+
+      .mp-area-range__input:focus-visible::-webkit-slider-thumb {
+        outline: 3px solid rgba(70, 111, 70, 0.28);
+        outline-offset: 2px;
+      }
+
+      .mp-area-range__input:focus-visible::-moz-range-thumb {
+        outline: 3px solid rgba(70, 111, 70, 0.28);
+        outline-offset: 2px;
+      }
     `}</style>
   );
 }
@@ -3208,7 +3422,7 @@ function FilterPillGroup<T extends string>({
       <legend className="mp-liquid-switcher__legend">Choose filter</legend>
       {options.map((item) => {
         const isActive = value === item;
-        const shouldShowTowerIcon = item === "Tower A" || item === "Tower B";
+        const shouldShowTowerIcon = item.startsWith("Tower ");
 
         return (
           <label

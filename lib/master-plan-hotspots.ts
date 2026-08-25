@@ -14,7 +14,7 @@ export type MasterPlanHotspotKey = (typeof MASTER_PLAN_HOTSPOT_KEYS)[number];
 
 const HOTSPOT_ALLOWED_UNIT_ENDINGS: Record<
   MasterPlanHotspotKey,
-  Record<TowerType, readonly string[]>
+  Partial<Record<TowerType, readonly string[]>>
 > = {
   A1: {
     "Tower A": ["1", "2", "5", "6"],
@@ -89,14 +89,19 @@ export function isFlatNumberAllowedAtHotspot(
     return false;
   }
 
-  return HOTSPOT_ALLOWED_UNIT_ENDINGS[hotspot][tower].includes(unitEnding);
+  const allowedEndings = HOTSPOT_ALLOWED_UNIT_ENDINGS[hotspot][tower];
+
+  // The inherited hotspot model only defines positional rules for A and B.
+  // Valid C/D inventory must remain selectable until their model coordinates
+  // are supplied.
+  return allowedEndings ? allowedEndings.includes(unitEnding) : true;
 }
 
 export function isInventoryApartmentAllowedAtHotspot(
   apartment: InventoryApartment,
   hotspot: MasterPlanHotspotKey,
 ) {
-  if (apartment.floor <= 0) {
+  if (apartment.floor < 0) {
     return false;
   }
 
@@ -117,12 +122,9 @@ export function isApartmentIdAllowedAtHotspot(
   }
 
   const [, towerCode = "", , unitCode = ""] = apartmentId.split("_");
-  const tower =
-    towerCode === "B"
-      ? "Tower B"
-      : fallbackTower === "Tower B"
-        ? "Tower B"
-        : "Tower A";
+  const tower = (["A", "B", "C", "D"].includes(towerCode)
+    ? `Tower ${towerCode}`
+    : fallbackTower ?? "Tower A") as TowerType;
 
   return isFlatNumberAllowedAtHotspot(hotspot, tower, unitCode);
 }

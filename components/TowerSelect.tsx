@@ -55,6 +55,30 @@ const towerCards: Array<{
       "absolute -bottom-[10%] -left-[8%] h-[126%] w-auto max-w-none object-contain object-bottom-left",
     mobileImageClass: "scale-[1.28] object-cover object-[34%_100%]",
   },
+  {
+    value: "Tower C",
+    accent: "border-emerald-300 bg-white ring-1 ring-emerald-200",
+    accentMuted: "border-zinc-200 bg-white hover:border-zinc-300",
+    accentCheck: "text-emerald-600",
+    description: "Mapped residences with complete floor-specific layouts.",
+    image: towerAimg,
+    imageAlt: "Tower C exterior",
+    imageClass:
+      "absolute -bottom-[8%] -left-[10%] h-[122%] w-auto max-w-none object-contain object-bottom-left",
+    mobileImageClass: "scale-[1.18] object-cover object-center",
+  },
+  {
+    value: "Tower D",
+    accent: "border-amber-300 bg-white ring-1 ring-amber-200",
+    accentMuted: "border-zinc-200 bg-white hover:border-zinc-300",
+    accentCheck: "text-amber-600",
+    description: "Mapped residences across ground, even, and odd floors.",
+    image: towerBimg,
+    imageAlt: "Tower D exterior",
+    imageClass:
+      "absolute -bottom-[8%] -left-[10%] h-[122%] w-auto max-w-none object-contain object-bottom-left",
+    mobileImageClass: "scale-[1.18] object-cover object-center",
+  },
 ];
 
 function TowerSelectPanel({

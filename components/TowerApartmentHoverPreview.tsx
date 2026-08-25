@@ -121,7 +121,7 @@ function formatApartmentLabel(
     return {
       floor: null,
       tower: fallbackTower,
-      towerCode: fallbackTower.endsWith("B") ? "B" : "A",
+      towerCode: fallbackTower.slice(-1),
       unit: null,
       title: "Hover a flat",
     };
