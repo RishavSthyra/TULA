@@ -2,32 +2,33 @@
 
 ## Goal
 
-Replace the exterior walkthrough's circular ripple/flash navigation feedback with a balanced Google Street View-style forward fly-through. The new effect should make movement feel spatial while preserving the existing preview-first tiled panorama loading pipeline.
+Replace the exterior walkthrough's circular ripple/flash navigation feedback with a fast, lightweight projected panorama transition. The effect should preserve directional feedback without scaling or blurring the panorama canvas, while keeping the existing preview-first tiled panorama loading pipeline.
 
 ## Motion Design
 
-Each successful panorama change will use three coordinated phases over approximately 600–700 milliseconds:
+Each successful panorama change will use a projected crossfade lasting approximately 180–220 milliseconds:
 
-1. **Forward push:** the current panorama scales toward the viewer with a restrained acceleration. A light blur and darker edge treatment build briefly near the swap point.
-2. **Panorama swap:** the already-resolved target preview crossfades over the current panorama while Photo Sphere Viewer changes to the target tiled source.
-3. **Settle:** the target preview begins slightly enlarged and settles to its normal scale as the high-resolution tiles become visible through the existing loader.
+1. **Panorama swap:** Photo Sphere Viewer crossfades from the current projected panorama to the already-resolved target source.
+2. **Directional cue:** a lightweight translucent gradient moves briefly in the requested navigation direction using opacity and `translate3d()` only.
+3. **Completion:** the cue fades out as the target panorama becomes interactive; there is no additional settle delay.
 
-The movement should feel polished and fast rather than dramatic. It must not use a large tunnel effect, aggressive blur, white flash, or exaggerated zoom.
+The panorama canvas remains geometrically stable throughout. The transition must not animate `scale()`, `filter: blur()`, canvas translation, field of view, or zoom.
 
 ## Architecture
 
-The transition will be controlled by a small reusable fly-through state inside `ExteriorPanoWalkthrough` rather than duplicated across navigation callbacks. The state will expose explicit phases such as idle, pushing, swapping, and settling, plus a transition key used to restart the animation reliably.
+The transition will be controlled by a small reusable state inside `ExteriorPanoWalkthrough` rather than duplicated across navigation callbacks. The state will identify whether a swap is active and the requested direction so the directional cue can restart reliably.
 
-Both viewer layers will participate:
+The layers have separate responsibilities:
 
-- The Photo Sphere Viewer host will receive the forward-push transform and temporary blur.
-- The existing preview overlay will receive the target crossfade and settling transform.
+- Photo Sphere Viewer performs the correctly projected panorama crossfade.
+- The preview overlay remains available only for existing tile-only/fallback behavior and animates opacity only.
+- A new non-interactive gradient cue animates opacity and `translate3d()` without modifying the panorama host.
 
-The existing panorama resolution, signed URL, preview preload, tile preload, caching, and fallback code remains responsible for asset readiness. The motion controller only begins the committed fly-through after the target preview has resolved, avoiding an extended zoom while heavy assets are still loading.
+The existing panorama resolution, signed URL, preview preload, tile preload, caching, and fallback code remains responsible for asset readiness. The transition begins after the target preview has resolved, avoiding a visible loading gap while heavy tiles stream.
 
 ## Navigation Coverage
 
-The shared fly-through must apply to every exterior node change:
+The shared transition must apply to every exterior node change:
 
 - directional buttons;
 - double-click/tap forward navigation;
@@ -35,29 +36,28 @@ The shared fly-through must apply to every exterior node change:
 - history/back navigation when it changes nodes;
 - amenity and expanded-map jumps.
 
-Same-node amenity selections that only rotate or zoom the current panorama will retain their existing direct camera adjustment and will not trigger a spatial fly-through.
+Same-node amenity selections that only rotate or zoom the current panorama will retain their existing direct camera adjustment and will not trigger a panorama transition.
 
 ## Existing Effect Removal
 
-The `transitionPulseKey` ring and flash overlay will be removed from exterior navigation. Any CSS keyframes used exclusively by that overlay will also be removed when no longer referenced.
+The `transitionPulseKey` ring and flash overlay remain removed from exterior navigation. Any CSS keyframes used exclusively by that overlay remain removed.
 
-The subtle transition vignette may remain but will be coordinated with the new phase state rather than acting as the primary movement effect.
+The subtle transition vignette may remain. The directional gradient cue must not resemble the old circle ripple or a full-screen white flash.
 
 ## Loading and Failure Behavior
 
-- Existing node resolution and preview preloading occur before the committed motion begins.
-- Existing panorama fade support remains active during the swap, with timing shortened to align with the overlay motion.
-- The target preview hides the viewer reset so the host can return to its neutral transform without a visible snap.
-- When tiled panorama loading fails and the preview fallback succeeds, the same settle phase completes normally.
-- When target resolution or all panorama fallbacks fail, the fly-through is cancelled, the current panorama returns to its neutral visual state, and the current error state is shown.
-- Navigation locking remains active for the full motion to prevent overlapping transitions.
+- Existing node resolution and preview preloading occur before the committed transition begins.
+- Existing panorama fade support performs the visual swap at 180–220 milliseconds.
+- When tiled panorama loading fails and the preview fallback succeeds, the same short crossfade completes normally.
+- When target resolution or all panorama fallbacks fail, the directional cue is cancelled and the current error state is shown.
+- Navigation locking remains active for the short swap to prevent overlapping transitions.
 
 ## Device and Accessibility Behavior
 
-- Desktop and standard mobile devices receive the balanced push, mild blur, crossfade, and settle.
-- Apple touch fallback mode applies the equivalent transform to its image layer instead of the hidden viewer host.
-- `prefers-reduced-motion: reduce` disables the push, blur, and scale movement while retaining a short crossfade.
-- The effect must use compositor-friendly opacity, transform, and limited filter animation without adding canvas readbacks or new large assets.
+- Desktop and standard mobile devices receive the projected crossfade and directional gradient cue.
+- Apple touch fallback mode uses its preview image opacity transition without transforming the image.
+- `prefers-reduced-motion: reduce` disables the directional cue while retaining a short crossfade.
+- The effect uses compositor-friendly opacity and `translate3d()` on the small cue layer only. It adds no canvas readbacks, filters, or new large assets.
 
 ## Scope Boundaries
 
@@ -68,18 +68,20 @@ This change will not alter:
 - directional graph selection;
 - amenity mappings, names, or minimap behavior;
 - viewer controls or page layout;
-- panorama camera orientation preservation.
+- panorama camera orientation preservation;
+- panorama host transform, filter, field of view, or zoom.
 
 ## Validation
 
 Before completion, verify:
 
 - the ripple/ring overlay no longer renders;
-- all navigation paths use the shared fly-through;
-- the current pano visibly pushes forward before the target settles;
+- all navigation paths use the shared lightweight transition;
+- the panorama canvas never scales or blurs;
+- the directional cue moves consistently with the requested direction;
 - preview and tile loading remain continuous without a black frame;
-- failed navigation restores a neutral transform and unlocks navigation;
+- failed navigation clears the cue and unlocks navigation;
 - rapid repeated input cannot overlap transitions;
-- reduced-motion mode uses a crossfade without push or blur;
+- reduced-motion mode uses only the projected crossfade;
 - lint, TypeScript checks, and a production build pass;
 - the local production walkthrough loads and performs multiple consecutive node changes without console errors.
