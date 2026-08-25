@@ -511,34 +511,8 @@
             "y": 0.912,
             "z": 0.0
         }
-    },
-    {
-        "id": "PANO_Spline_F0019",
-        "x": 8729.146,
-        "y": 5536.983,
-        "z": 165.000,
-        "pitch": 0.0,
-        "yaw": 126.2925,
-        "roll": 0.0,
-        "frame": 0,
-        "image_filename": "LS_PANO_Spline_F0019.png",
-        "facing_axis": "+Y",
-        "forward_vector": {
-            "x": -0.592,
-            "y": 0.806,
-            "z": 0.0
-        },
-        "right_vector": {
-            "x": -0.806,
-            "y": -0.592,
-            "z": 0.0
-        },
-        "left_vector": {
-            "x": 0.806,
-            "y": 0.592,
-            "z": 0.0
-        }
-    },
+    },   
+
     {
         "id": "PANO_Spline_F0020",
         "x": 9082.874,

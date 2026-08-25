@@ -15,6 +15,7 @@ import {
   Check,
   Clipboard,
   Maximize2,
+  MapPin,
   Menu,
   Minimize2,
   Pause,
@@ -32,6 +33,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
@@ -98,6 +100,8 @@ const EXTERIOR_APPLE_TOUCH_SPHERE_RESOLUTION = 64;
 const EXTERIOR_MIN_FOV = 36;
 const EXTERIOR_MAX_FOV = 74;
 const IOS_PREVIEW_OVERLAY_FADE_MS = 180;
+const PANO_TRANSITION_MS = 200;
+const REDUCED_MOTION_CROSSFADE_MS = 120;
 const RESOLVED_PANO_CACHE_LIMIT = 10;
 const CACHE_MAX_ITEMS = 320;
 const CACHE_TTL_MS = 1000 * 60 * 10;
@@ -112,6 +116,9 @@ const TRACKPAD_PANO_YAW_RADIANS_PER_PIXEL = 0.0032;
 const EMPTY_IMAGE_DATA_URL =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 const LOCAL_EXTERIOR_MINIMAP_IMAGE_URL = "/images/exterior-minimap-fallback.jpg";
+// Single calibration value aligning world heading with the minimap image's north.
+const EXTERIOR_MINIMAP_HEADING_OFFSET_DEG = -90;
+const EXTERIOR_COMPACT_MINIMAP_ZOOM = 1.32;
 const PREMIUM_OLIVE_GRADIENT = "walkthrough-glass-accent";
 const PREMIUM_PANEL_SURFACE = "walkthrough-glass-panel";
 const PREMIUM_PILL_SURFACE = "walkthrough-glass-chip";
@@ -178,6 +185,25 @@ type ViewSnapshot = {
   pitch: number;
   zoom: number;
 };
+
+type FlythroughPhase = "idle" | "swap";
+
+type MinimapPoint = {
+  leftPercent: number;
+  topPercent: number;
+};
+
+function waitForMotion(milliseconds: number) {
+  return new Promise<void>((resolve) => {
+    globalThis.setTimeout(resolve, milliseconds);
+  });
+}
+
+function waitForAnimationFrame() {
+  return new Promise<void>((resolve) => {
+    globalThis.requestAnimationFrame(() => resolve());
+  });
+}
 
 function createLoadState(
   phase: PanoLoadState["phase"],
@@ -480,9 +506,9 @@ function ArrowButton({
       aria-label={label}
       onClick={onClick}
       disabled={disabled}
-      className={`walkthrough-glass-button group flex h-10 w-10 touch-manipulation items-center justify-center rounded-[1rem] text-white/86 transition duration-200 active:scale-95 sm:h-11 sm:w-11 sm:rounded-[1.05rem] disabled:cursor-not-allowed disabled:opacity-30 ${PREMIUM_PILL_SURFACE}`}
+      className={`walkthrough-direction-button walkthrough-glass-button group flex h-10 w-10 touch-manipulation items-center justify-center rounded-full text-white/84 transition duration-200 active:scale-95 sm:h-11 sm:w-11 disabled:cursor-not-allowed disabled:opacity-28 ${PREMIUM_PILL_SURFACE}`}
     >
-      <Icon className="h-4 w-4 transition duration-200 group-hover:scale-110 sm:h-4.5 sm:w-4.5" />
+      <Icon className="h-4 w-4 stroke-[1.65] transition duration-200 group-hover:text-[#8bd3a7] sm:h-4.5 sm:w-4.5" />
     </button>
   );
 }
@@ -588,98 +614,56 @@ function CurrentAmenityPanel({
   name,
   description,
   nodeIds,
-  activeNodeId,
   progressIndex,
   className = "",
 }: {
   name: string;
   description: string;
   nodeIds: string[];
-  activeNodeId: string;
   progressIndex: number;
   className?: string;
 }) {
+  const stepCount = Math.max(nodeIds.length, 1);
+
   return (
     <div
-      className={`${uiFont.className} pointer-events-auto relative overflow-hidden rounded-[2rem] ${PREMIUM_PANEL_SURFACE} ${className}`}
+      className={`${uiFont.className} pointer-events-auto relative isolate px-3 py-4 text-white ${className}`}
     >
-      <div className="pointer-events-none absolute inset-[8px] rounded-[1.6rem] border border-white/18" />
+      <div className="pointer-events-none absolute inset-[-2.5rem] -z-10 bg-[radial-gradient(ellipse_at_28%_62%,rgba(0,0,0,0.68)_0%,rgba(0,0,0,0.36)_36%,transparent_72%)] blur-[10px]" />
 
-      <div className="relative z-10 px-5 pb-4 pt-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-[10px] font-bold uppercase tracking-[0.32em] text-white/62">
-              You are here
-            </div>
-            <div
-              className={`${editorialFont.className} mt-2 truncate text-[2.3rem] leading-none text-white`}
-            >
-              {name}
-            </div>
-          </div>
-          <div
-            className={`shrink-0 rounded-full px-3 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-white/78 ${PREMIUM_PILL_SURFACE}`}
-          >
-            Live View
-          </div>
-        </div>
-
-        <div className="mt-4 flex items-center gap-3">
-          <span className="h-px flex-1 bg-[linear-gradient(90deg,transparent,rgba(76,110,93,0.45),transparent)]" />
-        </div>
-
-        <p
-          className="mt-4 max-w-[14.5rem] text-[14px] leading-7 text-white/78"
-          style={{
-            display: "-webkit-box",
-            WebkitBoxOrient: "vertical",
-            WebkitLineClamp: 3,
-            overflow: "hidden",
-          }}
-        >
-          {description}
-        </p>
-
-        {/* <button
-          type="button"
-          onClick={onViewMap}
-          className={`walkthrough-glass-button mt-6 inline-flex items-center gap-3 rounded-[1.15rem] px-5 py-3 text-sm font-semibold text-white transition hover:scale-[1.01] active:scale-[0.99] ${PREMIUM_OLIVE_GRADIENT}`}
-        >
-          <MapIcon className="h-4 w-4" />
-          {isMapExpanded ? "Hide Map" : "View on Map"}
-        </button> */}
-
-        <div className="mt-5 flex items-center gap-2">
-          <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white/78 ${PREMIUM_PILL_SURFACE}`}>
-            Stop {progressIndex + 1} of {nodeIds.length}
-          </span>
-        </div>
-
-        <div className="mt-4 flex w-full min-w-0 items-center gap-1.5 overflow-hidden">
-          {nodeIds.map((nodeId, index) => {
-            const isCurrent = nodeId === activeNodeId;
-            const isVisited = index <= progressIndex;
-
-            return (
-              <span
-                key={`${nodeId}-${index}`}
-                className={`h-1 min-w-0 flex-1 rounded-full transition-colors duration-300 ${
-                  isCurrent
-                    ? "bg-[#4d7b63] shadow-[0_0_12px_rgba(120,192,150,0.28)]"
-                    : isVisited
-                      ? "bg-[#7aa98d]/60"
-                      : "bg-white/24"
-                }`}
-              />
-            );
-          })}
-        </div>
+      <div className="text-[9px] font-bold uppercase tracking-[0.34em] text-white/68 sm:text-[10px]">
+        You are here
+      </div>
+      <h2
+        className={`${editorialFont.className} mt-2 truncate text-[2.35rem] font-medium leading-[0.96] tracking-[-0.025em] text-white sm:text-[2.7rem]`}
+      >
+        {name}
+      </h2>
+      <span className="mt-4 block h-[2px] w-11 rounded-full bg-[#78c995] shadow-[0_0_12px_rgba(120,201,149,0.24)]" />
+      <p
+        className="mt-4 max-w-[17rem] text-[13px] font-medium leading-[1.7] text-white/74 sm:text-[14px]"
+        style={{
+          display: "-webkit-box",
+          WebkitBoxOrient: "vertical",
+          WebkitLineClamp: 3,
+          overflow: "hidden",
+        }}
+      >
+        {description}
+      </p>
+      <div className="mt-6 flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.28em] text-white/72 sm:text-[10px]">
+        <span>
+          Step {String(progressIndex + 1).padStart(2, "0")} of{" "}
+          {String(stepCount).padStart(2, "0")}
+        </span>
+        <span className="h-1.5 w-1.5 rounded-full bg-[#78c995] shadow-[0_0_8px_rgba(120,201,149,0.48)]" />
       </div>
     </div>
   );
 }
 
 function ExteriorMinimapGraphic({
+  variant,
   signedMinimapImageUrl,
   fallbackMinimapImageUrl,
   minimapZoom,
@@ -693,9 +677,12 @@ function ExteriorMinimapGraphic({
   minimapTrailPolyline,
   minimapDots,
   activeAmenityId,
+  activeMinimapPoint,
   jumpToAmenity,
+  onOpenCompact,
   className,
 }: {
+  variant: "compact" | "expanded";
   signedMinimapImageUrl: string;
   fallbackMinimapImageUrl: string;
   minimapZoom: number;
@@ -713,13 +700,136 @@ function ExteriorMinimapGraphic({
   minimapTrailPolyline: string;
   minimapDots: Array<ExteriorAmenity & { leftPercent: number; topPercent: number }>;
   activeAmenityId: string | null;
+  activeMinimapPoint: MinimapPoint;
   jumpToAmenity: (amenity: ExteriorAmenity) => Promise<boolean>;
+  onOpenCompact?: () => void;
   className?: string;
 }) {
   const minimapImageSrc =
     signedMinimapImageUrl && signedMinimapImageUrl !== EMPTY_IMAGE_DATA_URL
       ? signedMinimapImageUrl
       : fallbackMinimapImageUrl;
+  const isCompact = variant === "compact";
+  const compactTranslateX = (0.5 - activeMinimapPoint.leftPercent) * 100;
+  const compactTranslateY = (0.5 - activeMinimapPoint.topPercent) * 100;
+
+  const mapContents = (
+    <div className="relative h-full w-full overflow-hidden bg-[#101612]">
+      <Image
+        src={minimapImageSrc}
+        alt="Trifecta amenity minimap"
+        unoptimized
+        width={EXTERIOR_MINIMAP_IMAGE_LAYOUT.width}
+        height={EXTERIOR_MINIMAP_IMAGE_LAYOUT.height}
+        sizes={isCompact ? "176px" : "(max-width: 640px) 94vw, 72rem"}
+        draggable={false}
+        className="pointer-events-none absolute inset-0 block h-full w-full select-none object-cover brightness-[0.78] contrast-[1.08] saturate-[0.78]"
+      />
+
+      {minimapTrailPoints.length > 1 ? (
+        <svg
+          className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          aria-hidden
+        >
+          <polyline
+            points={minimapTrailPolyline}
+            fill="none"
+            stroke="rgba(2,8,5,0.72)"
+            strokeWidth={3.2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+          />
+          <polyline
+            points={minimapTrailPolyline}
+            fill="none"
+            stroke="rgba(120,201,149,0.92)"
+            strokeWidth={1.35}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+      ) : null}
+
+      {!isCompact && minimapTrailPoints.length > 0 ? (
+        <span
+          className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/90 bg-[#78c995] shadow-[0_0_0_4px_rgba(120,201,149,0.18),0_0_14px_rgba(120,201,149,0.32)]"
+          style={{
+            left: `${minimapTrailPoints[minimapTrailPoints.length - 1].leftPercent * 100}%`,
+            top: `${minimapTrailPoints[minimapTrailPoints.length - 1].topPercent * 100}%`,
+          }}
+        />
+      ) : null}
+
+      {minimapDots.map((amenity) => (
+        <button
+          key={amenity.id}
+          type="button"
+          aria-label={`Go to ${amenity.name}`}
+          title={amenity.name}
+          tabIndex={isCompact ? -1 : 0}
+          onClick={(event) => {
+            event.stopPropagation();
+            if (!isCompact) {
+              void jumpToAmenity(amenity);
+            }
+          }}
+          className={`group absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border transition ${
+            isCompact ? "pointer-events-none" : "hover:scale-110"
+          } ${
+            activeAmenityId === amenity.id
+              ? "border-white/90 bg-[#8bd3a7] shadow-[0_0_0_3px_rgba(120,201,149,0.2),0_0_12px_rgba(120,201,149,0.34)]"
+              : "border-white/76 bg-white/82 shadow-[0_0_0_2px_rgba(0,0,0,0.18)]"
+          }`}
+          style={{
+            left: `${amenity.leftPercent * 100}%`,
+            top: `${amenity.topPercent * 100}%`,
+          }}
+        />
+      ))}
+    </div>
+  );
+
+  if (isCompact) {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label="Expand minimap"
+        onClick={onOpenCompact}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onOpenCompact?.();
+          }
+        }}
+        className={`walkthrough-compact-minimap relative aspect-square cursor-pointer overflow-hidden rounded-full border border-white/16 bg-black/72 shadow-[0_18px_44px_rgba(0,0,0,0.44),inset_0_1px_0_rgba(255,255,255,0.1)] outline-none transition focus-visible:ring-2 focus-visible:ring-[#78c995]/80 ${className ?? ""}`}
+        style={{ touchAction: "manipulation" }}
+      >
+        <div className="walkthrough-minimap-heading-layer absolute left-1/2 top-1/2 aspect-[16/9] w-[225%] will-change-transform">
+          <div
+            className="relative h-full w-full will-change-transform"
+            style={{
+              transform: `translate(${compactTranslateX}%, ${compactTranslateY}%) scale(${EXTERIOR_COMPACT_MINIMAP_ZOOM})`,
+              transformOrigin: "center center",
+            }}
+          >
+            {mapContents}
+          </div>
+        </div>
+
+        <div className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle_at_center,transparent_48%,rgba(0,0,0,0.34)_82%,rgba(0,0,0,0.66)_100%)] shadow-[inset_0_0_0_5px_rgba(2,4,3,0.42)]" />
+        <div className="pointer-events-none absolute left-1/2 top-1/2 z-20 h-8 w-8 -translate-x-1/2 -translate-y-1/2">
+          <span className="walkthrough-minimap-player-pulse absolute inset-0 rounded-full border border-[#78c995]/42 bg-[#78c995]/10 shadow-[0_0_16px_rgba(120,201,149,0.22)]" />
+          <span className="absolute left-1/2 top-1/2 h-0 w-0 -translate-x-1/2 -translate-y-[64%] border-x-[6px] border-b-[11px] border-x-transparent border-b-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" />
+          <span className="absolute left-1/2 top-[58%] h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-[#78c995]" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -740,7 +850,6 @@ function ExteriorMinimapGraphic({
         aspectRatio: `${EXTERIOR_MINIMAP_IMAGE_LAYOUT.width} / ${EXTERIOR_MINIMAP_IMAGE_LAYOUT.height}`,
       }}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.22),transparent_36%),linear-gradient(180deg,rgba(218,245,229,0.14),rgba(213,240,223,0.06))]" />
       <div
         className="absolute inset-0 transition-transform duration-150 ease-out"
         style={{
@@ -749,95 +858,7 @@ function ExteriorMinimapGraphic({
           willChange: "transform",
         }}
       >
-        <div className="relative h-full w-full overflow-hidden rounded-[1.45rem] bg-[#132015]">
-          <Image
-            src={minimapImageSrc}
-            alt="Trifecta amenity minimap"
-            unoptimized
-            width={EXTERIOR_MINIMAP_IMAGE_LAYOUT.width}
-            height={EXTERIOR_MINIMAP_IMAGE_LAYOUT.height}
-            sizes="(max-width: 640px) 70vw, 19rem"
-            draggable={false}
-            className="pointer-events-none block h-full w-full select-none object-cover brightness-[0.96] contrast-[1.02] saturate-[0.84] hue-rotate-[6deg]"
-          />
-
-          {minimapTrailPoints.length > 1 ? (
-            <svg
-              className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
-              viewBox="0 0 100 100"
-              preserveAspectRatio="none"
-              aria-hidden
-            >
-              <polyline
-                points={minimapTrailPolyline}
-                fill="none"
-                stroke="rgba(120,92,6,0.34)"
-                strokeWidth={1.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                vectorEffect="non-scaling-stroke"
-              />
-              <polyline
-                points={minimapTrailPolyline}
-                fill="none"
-                stroke="rgba(255,223,77,0.34)"
-                strokeWidth={3}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                vectorEffect="non-scaling-stroke"
-                style={{ filter: "blur(2px)" }}
-              />
-              <polyline
-                points={minimapTrailPolyline}
-                fill="none"
-                stroke="rgba(255,214,64,0.98)"
-                strokeWidth={1.15}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                vectorEffect="non-scaling-stroke"
-              />
-            </svg>
-          ) : null}
-
-          {minimapTrailPoints.length > 0 ? (
-            <span
-              className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/80 bg-[#ffd54a] shadow-[0_0_0_4px_rgba(255,222,89,0.22),0_0_16px_rgba(255,214,64,0.36)]"
-              style={{
-                left: `${minimapTrailPoints[minimapTrailPoints.length - 1].leftPercent * 100}%`,
-                top: `${minimapTrailPoints[minimapTrailPoints.length - 1].topPercent * 100}%`,
-              }}
-            />
-          ) : null}
-
-          {minimapDots.map((amenity) => (
-            <button
-              key={amenity.id}
-              type="button"
-              aria-label={`Go to ${amenity.name}`}
-              title={amenity.name}
-              onClick={() => void jumpToAmenity(amenity)}
-              className={`group absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border transition hover:scale-110 ${
-                activeAmenityId === amenity.id
-                  ? "border-white/85 bg-[#ffd54a] shadow-[0_0_0_4px_rgba(255,222,89,0.24),0_0_12px_rgba(255,214,64,0.34)]"
-                  : "border-[#fff4c4] bg-[#ffcc33] shadow-[0_0_0_2px_rgba(255,214,64,0.14),0_0_10px_rgba(255,204,51,0.3)]"
-              }`}
-              style={{
-                left: `${amenity.leftPercent * 100}%`,
-                top: `${amenity.topPercent * 100}%`,
-              }}
-            >
-              <span
-                aria-hidden
-                className={`pointer-events-none absolute inset-0 rounded-full ${
-                  activeAmenityId === amenity.id
-                    ? "bg-[#fff3a6]/60"
-                    : "bg-[#ffe27a]/44"
-                }`}
-                style={{ animation: "walkthroughMinimapPulse 1.8s ease-in-out infinite" }}
-              />
-            </button>
-          ))}
-        </div>
+        {mapContents}
       </div>
     </div>
   );
@@ -859,6 +880,7 @@ function ExteriorMinimapPanel({
   minimapTrailPolyline,
   minimapDots,
   activeAmenityId,
+  activeMinimapPoint,
   jumpToAmenity,
   className,
   mapClassName,
@@ -882,15 +904,56 @@ function ExteriorMinimapPanel({
   minimapTrailPolyline: string;
   minimapDots: Array<ExteriorAmenity & { leftPercent: number; topPercent: number }>;
   activeAmenityId: string | null;
+  activeMinimapPoint: MinimapPoint;
   jumpToAmenity: (amenity: ExteriorAmenity) => Promise<boolean>;
   className?: string;
   mapClassName: string;
 }) {
+  if (!isExpanded) {
+    return (
+      <div className={`${uiFont.className} relative text-white ${className ?? ""}`}>
+        <div className="mb-2 flex items-center justify-end gap-2 pr-1 text-[9px] font-bold uppercase tracking-[0.28em] text-white/78">
+          <MapPin className="h-3.5 w-3.5 stroke-[1.7]" />
+          <span>Amenity Map</span>
+        </div>
+        <div className="relative ml-auto w-fit">
+          <ExteriorMinimapGraphic
+            variant="compact"
+            signedMinimapImageUrl={signedMinimapImageUrl}
+            fallbackMinimapImageUrl={fallbackMinimapImageUrl}
+            minimapZoom={minimapZoom}
+            minimapOffset={minimapOffset}
+            isMinimapDragging={isMinimapDragging}
+            handleMinimapWheel={handleMinimapWheel}
+            handleMinimapPointerDown={handleMinimapPointerDown}
+            handleMinimapPointerMove={handleMinimapPointerMove}
+            handleMinimapPointerUp={handleMinimapPointerUp}
+            minimapTrailPoints={minimapTrailPoints}
+            minimapTrailPolyline={minimapTrailPolyline}
+            minimapDots={minimapDots}
+            activeAmenityId={activeAmenityId}
+            activeMinimapPoint={activeMinimapPoint}
+            jumpToAmenity={jumpToAmenity}
+            onOpenCompact={onToggleExpanded}
+            className={mapClassName}
+          />
+          <button
+            type="button"
+            aria-label="Expand minimap"
+            onClick={onToggleExpanded}
+            className={`walkthrough-glass-button absolute -right-1 -top-1 z-30 flex h-8 w-8 items-center justify-center rounded-full text-white/86 transition hover:text-[#8bd3a7] active:scale-95 ${PREMIUM_PILL_SURFACE}`}
+          >
+            <Maximize2 className="h-3.5 w-3.5 stroke-[1.7]" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`relative overflow-hidden rounded-[1.85rem] ${PREMIUM_PANEL_SURFACE} ${className ?? ""}`}
     >
-      <div className="pointer-events-none absolute inset-[8px] rounded-[1.45rem] border border-white/18" />
       <div className="relative z-10">
         <div className={`${uiFont.className} flex items-start justify-between gap-3 px-4 pb-3 pt-4 text-white`}>
           <div className="min-w-0">
@@ -926,6 +989,7 @@ function ExteriorMinimapPanel({
           </div> */}
 
           <ExteriorMinimapGraphic
+            variant="expanded"
             signedMinimapImageUrl={signedMinimapImageUrl}
             fallbackMinimapImageUrl={fallbackMinimapImageUrl}
             minimapZoom={minimapZoom}
@@ -939,6 +1003,7 @@ function ExteriorMinimapPanel({
             minimapTrailPolyline={minimapTrailPolyline}
             minimapDots={minimapDots}
             activeAmenityId={activeAmenityId}
+            activeMinimapPoint={activeMinimapPoint}
             jumpToAmenity={jumpToAmenity}
             className={mapClassName}
           />
@@ -977,7 +1042,8 @@ export default function ExteriorPanoWalkthrough({
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isMobileAmenitiesOpen, setIsMobileAmenitiesOpen] = useState(false);
   const [isTrailPlaying, setIsTrailPlaying] = useState(false);
-  const [transitionPulseKey, setTransitionPulseKey] = useState(0);
+  const [flythroughPhase, setFlythroughPhase] =
+    useState<FlythroughPhase>("idle");
   const [historyDepth, setHistoryDepth] = useState(0);
   const [visitedTrailNodeIds, setVisitedTrailNodeIds] = useState<string[]>([]);
   const [trailSecondsRemaining, setTrailSecondsRemaining] = useState(
@@ -1012,6 +1078,7 @@ export default function ExteriorPanoWalkthrough({
   });
 
   const assetStore = useMemo(() => new PanoAssetStore(cdnBaseUrl), [cdnBaseUrl]);
+  const walkthroughRootRef = useRef<HTMLElement | null>(null);
   const viewerHostRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<Viewer | null>(null);
   const navigationLockRef = useRef(false);
@@ -1053,6 +1120,18 @@ export default function ExteriorPanoWalkthrough({
   const previewOverlayHideTimeoutRef = useRef<
     ReturnType<typeof globalThis.setTimeout> | null
   >(null);
+  const flythroughRunIdRef = useRef(0);
+  const flythroughPhaseRef = useRef<FlythroughPhase>("idle");
+  const prefersReducedMotionRef = useRef(false);
+  const minimapHeadingFrameRef = useRef<number | null>(null);
+  const minimapHeadingRotationRef = useRef(0);
+  const minimapHeadingStateRef = useRef<{
+    lastRawHeading: number | null;
+    continuousHeading: number;
+  }>({
+    lastRawHeading: null,
+    continuousHeading: 0,
+  });
 
   const activeNode = graph.byId[activeNodeId];
   const sequential = useMemo(
@@ -1129,6 +1208,51 @@ export default function ExteriorPanoWalkthrough({
       ),
     };
   }, []);
+  const activeMinimapPoint = useMemo<MinimapPoint>(() => {
+    if (!activeNode) {
+      return { leftPercent: 0.5, topPercent: 0.5 };
+    }
+
+    return projectMinimapPoint(activeNode.rawPosition);
+  }, [activeNode, projectMinimapPoint]);
+  const updateMinimapHeading = useCallback(
+    (yaw: number) => {
+      const node = graph.byId[activeNodeIdRef.current];
+      if (!node) {
+        return;
+      }
+
+      const forward = getViewForwardVector(node, yaw);
+      const rawHeading = Math.atan2(forward.y, forward.x);
+      const headingState = minimapHeadingStateRef.current;
+
+      if (headingState.lastRawHeading === null) {
+        headingState.continuousHeading = rawHeading;
+      } else {
+        headingState.continuousHeading += wrapAngleRad(
+          rawHeading - headingState.lastRawHeading,
+        );
+      }
+
+      headingState.lastRawHeading = rawHeading;
+      minimapHeadingRotationRef.current =
+        EXTERIOR_MINIMAP_HEADING_OFFSET_DEG -
+        radToDeg(headingState.continuousHeading);
+
+      if (minimapHeadingFrameRef.current !== null) {
+        return;
+      }
+
+      minimapHeadingFrameRef.current = globalThis.requestAnimationFrame(() => {
+        minimapHeadingFrameRef.current = null;
+        walkthroughRootRef.current?.style.setProperty(
+          "--exterior-minimap-rotation",
+          `${minimapHeadingRotationRef.current}deg`,
+        );
+      });
+    },
+    [graph.byId],
+  );
   const minimapDots = useMemo(() => {
     return visibleExteriorAmenities.map((amenity) => ({
       ...amenity,
@@ -1166,6 +1290,21 @@ export default function ExteriorPanoWalkthrough({
   const minimapTrailPolyline = minimapTrailPoints
     .map((point) => `${point.leftPercent * 100},${point.topPercent * 100}`)
     .join(" ");
+
+  useEffect(() => {
+    const fallbackYaw = activeNode ? degToRad(activeNode.yaw) : 0;
+    const viewerYaw = viewerRef.current?.getPosition().yaw;
+    updateMinimapHeading(viewerYaw ?? fallbackYaw);
+  }, [activeNode, updateMinimapHeading]);
+
+  useEffect(() => {
+    return () => {
+      if (minimapHeadingFrameRef.current !== null) {
+        globalThis.cancelAnimationFrame(minimapHeadingFrameRef.current);
+        minimapHeadingFrameRef.current = null;
+      }
+    };
+  }, []);
   const exteriorMenuViewportHeightWithBuffer = exteriorMenuViewportHeight
     ? Math.ceil(exteriorMenuViewportHeight) + 16
     : null;
@@ -1226,7 +1365,25 @@ export default function ExteriorPanoWalkthrough({
     }
   }, []);
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updatePreference = () => {
+      prefersReducedMotionRef.current = mediaQuery.matches;
+    };
+
+    updatePreference();
+    mediaQuery.addEventListener?.("change", updatePreference);
+
+    return () => {
+      mediaQuery.removeEventListener?.("change", updatePreference);
+    };
+  }, []);
+
   const hidePreviewOverlay = useCallback((delay = IOS_PREVIEW_OVERLAY_FADE_MS) => {
+    if (flythroughPhaseRef.current !== "idle") {
+      return;
+    }
+
     if (previewOverlayHideTimeoutRef.current !== null) {
       globalThis.clearTimeout(previewOverlayHideTimeoutRef.current);
       previewOverlayHideTimeoutRef.current = null;
@@ -1238,32 +1395,76 @@ export default function ExteriorPanoWalkthrough({
     }, delay);
   }, []);
 
+  const preparePreviewOverlay = useCallback(
+    async (previewUrl: string | null | undefined) => {
+      if (!previewUrl) {
+        return false;
+      }
+
+      if (previewOverlayHideTimeoutRef.current !== null) {
+        globalThis.clearTimeout(previewOverlayHideTimeoutRef.current);
+        previewOverlayHideTimeoutRef.current = null;
+      }
+
+      const loadId = ++previewOverlayLoadIdRef.current;
+
+      await new Promise<void>((resolve) => {
+        const image = new window.Image();
+        image.decoding = "async";
+        image.onload = () => resolve();
+        image.onerror = () => resolve();
+        image.src = previewUrl;
+      });
+
+      if (previewOverlayLoadIdRef.current !== loadId) {
+        return false;
+      }
+
+      setPreviewOverlayUrl(previewUrl);
+      setIsPreviewOverlayVisible(false);
+      return true;
+    },
+    [],
+  );
+
   const showPreviewOverlay = useCallback(async (previewUrl: string | null | undefined) => {
-    if (!previewUrl || !preferTileOnlyPanoramaRef.current) {
+    if (!preferTileOnlyPanoramaRef.current) {
       return;
     }
 
-    if (previewOverlayHideTimeoutRef.current !== null) {
-      globalThis.clearTimeout(previewOverlayHideTimeoutRef.current);
-      previewOverlayHideTimeoutRef.current = null;
+    const prepared = await preparePreviewOverlay(previewUrl);
+    if (prepared) {
+      setIsPreviewOverlayVisible(true);
     }
+  }, [preparePreviewOverlay]);
 
-    const loadId = ++previewOverlayLoadIdRef.current;
+  const beginFlythrough = useCallback(async () => {
+    const runId = ++flythroughRunIdRef.current;
 
-    await new Promise<void>((resolve) => {
-      const image = new window.Image();
-      image.decoding = "async";
-      image.onload = () => resolve();
-      image.onerror = () => resolve();
-      image.src = previewUrl;
-    });
-
-    if (previewOverlayLoadIdRef.current !== loadId) {
-      return;
-    }
-
-    setPreviewOverlayUrl(previewUrl);
     setIsPreviewOverlayVisible(true);
+    flythroughPhaseRef.current = "swap";
+    setFlythroughPhase("swap");
+
+    await waitForAnimationFrame();
+
+    return runId;
+  }, []);
+
+  const finishFlythrough = useCallback(async (runId: number | null) => {
+    if (runId === null || flythroughRunIdRef.current !== runId) {
+      return;
+    }
+
+    setIsPreviewOverlayVisible(false);
+    flythroughPhaseRef.current = "idle";
+    setFlythroughPhase("idle");
+  }, []);
+
+  const cancelFlythrough = useCallback(() => {
+    flythroughRunIdRef.current += 1;
+    setIsPreviewOverlayVisible(false);
+    flythroughPhaseRef.current = "idle";
+    setFlythroughPhase("idle");
   }, []);
 
   const resolvePano = useCallback(
@@ -1416,6 +1617,8 @@ export default function ExteriorPanoWalkthrough({
 
   useEffect(() => {
     return () => {
+      flythroughRunIdRef.current += 1;
+      flythroughPhaseRef.current = "idle";
       if (previewOverlayHideTimeoutRef.current !== null) {
         globalThis.clearTimeout(previewOverlayHideTimeoutRef.current);
       }
@@ -1690,6 +1893,7 @@ export default function ExteriorPanoWalkthrough({
           yaw: position.yaw,
           pitch: position.pitch,
         };
+        updateMinimapHeading(position.yaw);
         if (EXTERIOR_PANO_DEV_TOOL_ENABLED) {
           setLiveDebugView((current) => ({
             ...current,
@@ -1721,6 +1925,7 @@ export default function ExteriorPanoWalkthrough({
         };
 
         viewRef.current = readyView;
+        updateMinimapHeading(readyView.yaw);
         if (EXTERIOR_PANO_DEV_TOOL_ENABLED) {
           setLiveDebugView(readyView);
         }
@@ -1746,6 +1951,7 @@ export default function ExteriorPanoWalkthrough({
     isAppleTouchFallbackMode,
     resolvePano,
     showPreviewOverlay,
+    updateMinimapHeading,
   ]);
 
   useEffect(() => {
@@ -1997,12 +2203,16 @@ export default function ExteriorPanoWalkthrough({
 
       if (!viewer && isAppleTouchFallbackMode) {
         navigationLockRef.current = true;
-        setTransitionPulseKey((current) => (current + 1) % 10000);
         setIsTransitioning(true);
         setLoadState(createLoadState("preview", "Switching panorama"));
+        let flythroughRunId: number | null = null;
 
         try {
-          await resolvePano(targetId, { previewPriority: "high" });
+          const target = await resolvePano(targetId, { previewPriority: "high" });
+          if (preferTileOnlyPanoramaRef.current || isAppleTouchFallbackMode) {
+            await preparePreviewOverlay(target.previewUrl);
+          }
+          flythroughRunId = await beginFlythrough();
 
           if (options.recordHistory !== false) {
             pushNavigationHistory(fromNode.id);
@@ -2019,10 +2229,17 @@ export default function ExteriorPanoWalkthrough({
           startTransition(() => {
             setActiveNodeId(targetId);
           });
+          await waitForMotion(
+            prefersReducedMotionRef.current
+              ? REDUCED_MOTION_CROSSFADE_MS
+              : PANO_TRANSITION_MS,
+          );
+          await finishFlythrough(flythroughRunId);
 
           return true;
         } catch (error) {
           console.error("Exterior amenity jump failed:", error);
+          cancelFlythrough();
           setLoadState(createLoadState("error", "Panorama unavailable"));
           return false;
         } finally {
@@ -2040,13 +2257,16 @@ export default function ExteriorPanoWalkthrough({
       const warmupProfile = getWarmupProfile(isCompactExperienceRef.current);
       navigationLockRef.current = true;
       autorotatePluginRef.current?.stop();
-      setTransitionPulseKey((current) => (current + 1) % 10000);
       setIsTransitioning(true);
       setLoadState(createLoadState("preview", "Switching panorama"));
+      let flythroughRunId: number | null = null;
 
       try {
         const target = await resolvePano(targetId, { previewPriority: "high" });
-        await showPreviewOverlay(target.previewUrl);
+        if (preferTileOnlyPanoramaRef.current) {
+          await preparePreviewOverlay(target.previewUrl);
+        }
+        flythroughRunId = await beginFlythrough();
         const currentPosition = viewer.getPosition();
         const targetPitch = clamp(
           options.viewPitchDegrees === undefined
@@ -2074,7 +2294,9 @@ export default function ExteriorPanoWalkthrough({
           transition: {
             effect: "fade",
             rotation: false,
-            speed: warmupProfile.transitionSpeed,
+            speed: prefersReducedMotionRef.current
+              ? REDUCED_MOTION_CROSSFADE_MS
+              : Math.min(warmupProfile.transitionSpeed, PANO_TRANSITION_MS),
           },
           showLoader: false,
         } as const;
@@ -2114,15 +2336,16 @@ export default function ExteriorPanoWalkthrough({
           startTransition(() => {
             setActiveNodeId(targetId);
           });
+          await finishFlythrough(flythroughRunId);
 
           return true;
         }
-        hidePreviewOverlay(0);
+        cancelFlythrough();
         return false;
       } catch (error) {
         console.error("Exterior amenity jump failed:", error);
         viewer.hideError();
-        hidePreviewOverlay(0);
+        cancelFlythrough();
         setLoadState(createLoadState("error", "Panorama unavailable"));
         return false;
       } finally {
@@ -2133,13 +2356,15 @@ export default function ExteriorPanoWalkthrough({
       }
     },
     [
+      beginFlythrough,
+      cancelFlythrough,
+      finishFlythrough,
       graph,
-      hidePreviewOverlay,
       isAppleTouchFallbackMode,
       isTransitioning,
+      preparePreviewOverlay,
       pushNavigationHistory,
       resolvePano,
-      showPreviewOverlay,
     ],
   );
 
@@ -2273,9 +2498,9 @@ export default function ExteriorPanoWalkthrough({
 
       if (!viewer && isAppleTouchFallbackMode) {
         navigationLockRef.current = true;
-        setTransitionPulseKey((current) => (current + 1) % 10000);
         setIsTransitioning(true);
         setLoadState(createLoadState("preview", "Switching panorama"));
+        let flythroughRunId: number | null = null;
 
         try {
           const rankedCandidates = getViewDirectionalCandidates(
@@ -2294,8 +2519,15 @@ export default function ExteriorPanoWalkthrough({
             }
 
             try {
-              await resolvePano(targetId, { previewPriority: "high" });
+              const target = await resolvePano(targetId, {
+                previewPriority: "high",
+              });
+              if (preferTileOnlyPanoramaRef.current || isAppleTouchFallbackMode) {
+                await preparePreviewOverlay(target.previewUrl);
+              }
+              flythroughRunId = await beginFlythrough();
             } catch {
+              cancelFlythrough();
               availabilityRef.current.set(targetId, "missing");
               continue;
             }
@@ -2312,6 +2544,12 @@ export default function ExteriorPanoWalkthrough({
             startTransition(() => {
               setActiveNodeId(targetId);
             });
+            await waitForMotion(
+              prefersReducedMotionRef.current
+                ? REDUCED_MOTION_CROSSFADE_MS
+                : PANO_TRANSITION_MS,
+            );
+            await finishFlythrough(flythroughRunId);
             navigated = true;
             break;
           }
@@ -2321,6 +2559,7 @@ export default function ExteriorPanoWalkthrough({
           }
         } catch (error) {
           console.error("Exterior navigation failed:", error);
+          cancelFlythrough();
           setLoadState(createLoadState("error", "Panorama unavailable"));
         } finally {
           globalThis.setTimeout(() => {
@@ -2338,7 +2577,6 @@ export default function ExteriorPanoWalkthrough({
       const warmupProfile = getWarmupProfile(isCompactExperienceRef.current);
       navigationLockRef.current = true;
       autorotatePluginRef.current?.stop();
-      setTransitionPulseKey((current) => (current + 1) % 10000);
       setIsTransitioning(true);
       setLoadState(createLoadState("preview", "Switching panorama"));
  
@@ -2370,7 +2608,10 @@ export default function ExteriorPanoWalkthrough({
             continue;
           }
 
-          await showPreviewOverlay(target.previewUrl);
+          if (preferTileOnlyPanoramaRef.current) {
+            await preparePreviewOverlay(target.previewUrl);
+          }
+          const flythroughRunId = await beginFlythrough();
 
           try {
             const targetYaw = preserveViewYawBetweenNodes(
@@ -2387,13 +2628,16 @@ export default function ExteriorPanoWalkthrough({
               transition: {
                 effect: "fade",
                 rotation: false,
-                speed: warmupProfile.transitionSpeed,
+                speed: prefersReducedMotionRef.current
+                  ? REDUCED_MOTION_CROSSFADE_MS
+                  : Math.min(warmupProfile.transitionSpeed, PANO_TRANSITION_MS),
               },
               showLoader: false,
             } as const;
             const completed = await viewer.setPanorama(target.panorama, panoramaOptions);
 
             if (completed === false) {
+              cancelFlythrough();
               continue;
             }
 
@@ -2418,6 +2662,7 @@ export default function ExteriorPanoWalkthrough({
             startTransition(() => {
               setActiveNodeId(targetId);
             });
+            await finishFlythrough(flythroughRunId);
             navigated = true;
             break;
           } catch (previewTransitionError) {
@@ -2425,6 +2670,7 @@ export default function ExteriorPanoWalkthrough({
               withoutBasePreview(target.panorama) ?? target.previewUrl;
 
             if (!fallbackPanorama) {
+              cancelFlythrough();
               console.warn(
                 `Exterior pano transition failed for ${target.panoId}`,
                 previewTransitionError,
@@ -2447,12 +2693,18 @@ export default function ExteriorPanoWalkthrough({
                 transition: {
                   effect: "fade",
                   rotation: false,
-                  speed: warmupProfile.transitionSpeed,
+                  speed: prefersReducedMotionRef.current
+                    ? REDUCED_MOTION_CROSSFADE_MS
+                    : Math.min(
+                        warmupProfile.transitionSpeed,
+                        PANO_TRANSITION_MS,
+                      ),
                 },
                 showLoader: false,
               });
 
               if (completed === false) {
+                cancelFlythrough();
                 continue;
               }
 
@@ -2477,9 +2729,11 @@ export default function ExteriorPanoWalkthrough({
               startTransition(() => {
                 setActiveNodeId(targetId);
               });
+              await finishFlythrough(flythroughRunId);
               navigated = true;
               break;
             } catch (fallbackTransitionError) {
+              cancelFlythrough();
               console.warn(
                 `Exterior pano fallback transition failed for ${target.panoId}`,
                 fallbackTransitionError,
@@ -2491,13 +2745,13 @@ export default function ExteriorPanoWalkthrough({
         }
 
         if (!navigated) {
-          hidePreviewOverlay(0);
+          cancelFlythrough();
           throw new Error(`No available pano found for direction ${direction}`);
         }
       } catch (error) {
         console.error("Exterior navigation failed:", error);
         viewer.hideError();
-        hidePreviewOverlay(0);
+        cancelFlythrough();
         setLoadState(createLoadState("error", "Panorama unavailable"));
       } finally {
         globalThis.setTimeout(() => {
@@ -2507,13 +2761,15 @@ export default function ExteriorPanoWalkthrough({
       }
     },
     [
+      beginFlythrough,
+      cancelFlythrough,
+      finishFlythrough,
       graph,
-      hidePreviewOverlay,
       isAppleTouchFallbackMode,
       isTransitioning,
+      preparePreviewOverlay,
       pushNavigationHistory,
       resolvePano,
-      showPreviewOverlay,
     ],
   );
 
@@ -2826,6 +3082,18 @@ export default function ExteriorPanoWalkthrough({
     }
   }, [activeNode, liveDebugSnippet]);
 
+  const reduceFlythroughMotion = prefersReducedMotionRef.current;
+  const previewMotionStyle: CSSProperties = {
+    opacity: isPreviewOverlayVisible ? 1 : 0,
+    transitionProperty: "opacity",
+    transitionDuration: `${
+      reduceFlythroughMotion
+        ? REDUCED_MOTION_CROSSFADE_MS
+        : PANO_TRANSITION_MS
+    }ms`,
+    transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+    willChange: flythroughPhase === "idle" ? "auto" : "opacity",
+  };
   if (!activeNode) {
     return (
       <div className="flex h-full items-center justify-center rounded-[2rem] border border-white/10 bg-black/30 text-white/70">
@@ -2836,6 +3104,7 @@ export default function ExteriorPanoWalkthrough({
 
   return (
     <section
+      ref={walkthroughRootRef}
       aria-label={title}
       className={`relative isolate h-full min-h-[100svh] w-full overflow-hidden rounded-none border border-white/10 bg-[linear-gradient(180deg,#040608_0%,#05070a_50%,#040608_100%)] text-white shadow-[0_30px_80px_rgba(0,0,0,0.35)] md:min-h-0 md:rounded-[2.25rem] ${className ?? ""}`}
     >
@@ -2843,51 +3112,37 @@ export default function ExteriorPanoWalkthrough({
         <TrifectaPreloader progress={exteriorPreloaderProgress} />
       ) : null}
       <div className="sr-only">{subtitle}</div>
-      <svg
-        className="pointer-events-none absolute inset-0 z-[1] h-full w-full opacity-[0.14]"
-        width="100%"
-        height="100%"
-        xmlns="http://www.w3.org/2000/svg"
-        aria-hidden
-      >
-        <defs>
-          <pattern id="walkthroughDottedGrid" width="30" height="30" patternUnits="userSpaceOnUse">
-            <circle cx="2" cy="2" r="1" fill="rgba(206,241,220,0.42)" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#walkthroughDottedGrid)" />
-      </svg>
-      <div className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_18%_8%,rgba(255,255,255,0.07),transparent_24%),radial-gradient(circle_at_80%_12%,rgba(164,225,188,0.08),transparent_20%)]" />
 
       <div className="absolute inset-0 overflow-hidden rounded-none md:rounded-[2.25rem]">
-        {fallbackPreviewUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={fallbackPreviewUrl}
-            alt=""
-            aria-hidden
-            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
-              isAppleTouchFallbackMode ? "opacity-100" : "opacity-0"
+        <div className="absolute inset-0" data-flythrough-phase={flythroughPhase}>
+          {fallbackPreviewUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={fallbackPreviewUrl}
+              alt=""
+              aria-hidden
+              className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
+                isAppleTouchFallbackMode ? "opacity-100" : "opacity-0"
+              }`}
+              draggable={false}
+            />
+          ) : null}
+          <div
+            ref={viewerHostRef}
+            className={`h-full min-h-[100svh] w-full select-none [touch-action:none] [-webkit-user-drag:none] [-webkit-user-select:none] md:min-h-0 ${
+              isAppleTouchFallbackMode ? "opacity-0" : "opacity-100"
             }`}
-            draggable={false}
           />
-        ) : null}
-        <div
-          ref={viewerHostRef}
-          className={`h-full min-h-[100svh] w-full select-none [touch-action:none] [-webkit-user-drag:none] [-webkit-user-select:none] md:min-h-0 ${
-            isAppleTouchFallbackMode ? "opacity-0" : "opacity-100"
-          }`}
-        />
+        </div>
         {previewOverlayUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={previewOverlayUrl}
             alt=""
             aria-hidden
-            className={`pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
-              isPreviewOverlayVisible ? "opacity-100" : "opacity-0"
-            }`}
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover"
             draggable={false}
+            style={previewMotionStyle}
           />
         ) : null}
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(4,8,7,0.18)_0%,rgba(4,8,7,0.03)_26%,rgba(4,8,7,0.05)_70%,rgba(4,8,7,0.24)_100%)]" />
@@ -2896,28 +3151,6 @@ export default function ExteriorPanoWalkthrough({
             isTransitioning ? "opacity-100" : "opacity-0"
           }`}
         />
-        {transitionPulseKey > 0 ? (
-          <div
-            key={transitionPulseKey}
-            className="pointer-events-none absolute inset-0 z-10 overflow-hidden"
-            aria-hidden
-          >
-            <div
-              className="absolute inset-[-8%] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.18)_0%,rgba(201,240,216,0.10)_16%,rgba(0,0,0,0)_44%),linear-gradient(90deg,rgba(255,255,255,0)_0%,rgba(255,255,255,0.10)_48%,rgba(255,255,255,0)_100%)]"
-              style={{
-                animation:
-                  "exteriorStepFlash 820ms cubic-bezier(0.2, 0.82, 0.18, 1) both",
-              }}
-            />
-            <div
-              className="absolute left-1/2 top-1/2 h-[34vmin] w-[34vmin] rounded-full border border-white/24 shadow-[0_0_55px_rgba(165,220,191,0.16)]"
-              style={{
-                animation:
-                  "exteriorStepFocus 780ms cubic-bezier(0.18, 0.84, 0.2, 1) both",
-              }}
-            />
-          </div>
-        ) : null}
       </div>
 
       <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-3 p-3 sm:gap-4 sm:p-6">
@@ -3060,7 +3293,7 @@ export default function ExteriorPanoWalkthrough({
       </div>
 
       <div className="pointer-events-auto absolute right-3 top-1/2 z-20 -translate-y-1/2 sm:right-5">
-        <div className={`flex flex-col items-center gap-1.5 rounded-[1.35rem] p-2 sm:gap-2 sm:p-2.5 ${PREMIUM_PANEL_SURFACE}`}>
+        <div className={`walkthrough-direction-rail flex flex-col items-center gap-1.5 rounded-full p-1.5 sm:gap-2 sm:p-2 ${PREMIUM_PANEL_SURFACE}`}>
           <ArrowButton
             icon={ArrowUp}
             label="Move forward"
@@ -3168,26 +3401,25 @@ export default function ExteriorPanoWalkthrough({
       ) : null}
 
       <div
-        className="pointer-events-none absolute bottom-3 left-4 z-30 hidden w-[20.5rem] xl:block 2xl:left-5 2xl:w-[22rem]"
+        className="pointer-events-none absolute bottom-[5.25rem] left-5 z-30 hidden w-[19rem] xl:block 2xl:left-7 2xl:w-[20rem]"
       >
         <CurrentAmenityPanel
           name={activeAmenity?.name ?? "Exterior Trail"}
           description={activeAmenityDescription}
           nodeIds={activeAmenityNodeIds}
-          activeNodeId={activeNodeId}
           progressIndex={activeAmenityProgressIndex}
         />
       </div>
 
       <div className="pointer-events-none absolute inset-x-0 bottom-3 z-30 hidden justify-end px-3 pl-[clamp(4.5rem,20vw,6.25rem)] xl:flex sm:bottom-4 sm:pl-[6rem] sm:pr-4 md:justify-center md:px-3">
         <div
-          className={`${uiFont.className} pointer-events-auto flex w-[min(34rem,calc(100vw-clamp(5rem,22vw,6.75rem)))] items-center gap-2.5 rounded-full px-3 py-2 text-white sm:w-[min(34rem,calc(100vw-6rem))] sm:gap-3 sm:px-4 sm:py-2.5 md:w-[min(34rem,calc(100vw-1.5rem))] ${PREMIUM_PANEL_SURFACE}`}
+          className={`${uiFont.className} pointer-events-auto flex h-[3.75rem] w-[min(40rem,calc(100vw-clamp(5rem,22vw,6.75rem)))] items-center gap-3 rounded-full px-3 text-white sm:w-[min(40rem,calc(100vw-6rem))] sm:px-4 md:w-[min(40rem,calc(100vw-1.5rem))] ${PREMIUM_PANEL_SURFACE}`}
         >
           <button
             type="button"
             aria-label={isTrailPlaying ? "Pause pano trail" : "Play pano trail"}
             onClick={toggleTrailPlayback}
-            className={`walkthrough-glass-button relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-white transition active:scale-95 sm:h-10 sm:w-10 ${PREMIUM_OLIVE_GRADIENT}`}
+            className={`walkthrough-glass-button relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full text-white transition active:scale-95 ${PREMIUM_OLIVE_GRADIENT}`}
           >
             {isTrailPlaying ? (
               <Pause className="relative h-4 w-4 stroke-[1.8]" />
@@ -3197,24 +3429,26 @@ export default function ExteriorPanoWalkthrough({
           </button>
 
           <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-[0.24em] text-white/62">
-              <span>Trail</span>
-              <span className="shrink-0 tracking-[0.18em] text-white/82">
-                {sequential.index + 1}/{graph.order.length}
+            <div className="flex items-center justify-between gap-3 text-[12px] font-semibold text-white/88">
+              <span className="truncate">
+                {activeAmenity?.name ?? "Exterior Trail"}
+              </span>
+              <span className="shrink-0 text-[10px] font-medium tabular-nums text-white/56">
+                {sequential.index + 1} / {graph.order.length}
               </span>
             </div>
 
-            <div className="relative mt-2 h-1 overflow-hidden rounded-full bg-white/24 shadow-[inset_0_1px_2px_rgba(11,20,15,0.1)]">
+            <div className="relative mt-2 h-[2px] overflow-hidden rounded-full bg-white/22">
               <div
                 ref={trailProgressFillRef}
-                className="absolute inset-y-0 left-0 w-full origin-left rounded-full bg-[linear-gradient(90deg,rgba(108,153,127,0.92)_0%,rgba(148,212,174,0.86)_52%,rgba(216,245,228,0.72)_100%)] shadow-[0_0_14px_rgba(148,212,174,0.18)] will-change-transform"
+                className="absolute inset-y-0 left-0 w-full origin-left rounded-full bg-[#78c995] shadow-[0_0_8px_rgba(120,201,149,0.32)] will-change-transform"
                 style={{ transform: "scaleX(0)" }}
               />
             </div>
           </div>
 
-          <div className="hidden min-w-7 text-right text-[10px] font-bold uppercase tracking-[0.14em] text-white/62 sm:block">
-            {trailSecondsRemaining}s
+          <div className="hidden min-w-[3.5rem] text-right text-[10px] font-semibold tabular-nums text-white/62 sm:block">
+            0:{String(trailSecondsRemaining).padStart(2, "0")}
           </div>
 
           <div className="ml-0.5 flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -3223,7 +3457,7 @@ export default function ExteriorPanoWalkthrough({
               aria-label="Go back to previous pano"
               onClick={goBackToPreviousNode}
               disabled={isTransitioning || historyDepth === 0}
-              className={`walkthrough-glass-button relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-white/86 transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-35 sm:h-10 sm:w-10 ${PREMIUM_PILL_SURFACE}`}
+              className={`walkthrough-glass-button relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-white/82 transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-30 ${PREMIUM_PILL_SURFACE}`}
             >
               <SkipBack className="relative h-4 w-4 stroke-[1.8]" />
             </button>
@@ -3233,7 +3467,7 @@ export default function ExteriorPanoWalkthrough({
               aria-label="Next pano"
               onClick={skipToNextTrailNode}
               disabled={isTransitioning || !nextTrailNodeId}
-              className={`walkthrough-glass-button relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-white/86 transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-35 sm:h-10 sm:w-10 ${PREMIUM_PILL_SURFACE}`}
+              className={`walkthrough-glass-button relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-white/82 transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-30 ${PREMIUM_PILL_SURFACE}`}
             >
               <SkipForward className="relative h-4 w-4 stroke-[1.8]" />
             </button>
@@ -3272,6 +3506,7 @@ export default function ExteriorPanoWalkthrough({
               minimapTrailPolyline={minimapTrailPolyline}
               minimapDots={minimapDots}
               activeAmenityId={activeAmenityId}
+              activeMinimapPoint={activeMinimapPoint}
               jumpToAmenity={jumpToAmenityFromExpandedMap}
               className="mx-auto w-full max-w-[72rem] rounded-[2.2rem]"
               mapClassName="w-full"
@@ -3297,25 +3532,14 @@ export default function ExteriorPanoWalkthrough({
           minimapTrailPolyline={minimapTrailPolyline}
           minimapDots={minimapDots}
           activeAmenityId={activeAmenityId}
+          activeMinimapPoint={activeMinimapPoint}
           jumpToAmenity={jumpToAmenity}
-          className="w-[min(70vw,19rem)] sm:w-[18.5rem] xl:w-[17rem] 2xl:w-[18.5rem]"
-          mapClassName="w-full"
+          className="w-28 sm:w-36 xl:w-[10.5rem] 2xl:w-44"
+          mapClassName="h-28 w-28 sm:h-36 sm:w-36 xl:h-[10.5rem] xl:w-[10.5rem] 2xl:h-44 2xl:w-44"
         />
       </div>
 
       <style jsx global>{`
-        @property --walkthrough-angle-1 {
-          syntax: "<angle>";
-          inherits: false;
-          initial-value: -75deg;
-        }
-
-        @property --walkthrough-angle-2 {
-          syntax: "<angle>";
-          inherits: false;
-          initial-value: -45deg;
-        }
-
         .walkthrough-glass-panel,
         .walkthrough-glass-chip,
         .walkthrough-glass-map,
@@ -3325,163 +3549,69 @@ export default function ExteriorPanoWalkthrough({
           position: relative;
           isolation: isolate;
           overflow: hidden;
-          border: 1px solid rgba(233, 248, 236, 0.24);
-          background:
-            linear-gradient(
-              -75deg,
-              rgba(10, 24, 17, 0.72),
-              rgba(43, 78, 61, 0.76),
-              rgba(11, 27, 19, 0.74)
-            );
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(5, 7, 6, 0.58);
           box-shadow:
-            inset 0 0.125em 0.125em rgba(0, 0, 0, 0.08),
-            inset 0 -0.125em 0.125em rgba(255, 255, 255, 0.14),
-            0 0.25em 0.125em -0.125em rgba(0, 0, 0, 0.22),
-            0 0 0.08em 0.14em inset rgba(223, 245, 232, 0.06),
-            0 18px 44px rgba(2, 10, 7, 0.24);
-          backdrop-filter: blur(18px) saturate(1.16);
-          -webkit-backdrop-filter: blur(18px) saturate(1.16);
-          color: rgba(246, 250, 247, 0.94);
+            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            0 18px 45px rgba(0, 0, 0, 0.3);
+          backdrop-filter: blur(20px) saturate(1.05);
+          -webkit-backdrop-filter: blur(20px) saturate(1.05);
+          color: rgba(255, 255, 255, 0.94);
           transition:
-            transform 400ms cubic-bezier(0.25, 1, 0.5, 1),
-            box-shadow 400ms cubic-bezier(0.25, 1, 0.5, 1),
-            border-color 400ms cubic-bezier(0.25, 1, 0.5, 1),
-            background-position 500ms cubic-bezier(0.25, 1, 0.5, 1),
-            --walkthrough-angle-1 500ms ease,
-            --walkthrough-angle-2 500ms ease;
+            transform 180ms ease,
+            border-color 180ms ease,
+            background-color 180ms ease,
+            color 180ms ease;
           text-shadow: none;
         }
 
-        .walkthrough-glass-panel *,
-        .walkthrough-glass-chip *,
-        .walkthrough-glass-map *,
-        .walkthrough-glass-button *,
-        .walkthrough-glass-card *,
-        .walkthrough-glass-accent * {
-          text-shadow: none !important;
-        }
-
-        .walkthrough-glass-panel::before,
-        .walkthrough-glass-chip::before,
-        .walkthrough-glass-map::before,
-        .walkthrough-glass-button::before,
-        .walkthrough-glass-card::before,
-        .walkthrough-glass-accent::before {
-          content: "";
-          position: absolute;
-          inset: 0;
-          z-index: 0;
-          border-radius: inherit;
-          background:
-            linear-gradient(
-              var(--walkthrough-angle-2),
-              rgba(255, 255, 255, 0) 0%,
-              rgba(236, 255, 244, 0.18) 40% 50%,
-              rgba(255, 255, 255, 0) 55%
-            );
-          background-size: 200% 200%;
-          background-position: 0% 50%;
-          mix-blend-mode: screen;
-          pointer-events: none;
-          transition:
-            background-position 500ms cubic-bezier(0.25, 1, 0.5, 1),
-            --walkthrough-angle-2 500ms cubic-bezier(0.25, 1, 0.5, 1);
-        }
-
-        .walkthrough-glass-panel::after,
-        .walkthrough-glass-chip::after,
-        .walkthrough-glass-map::after,
-        .walkthrough-glass-button::after,
-        .walkthrough-glass-card::after,
-        .walkthrough-glass-accent::after {
-          content: "";
-          position: absolute;
-          inset: 0;
-          z-index: 1;
-          border-radius: inherit;
-          padding: 1px;
-          box-sizing: border-box;
-          background:
-            conic-gradient(
-              from var(--walkthrough-angle-1) at 50% 50%,
-              rgba(12, 36, 21, 0.54),
-              rgba(15, 41, 23, 0) 5% 40%,
-              rgba(225, 250, 234, 0.38) 50%,
-              rgba(15, 41, 23, 0) 60% 95%,
-              rgba(12, 36, 21, 0.54)
-            ),
-            linear-gradient(
-              180deg,
-              rgba(255, 255, 255, 0.2),
-              rgba(214, 245, 225, 0.12)
-            );
-          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-          mask-composite: exclude;
-          pointer-events: none;
-          transition:
-            all 400ms cubic-bezier(0.25, 1, 0.5, 1),
-            --walkthrough-angle-1 500ms ease;
-        }
-
-        .walkthrough-glass-panel > *,
-        .walkthrough-glass-chip > *,
-        .walkthrough-glass-map > *,
-        .walkthrough-glass-button > *,
-        .walkthrough-glass-card > *,
-        .walkthrough-glass-accent > * {
-          position: relative;
-          z-index: 2;
+        .walkthrough-glass-button,
+        .walkthrough-glass-chip {
+          background: rgba(4, 6, 5, 0.68);
         }
 
         .walkthrough-glass-card-active,
         .walkthrough-glass-accent {
-          background:
-            linear-gradient(
-              -75deg,
-              rgba(44, 86, 65, 0.84),
-              rgba(86, 132, 108, 0.88),
-              rgba(48, 90, 69, 0.84)
-            );
-          border-color: rgba(229, 247, 234, 0.3);
+          border-color: rgba(120, 201, 149, 0.58);
+          background: rgba(5, 9, 7, 0.76);
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            0 0 0 1px rgba(120, 201, 149, 0.1),
+            0 14px 34px rgba(0, 0, 0, 0.3);
+        }
+
+        .walkthrough-direction-rail {
+          background: rgba(3, 5, 4, 0.62);
+          border-color: rgba(255, 255, 255, 0.1);
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.07),
+            0 16px 36px rgba(0, 0, 0, 0.34);
+        }
+
+        .walkthrough-minimap-heading-layer {
+          transform: translate3d(-50%, -50%, 0)
+            rotate(var(--exterior-minimap-rotation, 0deg));
+          transform-origin: center center;
+          transition: transform 72ms linear;
+        }
+
+        .walkthrough-minimap-player-pulse {
+          animation: walkthroughMinimapPulse 1.8s ease-in-out infinite;
         }
 
         @media (hover: hover) and (pointer: fine) {
-          .walkthrough-glass-panel:hover,
-          .walkthrough-glass-map:hover {
-            transform: translateY(-1px);
-            box-shadow:
-              inset 0 0.125em 0.125em rgba(0, 0, 0, 0.08),
-              inset 0 -0.125em 0.125em rgba(255, 255, 255, 0.18),
-              0 22px 52px rgba(2, 10, 7, 0.28);
-          }
-
           .walkthrough-glass-button:hover,
           .walkthrough-glass-chip:hover,
-          .walkthrough-glass-card:hover,
-          .walkthrough-glass-accent:hover {
-            transform: scale(0.975);
+          .walkthrough-glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.22);
+            background: rgba(8, 11, 9, 0.72);
+          }
+
+          .walkthrough-direction-button:hover {
+            border-color: rgba(120, 201, 149, 0.7);
             box-shadow:
-              inset 0 0.125em 0.125em rgba(0, 0, 0, 0.08),
-              inset 0 -0.125em 0.125em rgba(255, 255, 255, 0.18),
-              0 12px 28px rgba(2, 10, 7, 0.24);
-          }
-
-          .walkthrough-glass-panel:hover::before,
-          .walkthrough-glass-map:hover::before,
-          .walkthrough-glass-button:hover::before,
-          .walkthrough-glass-chip:hover::before,
-          .walkthrough-glass-card:hover::before,
-          .walkthrough-glass-accent:hover::before {
-            background-position: 25% 50%;
-          }
-
-          .walkthrough-glass-panel:hover::after,
-          .walkthrough-glass-map:hover::after,
-          .walkthrough-glass-button:hover::after,
-          .walkthrough-glass-chip:hover::after,
-          .walkthrough-glass-card:hover::after,
-          .walkthrough-glass-accent:hover::after {
-            --walkthrough-angle-1: -125deg;
+              inset 0 1px 0 rgba(255, 255, 255, 0.08),
+              0 0 0 1px rgba(120, 201, 149, 0.12);
           }
         }
 
@@ -3490,6 +3620,16 @@ export default function ExteriorPanoWalkthrough({
         .walkthrough-glass-card:active,
         .walkthrough-glass-accent:active {
           transform: scale(0.968);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .walkthrough-minimap-heading-layer {
+            transition: none;
+          }
+
+          .walkthrough-minimap-player-pulse {
+            animation: none;
+          }
         }
 
         @keyframes walkthroughMinimapPulse {

@@ -9,42 +9,6 @@
 @source "../data";
 @source "../types";
 
-@keyframes exteriorStepFlash {
-  0% {
-    opacity: 0;
-    transform: scale(0.98);
-    filter: blur(10px);
-  }
-  18% {
-    opacity: 1;
-    transform: scale(1.02);
-    filter: blur(0);
-  }
-  48% {
-    opacity: 0.72;
-    transform: scale(1.04);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.08);
-    filter: blur(14px);
-  }
-}
-
-@keyframes exteriorStepFocus {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.42);
-  }
-  26% {
-    opacity: 0.7;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(1.35);
-  }
-}
-
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
