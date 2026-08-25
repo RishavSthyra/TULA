@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import HTMLFlipBook from "react-pageflip";
-import OverviewBg from "@/assets/overviewBg.avif";
 import Image from "next/image";
 import LeafOverlay from "@/components/ui/LeafOverlay";
 import MobileDeckLanding from "./MobileDeckLanding";
@@ -13,6 +12,7 @@ import {
   BROCHURE_LAST_PAGE_SRC,
   BROCHURE_PAGE_ASPECT_RATIO,
   BROCHURE_PAGES,
+  PROJECT_OVERVIEW_BACKGROUND_SRC,
   getBrochurePageWindow,
 } from "@/lib/brochure-pages";
 
@@ -165,7 +165,7 @@ export default function FlipBookDeck() {
       {!useStackedDeck ? (
         <div className="absolute inset-0">
           <Image
-            src={"/brochure 2 (1).avif"}
+            src={PROJECT_OVERVIEW_BACKGROUND_SRC}
             alt="Overview background"
             fill
             priority

@@ -11,6 +11,10 @@ import {
 import { primeSignedAssetUrls } from "@/src/lib/signed-assets";
 import { useSignedAssetUrls } from "@/src/lib/use-signed-assets";
 import type { HomeDeveloperConfig } from "@/types/developer-config";
+import {
+  BROCHURE_FIRST_PAGE_SRC,
+  PROJECT_OVERVIEW_BACKGROUND_SRC,
+} from "@/lib/brochure-pages";
 
 type IdleWindow = Window &
   typeof globalThis & {
@@ -24,6 +28,35 @@ type IdleWindow = Window &
 const HERO_VIDEO_RETRY_INTERVAL_MS = 850;
 const TEMPORARY_HOME_HERO_IMAGE_URL =
   "/HomeImage First Draft.jpeg";
+const PROJECT_OVERVIEW_CRITICAL_IMAGES = [
+  PROJECT_OVERVIEW_BACKGROUND_SRC,
+  BROCHURE_FIRST_PAGE_SRC,
+] as const;
+const cachedProjectOverviewImages = new Map<string, HTMLImageElement>();
+
+function cacheProjectOverviewImage(src: string) {
+  if (
+    typeof window === "undefined" ||
+    !src ||
+    cachedProjectOverviewImages.has(src)
+  ) {
+    return;
+  }
+
+  const image = new window.Image();
+  image.decoding = "async";
+  image.fetchPriority = "high";
+  cachedProjectOverviewImages.set(src, image);
+
+  image.onerror = () => {
+    cachedProjectOverviewImages.delete(src);
+  };
+  image.src = src;
+
+  if (typeof image.decode === "function") {
+    void image.decode().catch(() => undefined);
+  }
+}
 
 function getVideoLoadProgress(video: HTMLVideoElement) {
   const duration = video.duration;
@@ -263,6 +296,7 @@ export default function HomePageClient({
       href: string,
       as: "fetch" | "image" | "video",
       crossOrigin?: "anonymous",
+      fetchPriority?: "high" | "low" | "auto",
     ) => {
       const link = document.createElement("link");
       link.rel = "preload";
@@ -271,6 +305,9 @@ export default function HomePageClient({
 
       if (crossOrigin) {
         link.crossOrigin = crossOrigin;
+      }
+      if (fetchPriority) {
+        link.fetchPriority = fetchPriority;
       }
 
       document.head.appendChild(link);
@@ -282,6 +319,7 @@ export default function HomePageClient({
         href: string;
         as: "fetch" | "image" | "video";
         crossOrigin?: "anonymous";
+        fetchPriority?: "high" | "low" | "auto";
       }>,
     ) => {
       let index = 0;
@@ -294,7 +332,12 @@ export default function HomePageClient({
 
         const link = links[index];
         index += 1;
-        appendPreloadLink(link.href, link.as, link.crossOrigin);
+        appendPreloadLink(
+          link.href,
+          link.as,
+          link.crossOrigin,
+          link.fetchPriority,
+        );
         preloadAnimationFrame = window.requestAnimationFrame(appendNext);
       };
 
@@ -320,35 +363,45 @@ export default function HomePageClient({
       ? null
       : signedHeroVideoUrl;
 
+    PROJECT_OVERVIEW_CRITICAL_IMAGES.forEach(cacheProjectOverviewImage);
+
     appendPreloadLinksPaced(
       [
-      {
-        href: useStaticHeroIntro
-          ? signedHeroMobileStaticImageUrl
-          : signedHeroStageFallbackImageUrl,
-        as: "image",
-      },
-      ...(initialHeroVideoSource
-        ? [{ href: initialHeroVideoSource, as: "video" as const }]
-        : []),
-      ...(signedHeroLoopVideoUrl
-        ? [{ href: signedHeroLoopVideoUrl, as: "video" as const }]
-        : []),
-      ...(signedEntryVideoUrl
-        ? [{ href: signedEntryVideoUrl, as: "video" as const }]
-        : []),
-      ...(signedMasterPlanScrubVideoUrl
-        ? [{
-        href: signedMasterPlanScrubVideoUrl,
-        as: "video",
-      }]
-        : []),
-      { href: "/models/forglb.glb", as: "fetch" },
-      { href: "/models/forglb%20-%20Copy.glb", as: "fetch" },
-    ].filter((link): link is {
+        ...PROJECT_OVERVIEW_CRITICAL_IMAGES.map((href) => ({
+          href,
+          as: "image" as const,
+          fetchPriority: "high" as const,
+        })),
+        {
+          href: useStaticHeroIntro
+            ? signedHeroMobileStaticImageUrl
+            : signedHeroStageFallbackImageUrl,
+          as: "image",
+        },
+        ...(initialHeroVideoSource
+          ? [{ href: initialHeroVideoSource, as: "video" as const }]
+          : []),
+        ...(signedHeroLoopVideoUrl
+          ? [{ href: signedHeroLoopVideoUrl, as: "video" as const }]
+          : []),
+        ...(signedEntryVideoUrl
+          ? [{ href: signedEntryVideoUrl, as: "video" as const }]
+          : []),
+        ...(signedMasterPlanScrubVideoUrl
+          ? [
+              {
+                href: signedMasterPlanScrubVideoUrl,
+                as: "video" as const,
+              },
+            ]
+          : []),
+        { href: "/models/forglb.glb", as: "fetch" },
+        { href: "/models/forglb%20-%20Copy.glb", as: "fetch" },
+      ].filter((link): link is {
         href: string;
         as: "fetch" | "image" | "video";
         crossOrigin?: "anonymous";
+        fetchPriority?: "high" | "low" | "auto";
       } => Boolean(link.href)),
     );
 

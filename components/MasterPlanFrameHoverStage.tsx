@@ -106,10 +106,10 @@ const SNAP_ANIMATION_MS_PER_FRAME = 3.6;
 const HOTSPOT_NAVIGATION_MIN_DURATION_MS = 380;
 const HOTSPOT_NAVIGATION_MAX_DURATION_MS = 720;
 const HOTSPOT_NAVIGATION_MS_PER_FRAME = 6.8;
-const DRAG_VIDEO_SYNC_MS_STANDARD = 24;
+const DRAG_VIDEO_SYNC_MS_STANDARD = 1000 / MASTER_PLAN_SCRUB_VIDEO_FPS;
 const DRAG_VIDEO_SYNC_MS_CONSTRAINED = 40;
 const DRAG_VIDEO_SYNC_MS_LOW = 56;
-const DRAG_VIDEO_FRAME_SKIP_STANDARD = 2;
+const DRAG_VIDEO_FRAME_SKIP_STANDARD = 1;
 const DRAG_VIDEO_FRAME_SKIP_CONSTRAINED = 3;
 const DRAG_VIDEO_FRAME_SKIP_LOW = 4;
 const DISPLAYED_FRAME_COMMIT_MS_STANDARD = 24;
@@ -1421,12 +1421,14 @@ function bindVideoStream({
   video,
 }: VideoStreamBindingOptions) {
   let cancelled = false;
+  let hasMarkedReady = false;
 
   const markReady = () => {
-    if (cancelled) {
+    if (cancelled || hasMarkedReady) {
       return;
     }
 
+    hasMarkedReady = true;
     onReady();
   };
 
@@ -1443,7 +1445,6 @@ function bindVideoStream({
 
   video.addEventListener("loadeddata", markReady);
   video.addEventListener("canplay", markReady);
-  video.addEventListener("seeked", markReady);
   video.addEventListener("error", applyMp4Fallback);
 
   applyMp4Fallback();
@@ -1461,7 +1462,6 @@ function bindVideoStream({
     cancelled = true;
     video.removeEventListener("loadeddata", markReady);
     video.removeEventListener("canplay", markReady);
-    video.removeEventListener("seeked", markReady);
     video.removeEventListener("error", applyMp4Fallback);
     video.pause();
     video.removeAttribute("src");
@@ -3384,6 +3384,7 @@ export default function MasterPlanFrameHoverStage({
   const lastDragVideoSyncTimeRef = useRef(0);
   const lastPassiveVideoSyncFrameRef = useRef<number | null>(null);
   const lastPassiveVideoSyncTimeRef = useRef(0);
+  const pendingVideoSeekProgressRef = useRef<number | null>(null);
   const lastDisplayedFrameCommitTimeRef = useRef(0);
   const lastInvalidateSignatureRef = useRef("");
   const progressFrameRef = useRef<number | null>(null);
@@ -3771,13 +3772,21 @@ export default function MasterPlanFrameHoverStage({
       }
 
       const targetFrame = progressToFrame(progress);
+      const wrappedProgress = wrapProgress(progress);
       const targetTime = Math.min(
-        wrapProgress(progress) * video.duration,
+        wrappedProgress * video.duration,
         Math.max(video.duration - 1 / MASTER_PLAN_SCRUB_VIDEO_FPS, 0),
       );
       const previousFrame = lastSyncedVideoFrameRef.current;
       const now =
         typeof performance !== "undefined" ? performance.now() : Date.now();
+
+      if (video.seeking) {
+        pendingVideoSeekProgressRef.current = wrappedProgress;
+        return;
+      }
+
+      pendingVideoSeekProgressRef.current = null;
 
       if (!force) {
         if (
@@ -4402,9 +4411,23 @@ export default function MasterPlanFrameHoverStage({
       onReady: syncVideoState,
       video,
     });
+    const flushPendingVideoSeek = () => {
+      const pendingProgress = pendingVideoSeekProgressRef.current;
+
+      if (pendingProgress === null) {
+        return;
+      }
+
+      pendingVideoSeekProgressRef.current = null;
+      syncVideoTime(video, pendingProgress, { force: true });
+    };
+
+    video.addEventListener("seeked", flushPendingVideoSeek);
 
     return () => {
       stopVideoRevealFrame();
+      pendingVideoSeekProgressRef.current = null;
+      video.removeEventListener("seeked", flushPendingVideoSeek);
       cleanup();
     };
   }, [
@@ -4817,9 +4840,9 @@ export default function MasterPlanFrameHoverStage({
   const canvasDpr: [number, number] = useMemo(
     () => {
       const baseRange = getCanvasDprRange(performanceProfile.tier, {
-        isDragging,
+        isDragging: isThreeDsMaxTrial ? false : isDragging,
         isSafariLike: performanceProfile.isSafariLike,
-        isSettling,
+        isSettling: isThreeDsMaxTrial ? false : isSettling,
         supportsPreciseHover,
       });
 
@@ -4835,6 +4858,7 @@ export default function MasterPlanFrameHoverStage({
     },
     [
       isDragging,
+      isThreeDsMaxTrial,
       isSettling,
       performanceProfile.isSafariLike,
       performanceProfile.tier,

@@ -1,5 +1,6 @@
 import amenityCoordinates from "@/data/AminetiesCoordinates.json";
-import exteriorNodes from "@/data/trifecta_pano_walkthrough_data_Exterior1.json";
+import legacyExteriorNodes from "@/data/trifecta_pano_walkthrough_data_Exterior1.json";
+import exteriorNodes from "@/data/TULA Landscape 20082026 PANO_pano_walkthrough_data_2.json";
 import type { ExteriorPanoNodeSource } from "@/lib/exterior-tour/types";
 
 type AmenityCoordinate = {
@@ -58,6 +59,7 @@ export type ExteriorAmenity = {
 
 const coordinateMap = amenityCoordinates as Record<string, AmenityCoordinate>;
 const exteriorNodeSources = exteriorNodes as ExteriorPanoNodeSource[];
+const legacyExteriorNodeSources = legacyExteriorNodes as ExteriorPanoNodeSource[];
 
 function isIgnoredPanoId(value: string) {
   return /\.0000(?:\.[^/.]+)?$/i.test(value);
@@ -71,6 +73,57 @@ function normalizePanoNodeId(panoId: string) {
   }
 
   return withoutExtension.replace(/^LS_/, "");
+}
+
+const exteriorNodeSourceMap = new Map<string, ExteriorPanoNodeSource>(
+  exteriorNodeSources.map((node) => [node.id, node]),
+);
+const legacyExteriorNodeSourceMap = new Map<string, ExteriorPanoNodeSource>(
+  legacyExteriorNodeSources.map((node) => [node.id, node]),
+);
+const availableNodeIds = new Set(exteriorNodeSourceMap.keys());
+const remappedLegacyNodeIds = new Map<string, string>();
+
+function resolveAvailablePanoNodeId(panoId: string) {
+  const normalizedNodeId = normalizePanoNodeId(panoId);
+
+  if (!normalizedNodeId) {
+    return null;
+  }
+
+  if (availableNodeIds.has(normalizedNodeId)) {
+    return normalizedNodeId;
+  }
+
+  const cachedNodeId = remappedLegacyNodeIds.get(normalizedNodeId);
+  if (cachedNodeId) {
+    return cachedNodeId;
+  }
+
+  const legacyNode = legacyExteriorNodeSourceMap.get(normalizedNodeId);
+  if (!legacyNode) {
+    return null;
+  }
+
+  let nearestNodeId: string | null = null;
+  let nearestDistanceSquared = Number.POSITIVE_INFINITY;
+
+  for (const candidate of exteriorNodeSources) {
+    const deltaX = candidate.x - legacyNode.x;
+    const deltaY = candidate.y - legacyNode.y;
+    const distanceSquared = deltaX * deltaX + deltaY * deltaY;
+
+    if (distanceSquared < nearestDistanceSquared) {
+      nearestDistanceSquared = distanceSquared;
+      nearestNodeId = candidate.id;
+    }
+  }
+
+  if (nearestNodeId) {
+    remappedLegacyNodeIds.set(normalizedNodeId, nearestNodeId);
+  }
+
+  return nearestNodeId;
 }
 
 function pano(panoId: string) {
@@ -105,12 +158,6 @@ const exteriorNodeCoordinateMap = new Map<string, AmenityCoordinate>(
     ]),
 );
 
-const exteriorNodeSourceMap = new Map<string, ExteriorPanoNodeSource>(
-  exteriorNodeSources.map((node) => [node.id, node]),
-);
-
-const availableNodeIds = new Set(exteriorNodeCoordinateMap.keys());
-
 function startingPano(
   name: string,
   options: Omit<ExteriorAmenityStartingPanoInput, "name"> = {},
@@ -125,7 +172,7 @@ function ids(...groups: Array<string | string[]>) {
   const resolved: string[] = [];
 
   for (const id of groups.flat()) {
-    const nodeId = normalizePanoNodeId(id);
+    const nodeId = resolveAvailablePanoNodeId(id);
 
     if (!nodeId || !availableNodeIds.has(nodeId) || resolved.includes(nodeId)) {
       continue;
@@ -763,7 +810,7 @@ startingPano: startingPano("LS_BP_panoPath_Exterior32_F0097", {
 ];
 
 function getAmenityPreviewImage(nodeId: string) {
-  const source = exteriorNodeSources.find((node) => node.id === nodeId);
+  const source = legacyExteriorNodeSourceMap.get(nodeId);
   const folderName = (source?.image_filename ?? `LS_${nodeId}`).replace(
     /\.[^.]+$/,
     "",
@@ -784,7 +831,7 @@ function resolveAmenityStartingPano(
   fallbackNodeId: string,
 ): ExteriorAmenityStartingPano {
   const input = amenity.startingPano ?? startingPano(fallbackNodeId);
-  const nodeId = normalizePanoNodeId(input.name);
+  const nodeId = resolveAvailablePanoNodeId(input.name);
 
   if (!nodeId || !availableNodeIds.has(nodeId)) {
     throw new Error(
@@ -825,8 +872,10 @@ export const EXTERIOR_AMENITY_IMAGE_LINKS = amenityDefinitions.map(
       id: amenity.id,
       image:
         amenity.image ??
-        (primaryNodeId
-          ? getAmenityPreviewImage(primaryNodeId)
+        (primaryNodeId && amenity.startingPano
+          ? getAmenityPreviewImage(
+              normalizePanoNodeId(amenity.startingPano.name) ?? primaryNodeId,
+            )
           : AMENITY_IMAGE_PLACEHOLDER_URL),
     };
   },
@@ -852,7 +901,11 @@ function resolveAmenityImage(
     return amenity.image;
   }
 
-  return getAmenityPreviewImage(primaryNodeId);
+  const legacyStartingNodeId = amenity.startingPano
+    ? normalizePanoNodeId(amenity.startingPano.name)
+    : null;
+
+  return getAmenityPreviewImage(legacyStartingNodeId ?? primaryNodeId);
 }
 
 export const EXTERIOR_MINIMAP_IMAGE_URL =

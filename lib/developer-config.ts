@@ -2,8 +2,8 @@ import "server-only";
 
 import { revalidateTag, unstable_cache } from "next/cache";
 import amenitiesPageData from "@/data/amenitiesPage.json";
-import {exteriorAmenities} from "@/data/exteriorAmenities";
-import exteriorNodes from "@/data/trifecta_pano_walkthrough_data_Exterior1.json";
+import { exteriorAmenities } from "@/data/exteriorAmenities";
+import exteriorNodes from "@/data/TULA Landscape 20082026 PANO_pano_walkthrough_data_2.json";
 import furnishedInteriorNodes from "@/data/trifecta_pano_walkthrough_data_Interior_final.json";
 import bareShellInteriorNodes from "@/data/trifecta_pano_walkthrough_data_BareShell.json";
 import trackingData from "@/data/trifecta_unreal_tracking_data.json";
@@ -166,11 +166,11 @@ export const DEFAULT_DEVELOPER_RUNTIME_CONFIG: DeveloperRuntimeConfig = {
     fallbackImageKey: "images/first_frame_again.png",
   },
   exterior: {
-    panoBasePath: "exterior-panos-trifecta",
+    panoBasePath: "TULA/Panos/exterior-pano-remaining",
     nodes: exteriorNodes as ExteriorPanoNodeSource[],
-    initialNodeId: "BP_panoPath_Exterior_GateEntry_F0000",
+    initialNodeId: "PANO_Spline_F0000",
     initialPreviewKey:
-      "exterior-panos-trifecta/LS_BP_panoPath_Exterior_GateEntry_F0000/preview.jpg",
+      "TULA/Panos/exterior-pano-remaining/LS_PANO_Spline_F0000/preview.jpg",
     minimapKey: "images/Final_5.avif",
     fallbackImageKey: "images/exterior-minimap-fallback.jpg",
     title: "Trifecta Exterior Walkthrough",

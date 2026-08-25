@@ -2,6 +2,7 @@ export const BROCHURE_PAGE_WIDTH = 2011;
 export const BROCHURE_PAGE_HEIGHT = 1299;
 export const BROCHURE_PAGE_ASPECT_RATIO =
   BROCHURE_PAGE_WIDTH / BROCHURE_PAGE_HEIGHT;
+export const PROJECT_OVERVIEW_BACKGROUND_SRC = "/brochure 2 (1).avif";
 
 export type BrochurePage = {
   id: string;
