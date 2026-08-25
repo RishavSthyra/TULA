@@ -6,7 +6,8 @@ import { EquirectangularTilesAdapter } from "@photo-sphere-viewer/equirectangula
 import "@photo-sphere-viewer/core/index.css";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
 import Image from "next/image";
-import TrifectaPreloader from "@/components/ui/Preloader";
+import { AnimatePresence } from "framer-motion";
+import TulaBrandPreloader from "@/components/ui/TulaBrandPreloader";
 import {
   ArrowDown,
   ArrowLeft,
@@ -1038,6 +1039,13 @@ export default function ExteriorPanoWalkthrough({
     createLoadState("idle", "Preparing panorama"),
   );
   const [hasCompletedInitialPano, setHasCompletedInitialPano] = useState(false);
+  const [isInitialPanoReady, setIsInitialPanoReady] = useState(false);
+  const [isSecondPanoReady, setIsSecondPanoReady] = useState(
+    graph.order.length < 2,
+  );
+  const [secondPanoPreloadProgress, setSecondPanoPreloadProgress] = useState(
+    graph.order.length < 2 ? 1 : 0,
+  );
   const [isMinimapExpanded, setIsMinimapExpanded] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isMobileAmenitiesOpen, setIsMobileAmenitiesOpen] = useState(false);
@@ -1152,9 +1160,12 @@ export default function ExteriorPanoWalkthrough({
   const activeAmenityDescription =
     activeAmenity?.description ??
     "Explore the exterior route through gardens, arrivals, play courts, and community spaces.";
-  const exteriorPreloaderProgress = getExteriorPreloaderProgress(
+  const firstPanoPreloaderProgress = getExteriorPreloaderProgress(
     loadState,
     Boolean(fallbackPreviewUrl || previewOverlayUrl),
+  );
+  const exteriorPreloaderProgress = Math.round(
+    firstPanoPreloaderProgress * 0.5 + secondPanoPreloadProgress * 50,
   );
   const activeAmenityNodeIds = activeAmenity?.nodeIds.length
     ? activeAmenity.nodeIds
@@ -1630,11 +1641,7 @@ export default function ExteriorPanoWalkthrough({
       return;
     }
 
-    const isInitialPanoReady = isAppleTouchFallbackMode
-      ? Boolean(fallbackPreviewUrl)
-      : loadState.phase === "ready";
-
-    if (!isInitialPanoReady) {
+    if (!isInitialPanoReady || !isSecondPanoReady) {
       return;
     }
 
@@ -1648,8 +1655,9 @@ export default function ExteriorPanoWalkthrough({
   }, [
     fallbackPreviewUrl,
     hasCompletedInitialPano,
+    isInitialPanoReady,
     isAppleTouchFallbackMode,
-    loadState.phase,
+    isSecondPanoReady,
   ]);
 
   useEffect(() => {
@@ -1676,6 +1684,7 @@ export default function ExteriorPanoWalkthrough({
 
           setFallbackPreviewUrl(nextPreviewUrl);
           setLoadState(createLoadState("ready", "Ready", 1));
+          setIsInitialPanoReady(true);
         };
         image.onerror = () => {
           if (cancelled || fallbackPreviewLoadIdRef.current !== loadId) {
@@ -1837,8 +1846,88 @@ export default function ExteriorPanoWalkthrough({
 
       localViewer.addEventListener("panorama-loaded", () => {
         setLoadState(createLoadState("ready", "Ready", 1));
+        setIsInitialPanoReady(true);
         hidePreviewOverlay();
       });
+
+      const secondNodeId =
+        getSequentialNodeIds(graph, initialResolved.nodeId).nextId ??
+        graph.order.find((nodeId) => nodeId !== initialResolved.nodeId) ??
+        null;
+
+      if (!secondNodeId) {
+        setSecondPanoPreloadProgress(1);
+        setIsSecondPanoReady(true);
+      } else {
+        void (async () => {
+          try {
+            setSecondPanoPreloadProgress(0.12);
+            const secondResolved = await resolvePano(secondNodeId, {
+              previewPriority: "high",
+            });
+            if (cancelled || !localViewer) {
+              return;
+            }
+
+            setSecondPanoPreloadProgress(0.4);
+
+            try {
+              await localViewer.textureLoader.preloadPanorama(
+                secondResolved.panorama,
+              );
+            } catch {
+              // Priority tile warmup below still prepares tiled panos reliably.
+            }
+
+            if (cancelled) {
+              return;
+            }
+
+            setSecondPanoPreloadProgress(0.72);
+
+            if (secondResolved.mode === "tiles" && secondResolved.meta) {
+              const secondNode = graph.byId[secondNodeId];
+              const warmupProfile = getWarmupProfile(
+                isCompactExperienceRef.current,
+              );
+              const priorityTiles = selectPriorityTiles(
+                secondResolved.panoId,
+                secondResolved.meta,
+                cdnBaseUrl,
+                {
+                  yaw: secondNode ? degToRad(secondNode.yaw) : 0,
+                  pitch: secondNode
+                    ? clamp(degToRad(secondNode.pitch), MIN_PITCH, MAX_PITCH)
+                    : 0,
+                  zoom: DEFAULT_ZOOM,
+                },
+                warmupProfile.neighborFocusLimit,
+              );
+
+              await preloadTileBatch(
+                assetStore,
+                priorityTiles,
+                warmupProfile.neighborFocusConcurrency,
+                "high",
+              );
+            }
+
+            if (cancelled) {
+              return;
+            }
+
+            setSecondPanoPreloadProgress(1);
+            setIsSecondPanoReady(true);
+          } catch (error) {
+            console.warn("Exterior second panorama warmup failed:", error);
+            if (!cancelled) {
+              // Do not leave the experience permanently covered if a warmup fails.
+              setSecondPanoPreloadProgress(1);
+              setIsSecondPanoReady(true);
+            }
+          }
+        })();
+      }
 
       localViewer.addEventListener("panorama-error", ({ error }) => {
         console.error("Exterior panorama error:", error);
@@ -1944,8 +2033,9 @@ export default function ExteriorPanoWalkthrough({
     };
   }, [
     amenities,
-    graph.byId,
-    graph.order,
+    assetStore,
+    cdnBaseUrl,
+    graph,
     hidePreviewOverlay,
     initialRequestedNodeId,
     isAppleTouchFallbackMode,
@@ -3108,9 +3198,14 @@ export default function ExteriorPanoWalkthrough({
       aria-label={title}
       className={`relative isolate h-full min-h-[100svh] w-full overflow-hidden rounded-none border border-white/10 bg-[linear-gradient(180deg,#040608_0%,#05070a_50%,#040608_100%)] text-white shadow-[0_30px_80px_rgba(0,0,0,0.35)] md:min-h-0 md:rounded-[2.25rem] ${className ?? ""}`}
     >
-      {!hasCompletedInitialPano ? (
-        <TrifectaPreloader progress={exteriorPreloaderProgress} />
-      ) : null}
+      <AnimatePresence initial={false}>
+        {!hasCompletedInitialPano ? (
+          <TulaBrandPreloader
+            key="exterior-tula-preloader"
+            progress={exteriorPreloaderProgress}
+          />
+        ) : null}
+      </AnimatePresence>
       <div className="sr-only">{subtitle}</div>
 
       <div className="absolute inset-0 overflow-hidden rounded-none md:rounded-[2.25rem]">

@@ -1,0 +1,2433 @@
+{
+  "metadata": {
+    "source_files": [
+      "/Users/rishavmondal/Downloads/SALE UNIT 17-06-26.dwg",
+      "/Users/rishavmondal/Downloads/Files/3.SITE & TOWER TENDER 04-05-26 - Copy.dwg"
+    ],
+    "image_source_folder": "/Users/rishavmondal/Desktop/New Floor Plans",
+    "towers": [
+      "A",
+      "B",
+      "C",
+      "D"
+    ],
+    "total_floor_plans": 46,
+    "total_unit_mappings": 47,
+    "tower_config": "Each tower has 2B + Ground + 13 Floors (per DWG title block). Units are categorized by floor range: Ground, Ground+Even, First, First+Odd, Second+Even, Third+Odd, etc.",
+    "extraction_notes": [
+      "Floor plan type labels and floor ranges extracted from MTEXT/TEXT entities in SALE UNIT 17-06-26.dwg",
+      "Tower elevations and floor labels extracted from 3.SITE & TOWER TENDER 04-05-26 - Copy.dwg",
+      "Image filenames parsed to map each flat on each tower to its corresponding floor plan image",
+      "Tower A Flat-01 Ground+Even uses the file labeled 'Ground+ODD' in the Even folder (filename has a typo - this 4BHK image is used for A-Flat-01 on both even and odd floors per DWG)",
+      "Tower B 'Odd' folder contains the same Even-floor plans (typical floor plan repeats on odd floors)",
+      "Tower D Flat-04 Ground+Even image is not provided — using the First+Odd 4BHK image as substitute"
+    ]
+  },
+  "floor_plans": [
+    {
+      "id": "fp_001",
+      "tower": "A",
+      "flat": "02",
+      "floor_range": "Ground+Even",
+      "type": "3BHK 3T TYPE 1",
+      "bhk": "3BHK",
+      "original_filename": "_0000s_0003s_0000_3-BHK.-Flat-No.02--Ground+Even-Floors.png",
+      "source_path": "Even/Tower A Even/_0000s_0003s_0000_3-BHK.-Flat-No.02--Ground+Even-Floors.png",
+      "suggested_r2_key": "floor-plans/tower-a/flat-02/3-bhk.-flat-no.02-groundpluseven-floors.png"
+    },
+    {
+      "id": "fp_002",
+      "tower": "A",
+      "flat": "04",
+      "floor_range": "Ground+Even",
+      "type": "3.5BHK 3T TYPE 1",
+      "bhk": "3.5BHK",
+      "original_filename": "_0000s_0003s_0001_3.5-BHK.-Flat-No.04--Ground+-Even-Floors.png",
+      "source_path": "Even/Tower A Even/_0000s_0003s_0001_3.5-BHK.-Flat-No.04--Ground+-Even-Floors.png",
+      "suggested_r2_key": "floor-plans/tower-a/flat-04/3.5-bhk.-flat-no.04-groundplus-even-floors.png"
+    },
+    {
+      "id": "fp_003",
+      "tower": "A",
+      "flat": "05",
+      "floor_range": "Second+Even",
+      "type": "3BHK (Flat-05 Second+Even plan)",
+      "bhk": "3BHK",
+      "original_filename": "_0000s_0003s_0003_3-BHK.-Flat-No.05--Second-+-Even-Floors.png",
+      "source_path": "Even/Tower A Even/_0000s_0003s_0003_3-BHK.-Flat-No.05--Second-+-Even-Floors.png",
+      "suggested_r2_key": "floor-plans/tower-a/flat-05/3-bhk.-flat-no.05-second-plus-even-floors.png"
+    },
+    {
+      "id": "fp_004",
+      "tower": "A",
+      "flat": "05",
+      "floor_range": "Ground+Even",
+      "type": "2BHK 2T TYPE 1",
+      "bhk": "2BHK",
+      "original_filename": "_0000s_0003s_0002_2-BHK.-Flat-No.05--Ground+Even-Floors.png",
+      "source_path": "Even/Tower A Even/_0000s_0003s_0002_2-BHK.-Flat-No.05--Ground+Even-Floors.png",
+      "suggested_r2_key": "floor-plans/tower-a/flat-05/2-bhk.-flat-no.05-groundpluseven-floors.png"
+    },
+    {
+      "id": "fp_005",
+      "tower": "A",
+      "flat": "03",
+      "floor_range": "Ground+Even",
+      "type": "3BHK 3T TYPE 1a",
+      "bhk": "3BHK",
+      "original_filename": "_0000s_0003s_0004_3-BHK.-Flat-No.3--Ground+Even-Floors.png",
+      "source_path": "Even/Tower A Even/_0000s_0003s_0004_3-BHK.-Flat-No.3--Ground+Even-Floors.png",
+      "suggested_r2_key": "floor-plans/tower-a/flat-03/3-bhk.-flat-no.3-groundpluseven-floors.png"
+    },
+    {
+      "id": "fp_006",
+      "tower": "A",
+      "flat": "01",
+      "floor_range": "Ground+Even",
+      "type": "4BHK 4T TYPE 1",
+      "bhk": "4BHK",
+      "original_filename": "_0000s_0003s_0005_4-BHK.-Flat-No.01--Ground+ODD-Floors.png",
+      "source_path": "Even/Tower A Even/_0000s_0003s_0005_4-BHK.-Flat-No.01--Ground+ODD-Floors.png",
+      "suggested_r2_key": "floor-plans/tower-a/flat-01/4-bhk.-flat-no.01-groundplusodd-floors.png"
+    },
+    {
+      "id": "fp_007",
+      "tower": "A",
+      "flat": "05",
+      "floor_range": "Ground (Odd plan)",
+      "type": "2BHK 2T TYPE 1",
+      "bhk": "2BHK",
+      "original_filename": "_0001s_0000s_0000_2bhk-Tower-A-Flat_5-GROUND-Odd.png",
+      "source_path": "Odd/Tower A Odd/_0001s_0000s_0000_2bhk-Tower-A-Flat_5-GROUND-Odd.png",
+      "suggested_r2_key": "floor-plans/tower-a/flat-05/2bhk-tower-a-flat_5-ground-odd.png"
+    },
+    {
+      "id": "fp_008",
+      "tower": "A",
+      "flat": "03",
+      "floor_range": "Odd",
+      "type": "3BHK 3T TYPE 1a",
+      "bhk": "3BHK",
+      "original_filename": "_0001s_0000s_0004_3bhk-Tower-A-Flat_3-Odd.png",
+      "source_path": "Odd/Tower A Odd/_0001s_0000s_0004_3bhk-Tower-A-Flat_3-Odd.png",
+      "suggested_r2_key": "floor-plans/tower-a/flat-03/3bhk-tower-a-flat_3-odd.png"
+    },
+    {
+      "id": "fp_009",
+      "tower": "A",
+      "flat": "02",
+      "floor_range": "1st+Odd",
+      "type": "3BHK 3T TYPE 1",
+      "bhk": "3BHK",
+      "original_filename": "_0001s_0000s_0003_3bhk-Tower-A-Flat_2-(1st-Odd).png",
+      "source_path": "Odd/Tower A Odd/_0001s_0000s_0003_3bhk-Tower-A-Flat_2-(1st-Odd).png",
+      "suggested_r2_key": "floor-plans/tower-a/flat-02/3bhk-tower-a-flat_2-(1st-odd).png"
+    },
+    {
+      "id": "fp_010",
+      "tower": "A",
+      "flat": "04",
+      "floor_range": "Ground+Even (duplicate in Odd folder)",
+      "type": "3.5BHK 3T TYPE 1",
+      "bhk": "3.5BHK",
+      "original_filename": "_0001s_0000s_0002_3.5bhk-Tower-A-Flat_4-ground-even-floors.png",
+      "source_path": "Odd/Tower A Odd/_0001s_0000s_0002_3.5bhk-Tower-A-Flat_4-ground-even-floors.png",
+      "suggested_r2_key": "floor-plans/tower-a/flat-04/3.5bhk-tower-a-flat_4-ground-even-floors.png"
+    },
+    {
+      "id": "fp_011",
+      "tower": "A",
+      "flat": "05",
+      "floor_range": "Third+Odd",
+      "type": "2BHK 2T TYPE 1",
+      "bhk": "2BHK",
+      "original_filename": "_0001s_0000s_0001_2bhk-Tower-A-Flat_5-third+Odd.png",
+      "source_path": "Odd/Tower A Odd/_0001s_0000s_0001_2bhk-Tower-A-Flat_5-third+Odd.png",
+      "suggested_r2_key": "floor-plans/tower-a/flat-05/2bhk-tower-a-flat_5-thirdplusodd.png"
+    },
+    {
+      "id": "fp_012",
+      "tower": "A",
+      "flat": "01",
+      "floor_range": "Odd",
+      "type": "4BHK 4T TYPE 1",
+      "bhk": "4BHK",
+      "original_filename": "_0001s_0000s_0005_4bhk-Towe-A-Flat_1-Odd.png",
+      "source_path": "Odd/Tower A Odd/_0001s_0000s_0005_4bhk-Towe-A-Flat_1-Odd.png",
+      "suggested_r2_key": "floor-plans/tower-a/flat-01/4bhk-towe-a-flat_1-odd.png"
+    },
+    {
+      "id": "fp_013",
+      "tower": "B",
+      "flat": "06",
+      "floor_range": "Ground+Even",
+      "type": "3BHK 3T TYPE 3",
+      "bhk": "3BHK",
+      "original_filename": "_0000s_0002s_0006_3-BHK.-Flat-No.06--Ground+-Even-Floors.png",
+      "source_path": "Even/Tower B Even/_0000s_0002s_0006_3-BHK.-Flat-No.06--Ground+-Even-Floors.png",
+      "suggested_r2_key": "floor-plans/tower-b/flat-06/3-bhk.-flat-no.06-groundplus-even-floors.png"
+    },
+    {
+      "id": "fp_014",
+      "tower": "B",
+      "flat": "05",
+      "floor_range": "Ground+Even",
+      "type": "3.5BHK 3T TYPE 1",
+      "bhk": "3.5BHK",
+      "original_filename": "_0000s_0002s_0005_3.5-BHK.-Flat-No.05--Ground+-Even-Floors.png",
+      "source_path": "Even/Tower B Even/_0000s_0002s_0005_3.5-BHK.-Flat-No.05--Ground+-Even-Floors.png",
+      "suggested_r2_key": "floor-plans/tower-b/flat-05/3.5-bhk.-flat-no.05-groundplus-even-floors.png"
+    },
+    {
+      "id": "fp_015",
+      "tower": "B",
+      "flat": "02",
+      "floor_range": "Ground+Even",
+      "type": "3BHK 2T TYPE 2",
+      "bhk": "3BHK",
+      "original_filename": "_0000s_0002s_0004_3-BHK.-Flat-No.02--Ground+-Even-Floors.png",
+      "source_path": "Even/Tower B Even/_0000s_0002s_0004_3-BHK.-Flat-No.02--Ground+-Even-Floors.png",
+      "suggested_r2_key": "floor-plans/tower-b/flat-02/3-bhk.-flat-no.02-groundplus-even-floors.png"
+    },
+    {
+      "id": "fp_016",
+      "tower": "B",
+      "flat": "01",
+      "floor_range": "Ground",
+      "type": "2BHK 2T TYPE 2",
+      "bhk": "2BHK",
+      "original_filename": "_0000s_0002s_0000_2-BHK.-Flat-No.01--Ground-Floors.png",
+      "source_path": "Even/Tower B Even/_0000s_0002s_0000_2-BHK.-Flat-No.01--Ground-Floors.png",
+      "suggested_r2_key": "floor-plans/tower-b/flat-01/2-bhk.-flat-no.01-ground-floors.png"
+    },
+    {
+      "id": "fp_017",
+      "tower": "B",
+      "flat": "04",
+      "floor_range": "Ground+Even",
+      "type": "3BHK 3T TYPE 2a",
+      "bhk": "3BHK",
+      "original_filename": "_0000s_0002s_0003_3-BHK.-Flat-No.04--Ground+-Even-Floors.png",
+      "source_path": "Even/Tower B Even/_0000s_0002s_0003_3-BHK.-Flat-No.04--Ground+-Even-Floors.png",
+      "suggested_r2_key": "floor-plans/tower-b/flat-04/3-bhk.-flat-no.04-groundplus-even-floors.png"
+    },
+    {
+      "id": "fp_018",
+      "tower": "B",
+      "flat": "01",
+      "floor_range": "Second+Even",
+      "type": "3.5BHK 3T TYPE 1",
+      "bhk": "3.5BHK",
+      "original_filename": "_0000s_0002s_0002_3.5-BHK.-Flat-No.01--Secound+-Even-Floors.png",
+      "source_path": "Even/Tower B Even/_0000s_0002s_0002_3.5-BHK.-Flat-No.01--Secound+-Even-Floors.png",
+      "suggested_r2_key": "floor-plans/tower-b/flat-01/3.5-bhk.-flat-no.01-secoundplus-even-floors.png"
+    },
+    {
+      "id": "fp_019",
+      "tower": "B",
+      "flat": "03",
+      "floor_range": "Ground+Even",
+      "type": "3BHK 3T TYPE 1",
+      "bhk": "3BHK",
+      "original_filename": "_0000s_0002s_0001_3-BHK.-Flat-No.03--Ground+-Even-Floor.png",
+      "source_path": "Even/Tower B Even/_0000s_0002s_0001_3-BHK.-Flat-No.03--Ground+-Even-Floor.png",
+      "suggested_r2_key": "floor-plans/tower-b/flat-03/3-bhk.-flat-no.03-groundplus-even-floor.png"
+    },
+    {
+      "id": "fp_020",
+      "tower": "B",
+      "flat": "01",
+      "floor_range": "Second+Even (used on Odd)",
+      "type": "3.5BHK 3T TYPE 1",
+      "bhk": "3.5BHK",
+      "original_filename": "_0001s_0001s_0002_3.5-BHK.-Flat-No.01--Secound+-Even-Floors.png",
+      "source_path": "Odd/B Odd/_0001s_0001s_0002_3.5-BHK.-Flat-No.01--Secound+-Even-Floors.png",
+      "suggested_r2_key": "floor-plans/tower-b/flat-01/3.5-bhk.-flat-no.01-secoundplus-even-floors.png"
+    },
+    {
+      "id": "fp_021",
+      "tower": "B",
+      "flat": "02",
+      "floor_range": "Ground+Even (used on Odd)",
+      "type": "3BHK 2T TYPE 2",
+      "bhk": "3BHK",
+      "original_filename": "_0001s_0001s_0000_3-BHK.-Flat-No.02--Ground+-Even-Floors.png",
+      "source_path": "Odd/B Odd/_0001s_0001s_0000_3-BHK.-Flat-No.02--Ground+-Even-Floors.png",
+      "suggested_r2_key": "floor-plans/tower-b/flat-02/3-bhk.-flat-no.02-groundplus-even-floors.png"
+    },
+    {
+      "id": "fp_022",
+      "tower": "B",
+      "flat": "05",
+      "floor_range": "Ground+Even (used on Odd)",
+      "type": "3.5BHK 3T TYPE 1",
+      "bhk": "3.5BHK",
+      "original_filename": "_0001s_0001s_0005_3.5-BHK.-Flat-No.05--Ground+-Even-Floors.png",
+      "source_path": "Odd/B Odd/_0001s_0001s_0005_3.5-BHK.-Flat-No.05--Ground+-Even-Floors.png",
+      "suggested_r2_key": "floor-plans/tower-b/flat-05/3.5-bhk.-flat-no.05-groundplus-even-floors.png"
+    },
+    {
+      "id": "fp_023",
+      "tower": "B",
+      "flat": "04",
+      "floor_range": "Ground+Even (used on Odd)",
+      "type": "3BHK 3T TYPE 2a",
+      "bhk": "3BHK",
+      "original_filename": "_0001s_0001s_0001_3-BHK.-Flat-No.04--Ground+-Even-Floors.png",
+      "source_path": "Odd/B Odd/_0001s_0001s_0001_3-BHK.-Flat-No.04--Ground+-Even-Floors.png",
+      "suggested_r2_key": "floor-plans/tower-b/flat-04/3-bhk.-flat-no.04-groundplus-even-floors.png"
+    },
+    {
+      "id": "fp_024",
+      "tower": "B",
+      "flat": "03",
+      "floor_range": "Ground+Even (used on Odd)",
+      "type": "3BHK 3T TYPE 1",
+      "bhk": "3BHK",
+      "original_filename": "_0001s_0001s_0003_3-BHK.-Flat-No.03--Ground+-Even-Floor.png",
+      "source_path": "Odd/B Odd/_0001s_0001s_0003_3-BHK.-Flat-No.03--Ground+-Even-Floor.png",
+      "suggested_r2_key": "floor-plans/tower-b/flat-03/3-bhk.-flat-no.03-groundplus-even-floor.png"
+    },
+    {
+      "id": "fp_025",
+      "tower": "B",
+      "flat": "06",
+      "floor_range": "Ground+Even (used on Odd)",
+      "type": "3BHK 3T TYPE 3",
+      "bhk": "3BHK",
+      "original_filename": "_0001s_0001s_0004_3-BHK.-Flat-No.06--Ground+-Even-Floors.png",
+      "source_path": "Odd/B Odd/_0001s_0001s_0004_3-BHK.-Flat-No.06--Ground+-Even-Floors.png",
+      "suggested_r2_key": "floor-plans/tower-b/flat-06/3-bhk.-flat-no.06-groundplus-even-floors.png"
+    },
+    {
+      "id": "fp_026",
+      "tower": "C",
+      "flat": "01",
+      "floor_range": "Ground",
+      "type": "2BHK 2T TYPE 1",
+      "bhk": "2BHK",
+      "original_filename": "_0000s_0001s_0000_2BKH-FLAT-NO.01,GROUND-FLOOR.png",
+      "source_path": "Even/Tower C Even/_0000s_0001s_0000_2BKH-FLAT-NO.01,GROUND-FLOOR.png",
+      "suggested_r2_key": "floor-plans/tower-c/flat-01/2bkh-flat-no.01ground-floor.png"
+    },
+    {
+      "id": "fp_027",
+      "tower": "C",
+      "flat": "05",
+      "floor_range": "Ground+Even",
+      "type": "4BHK 4T TYPE 1a",
+      "bhk": "4BHK",
+      "original_filename": "_0000s_0001s_0001_4-BKH-FLAT-NO.05,-GROUND+EVEN-FLOOR.png",
+      "source_path": "Even/Tower C Even/_0000s_0001s_0001_4-BKH-FLAT-NO.05,-GROUND+EVEN-FLOOR.png",
+      "suggested_r2_key": "floor-plans/tower-c/flat-05/4-bkh-flat-no.05-groundpluseven-floor.png"
+    },
+    {
+      "id": "fp_028",
+      "tower": "C",
+      "flat": "02",
+      "floor_range": "Ground+Even",
+      "type": "3.5BHK 3T TYPE 2",
+      "bhk": "3.5BHK",
+      "original_filename": "_0000s_0001s_0002_3.5-BKH-FLAT-NO.02,-GROUND+EVEN-FLOOR.png",
+      "source_path": "Even/Tower C Even/_0000s_0001s_0002_3.5-BKH-FLAT-NO.02,-GROUND+EVEN-FLOOR.png",
+      "suggested_r2_key": "floor-plans/tower-c/flat-02/3.5-bkh-flat-no.02-groundpluseven-floor.png"
+    },
+    {
+      "id": "fp_029",
+      "tower": "C",
+      "flat": "01",
+      "floor_range": "Second+Even",
+      "type": "2BHK 2T TYPE 1",
+      "bhk": "2BHK",
+      "original_filename": "_0000s_0001s_0003_2BKH-FLAT-NO.01,-SECOND+EVEN-FLOOR.png",
+      "source_path": "Even/Tower C Even/_0000s_0001s_0003_2BKH-FLAT-NO.01,-SECOND+EVEN-FLOOR.png",
+      "suggested_r2_key": "floor-plans/tower-c/flat-01/2bkh-flat-no.01-secondpluseven-floor.png"
+    },
+    {
+      "id": "fp_030",
+      "tower": "C",
+      "flat": "03&04",
+      "floor_range": "Ground+Even",
+      "type": "3BHK 3T TYPE 1",
+      "bhk": "3BHK",
+      "original_filename": "_0000s_0001s_0004_3BHK-FLAT-NO.03&04-Ground-Even-Floor.png",
+      "source_path": "Even/Tower C Even/_0000s_0001s_0004_3BHK-FLAT-NO.03&04-Ground-Even-Floor.png",
+      "suggested_r2_key": "floor-plans/tower-c/flat-03and04/3bhk-flat-no.03and04-ground-even-floor.png"
+    },
+    {
+      "id": "fp_031",
+      "tower": "C",
+      "flat": "01",
+      "floor_range": "Third+Odd",
+      "type": "3BHK 3T TYPE 1 (Third+Odd plan)",
+      "bhk": "3BHK",
+      "original_filename": "_0001s_0001s_0000_3-BHK.-Flat-No.01--Third+ODD-Floors.png",
+      "source_path": "Odd/Tower C Odd/_0001s_0001s_0000_3-BHK.-Flat-No.01--Third+ODD-Floors.png",
+      "suggested_r2_key": "floor-plans/tower-c/flat-01/3-bhk.-flat-no.01-thirdplusodd-floors.png"
+    },
+    {
+      "id": "fp_032",
+      "tower": "C",
+      "flat": "03&04",
+      "floor_range": "First+Odd",
+      "type": "3BHK 3T TYPE 1",
+      "bhk": "3BHK",
+      "original_filename": "_0001s_0001s_0001_3-BHK-FLAT-no.03&04-First-+_ODD-Floor.png",
+      "source_path": "Odd/Tower C Odd/_0001s_0001s_0001_3-BHK-FLAT-no.03&04-First-+_ODD-Floor.png",
+      "suggested_r2_key": "floor-plans/tower-c/flat-03and04/3-bhk-flat-no.03and04-first-plus_odd-floor.png"
+    },
+    {
+      "id": "fp_033",
+      "tower": "C",
+      "flat": "01",
+      "floor_range": "First",
+      "type": "2BHK 2T TYPE 1",
+      "bhk": "2BHK",
+      "original_filename": "_0001s_0001s_0002_2-BHK.-Flat-No.01--First-Floors.png",
+      "source_path": "Odd/Tower C Odd/_0001s_0001s_0002_2-BHK.-Flat-No.01--First-Floors.png",
+      "suggested_r2_key": "floor-plans/tower-c/flat-01/2-bhk.-flat-no.01-first-floors.png"
+    },
+    {
+      "id": "fp_034",
+      "tower": "C",
+      "flat": "02",
+      "floor_range": "First+Odd",
+      "type": "3.5BHK 3T TYPE 2",
+      "bhk": "3.5BHK",
+      "original_filename": "_0001s_0001s_0003_3.5-BHK.-Flat-No.02--First+ODD-Floors.png",
+      "source_path": "Odd/Tower C Odd/_0001s_0001s_0003_3.5-BHK.-Flat-No.02--First+ODD-Floors.png",
+      "suggested_r2_key": "floor-plans/tower-c/flat-02/3.5-bhk.-flat-no.02-firstplusodd-floors.png"
+    },
+    {
+      "id": "fp_035",
+      "tower": "C",
+      "flat": "05",
+      "floor_range": "First+Odd",
+      "type": "4BHK 4T TYPE 1a",
+      "bhk": "4BHK",
+      "original_filename": "_0001s_0001s_0004_4-BHK.-Flat-No.05--First+ODD-Floors.png",
+      "source_path": "Odd/Tower C Odd/_0001s_0001s_0004_4-BHK.-Flat-No.05--First+ODD-Floors.png",
+      "suggested_r2_key": "floor-plans/tower-c/flat-05/4-bhk.-flat-no.05-firstplusodd-floors.png"
+    },
+    {
+      "id": "fp_036",
+      "tower": "D",
+      "flat": "02",
+      "floor_range": "Ground+Even",
+      "type": "3BHK 3T TYPE 1",
+      "bhk": "3BHK",
+      "original_filename": "_0000s_0000s_0000_3-BKH-FLAT-NO.02,GROUND+EVEN-FLOOR.png",
+      "source_path": "Even/Tower D Even/_0000s_0000s_0000_3-BKH-FLAT-NO.02,GROUND+EVEN-FLOOR.png",
+      "suggested_r2_key": "floor-plans/tower-d/flat-02/3-bkh-flat-no.02groundpluseven-floor.png"
+    },
+    {
+      "id": "fp_037",
+      "tower": "D",
+      "flat": "01",
+      "floor_range": "Ground+Even",
+      "type": "3.5BHK 3T TYPE 1",
+      "bhk": "3.5BHK",
+      "original_filename": "_0000s_0000s_0001_3.5-BKH-FLAT-NO.01,GROUND+EVEN-FLOOR.png",
+      "source_path": "Even/Tower D Even/_0000s_0000s_0001_3.5-BKH-FLAT-NO.01,GROUND+EVEN-FLOOR.png",
+      "suggested_r2_key": "floor-plans/tower-d/flat-01/3.5-bkh-flat-no.01groundpluseven-floor.png"
+    },
+    {
+      "id": "fp_038",
+      "tower": "D",
+      "flat": "05",
+      "floor_range": "Ground",
+      "type": "2BHK 2T TYPE 1",
+      "bhk": "2BHK",
+      "original_filename": "_0000s_0000s_0002_2BKH-FLAT-NO.05,-GROUND-FLOOR.png",
+      "source_path": "Even/Tower D Even/_0000s_0000s_0002_2BKH-FLAT-NO.05,-GROUND-FLOOR.png",
+      "suggested_r2_key": "floor-plans/tower-d/flat-05/2bkh-flat-no.05-ground-floor.png"
+    },
+    {
+      "id": "fp_039",
+      "tower": "D",
+      "flat": "03",
+      "floor_range": "Ground+Even",
+      "type": "3BHK 3T TYPE 1",
+      "bhk": "3BHK",
+      "original_filename": "_0000s_0000s_0003_3-BKH-FLAT-NO.03,GROUND+EVEN-FLOOR.png",
+      "source_path": "Even/Tower D Even/_0000s_0000s_0003_3-BKH-FLAT-NO.03,GROUND+EVEN-FLOOR.png",
+      "suggested_r2_key": "floor-plans/tower-d/flat-03/3-bkh-flat-no.03groundpluseven-floor.png"
+    },
+    {
+      "id": "fp_040",
+      "tower": "D",
+      "flat": "05",
+      "floor_range": "Second+Even",
+      "type": "3BHK 3T TYPE 1 (Flat-05 Second+Even)",
+      "bhk": "3BHK",
+      "original_filename": "_0000s_0000s_0004_3BHK-FLAT-NO.05-SECOND+EVEN-FLOOR.png",
+      "source_path": "Even/Tower D Even/_0000s_0000s_0004_3BHK-FLAT-NO.05-SECOND+EVEN-FLOOR.png",
+      "suggested_r2_key": "floor-plans/tower-d/flat-05/3bhk-flat-no.05-secondpluseven-floor.png"
+    },
+    {
+      "id": "fp_041",
+      "tower": "D",
+      "flat": "04",
+      "floor_range": "First+Odd",
+      "type": "4BHK 4T TYPE 1",
+      "bhk": "4BHK",
+      "original_filename": "_0000_4BHK-FLAT-NO.04-FIRST-+-ODD-FLOORS.png",
+      "source_path": "Odd/D Odd/_0000_4BHK-FLAT-NO.04-FIRST-+-ODD-FLOORS.png",
+      "suggested_r2_key": "floor-plans/tower-d/flat-04/4bhk-flat-no.04-first-plus-odd-floors.png"
+    },
+    {
+      "id": "fp_042",
+      "tower": "D",
+      "flat": "01",
+      "floor_range": "Third+Odd",
+      "type": "3BHK 3T TYPE 1 (Third+Odd)",
+      "bhk": "3BHK",
+      "original_filename": "_0001_3BHK-FLAT-NO.01-THIRD+ODD-FLOOR.png",
+      "source_path": "Odd/D Odd/_0001_3BHK-FLAT-NO.01-THIRD+ODD-FLOOR.png",
+      "suggested_r2_key": "floor-plans/tower-d/flat-01/3bhk-flat-no.01-thirdplusodd-floor.png"
+    },
+    {
+      "id": "fp_043",
+      "tower": "D",
+      "flat": "02",
+      "floor_range": "First+Odd",
+      "type": "3BHK 3T TYPE 1",
+      "bhk": "3BHK",
+      "original_filename": "_0002_3BHK-FLAT-NO.02-FIRST-+-ODD-FLOORS_.png",
+      "source_path": "Odd/D Odd/_0002_3BHK-FLAT-NO.02-FIRST-+-ODD-FLOORS_.png",
+      "suggested_r2_key": "floor-plans/tower-d/flat-02/3bhk-flat-no.02-first-plus-odd-floors_.png"
+    },
+    {
+      "id": "fp_044",
+      "tower": "D",
+      "flat": "05",
+      "floor_range": "First",
+      "type": "2BHK 2T TYPE 1",
+      "bhk": "2BHK",
+      "original_filename": "_0003_2BHK-FLAT-NO.05-FIRST-FLOORS.png",
+      "source_path": "Odd/D Odd/_0003_2BHK-FLAT-NO.05-FIRST-FLOORS.png",
+      "suggested_r2_key": "floor-plans/tower-d/flat-05/2bhk-flat-no.05-first-floors.png"
+    },
+    {
+      "id": "fp_045",
+      "tower": "D",
+      "flat": "01",
+      "floor_range": "First+Odd",
+      "type": "3.5BHK 3T TYPE 1",
+      "bhk": "3.5BHK",
+      "original_filename": "_0004_3.5BHK-FLAT-NO.01-FIRST-+-ODD-FLOORS.png",
+      "source_path": "Odd/D Odd/_0004_3.5BHK-FLAT-NO.01-FIRST-+-ODD-FLOORS.png",
+      "suggested_r2_key": "floor-plans/tower-d/flat-01/3.5bhk-flat-no.01-first-plus-odd-floors.png"
+    },
+    {
+      "id": "fp_046",
+      "tower": "D",
+      "flat": "03",
+      "floor_range": "First+Odd",
+      "type": "3BHK 3T TYPE 1",
+      "bhk": "3BHK",
+      "original_filename": "_0005_3BHK-FLAT-NO.03-FIRST-+-ODD-FLOORS.png",
+      "source_path": "Odd/D Odd/_0005_3BHK-FLAT-NO.03-FIRST-+-ODD-FLOORS.png",
+      "suggested_r2_key": "floor-plans/tower-d/flat-03/3bhk-flat-no.03-first-plus-odd-floors.png"
+    }
+  ],
+  "unit_mappings": [
+    {
+      "tower": "A",
+      "flat": "01",
+      "floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_range": "Ground+Even",
+      "plan_id": "fp_006",
+      "type": "4BHK 4T TYPE 1"
+    },
+    {
+      "tower": "A",
+      "flat": "01",
+      "floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_range": "Odd",
+      "plan_id": "fp_012",
+      "type": "4BHK 4T TYPE 1"
+    },
+    {
+      "tower": "A",
+      "flat": "02",
+      "floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_range": "Ground+Even",
+      "plan_id": "fp_001",
+      "type": "3BHK 3T TYPE 1"
+    },
+    {
+      "tower": "A",
+      "flat": "02",
+      "floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_range": "1st+Odd",
+      "plan_id": "fp_009",
+      "type": "3BHK 3T TYPE 1"
+    },
+    {
+      "tower": "A",
+      "flat": "03",
+      "floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_range": "Ground+Even",
+      "plan_id": "fp_005",
+      "type": "3BHK 3T TYPE 1a"
+    },
+    {
+      "tower": "A",
+      "flat": "03",
+      "floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_range": "Odd",
+      "plan_id": "fp_008",
+      "type": "3BHK 3T TYPE 1a"
+    },
+    {
+      "tower": "A",
+      "flat": "04",
+      "floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_range": "Ground+Even",
+      "plan_id": "fp_002",
+      "type": "3.5BHK 3T TYPE 1"
+    },
+    {
+      "tower": "A",
+      "flat": "04",
+      "floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_range": "Odd (uses Ground+Even duplicate)",
+      "plan_id": "fp_010",
+      "type": "3.5BHK 3T TYPE 1"
+    },
+    {
+      "tower": "A",
+      "flat": "05",
+      "floors": [
+        "Ground"
+      ],
+      "floor_range": "Ground+Even",
+      "plan_id": "fp_004",
+      "type": "2BHK 2T TYPE 1"
+    },
+    {
+      "tower": "A",
+      "flat": "05",
+      "floors": [
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_range": "Second+Even",
+      "plan_id": "fp_003",
+      "type": "3BHK"
+    },
+    {
+      "tower": "A",
+      "flat": "05",
+      "floors": [
+        "1st"
+      ],
+      "floor_range": "Ground (Odd plan)",
+      "plan_id": "fp_007",
+      "type": "2BHK 2T TYPE 1"
+    },
+    {
+      "tower": "A",
+      "flat": "05",
+      "floors": [
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_range": "Third+Odd",
+      "plan_id": "fp_011",
+      "type": "2BHK 2T TYPE 1"
+    },
+    {
+      "tower": "B",
+      "flat": "01",
+      "floors": [
+        "Ground"
+      ],
+      "floor_range": "Ground",
+      "plan_id": "fp_016",
+      "type": "2BHK 2T TYPE 2"
+    },
+    {
+      "tower": "B",
+      "flat": "01",
+      "floors": [
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_range": "Second+Even",
+      "plan_id": "fp_018",
+      "type": "3.5BHK 3T TYPE 1"
+    },
+    {
+      "tower": "B",
+      "flat": "01",
+      "floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_range": "Second+Even (used on Odd)",
+      "plan_id": "fp_020",
+      "type": "3.5BHK 3T TYPE 1"
+    },
+    {
+      "tower": "B",
+      "flat": "02",
+      "floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_range": "Ground+Even",
+      "plan_id": "fp_015",
+      "type": "3BHK 2T TYPE 2"
+    },
+    {
+      "tower": "B",
+      "flat": "02",
+      "floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_range": "Ground+Even (used on Odd)",
+      "plan_id": "fp_021",
+      "type": "3BHK 2T TYPE 2"
+    },
+    {
+      "tower": "B",
+      "flat": "03",
+      "floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_range": "Ground+Even",
+      "plan_id": "fp_019",
+      "type": "3BHK 3T TYPE 1"
+    },
+    {
+      "tower": "B",
+      "flat": "03",
+      "floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_range": "Ground+Even (used on Odd)",
+      "plan_id": "fp_024",
+      "type": "3BHK 3T TYPE 1"
+    },
+    {
+      "tower": "B",
+      "flat": "04",
+      "floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_range": "Ground+Even",
+      "plan_id": "fp_017",
+      "type": "3BHK 3T TYPE 2a"
+    },
+    {
+      "tower": "B",
+      "flat": "04",
+      "floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_range": "Ground+Even (used on Odd)",
+      "plan_id": "fp_023",
+      "type": "3BHK 3T TYPE 2a"
+    },
+    {
+      "tower": "B",
+      "flat": "05",
+      "floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_range": "Ground+Even",
+      "plan_id": "fp_014",
+      "type": "3.5BHK 3T TYPE 1"
+    },
+    {
+      "tower": "B",
+      "flat": "05",
+      "floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_range": "Ground+Even (used on Odd)",
+      "plan_id": "fp_022",
+      "type": "3.5BHK 3T TYPE 1"
+    },
+    {
+      "tower": "B",
+      "flat": "06",
+      "floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_range": "Ground+Even",
+      "plan_id": "fp_013",
+      "type": "3BHK 3T TYPE 3"
+    },
+    {
+      "tower": "B",
+      "flat": "06",
+      "floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_range": "Ground+Even (used on Odd)",
+      "plan_id": "fp_025",
+      "type": "3BHK 3T TYPE 3"
+    },
+    {
+      "tower": "C",
+      "flat": "01",
+      "floors": [
+        "Ground"
+      ],
+      "floor_range": "Ground",
+      "plan_id": "fp_026",
+      "type": "2BHK 2T TYPE 1"
+    },
+    {
+      "tower": "C",
+      "flat": "01",
+      "floors": [
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_range": "Second+Even",
+      "plan_id": "fp_029",
+      "type": "2BHK 2T TYPE 1"
+    },
+    {
+      "tower": "C",
+      "flat": "01",
+      "floors": [
+        "1st"
+      ],
+      "floor_range": "First",
+      "plan_id": "fp_033",
+      "type": "2BHK 2T TYPE 1"
+    },
+    {
+      "tower": "C",
+      "flat": "01",
+      "floors": [
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_range": "Third+Odd",
+      "plan_id": "fp_031",
+      "type": "3BHK 3T TYPE 1 (Third+Odd plan)"
+    },
+    {
+      "tower": "C",
+      "flat": "02",
+      "floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_range": "Ground+Even",
+      "plan_id": "fp_028",
+      "type": "3.5BHK 3T TYPE 2"
+    },
+    {
+      "tower": "C",
+      "flat": "02",
+      "floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_range": "First+Odd",
+      "plan_id": "fp_034",
+      "type": "3.5BHK 3T TYPE 2"
+    },
+    {
+      "tower": "C",
+      "flat": "03&04",
+      "floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_range": "Ground+Even",
+      "plan_id": "fp_030",
+      "type": "3BHK 3T TYPE 1"
+    },
+    {
+      "tower": "C",
+      "flat": "03&04",
+      "floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_range": "First+Odd",
+      "plan_id": "fp_032",
+      "type": "3BHK 3T TYPE 1"
+    },
+    {
+      "tower": "C",
+      "flat": "05",
+      "floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_range": "Ground+Even",
+      "plan_id": "fp_027",
+      "type": "4BHK 4T TYPE 1a"
+    },
+    {
+      "tower": "C",
+      "flat": "05",
+      "floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_range": "First+Odd",
+      "plan_id": "fp_035",
+      "type": "4BHK 4T TYPE 1a"
+    },
+    {
+      "tower": "D",
+      "flat": "01",
+      "floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_range": "Ground+Even",
+      "plan_id": "fp_037",
+      "type": "3.5BHK 3T TYPE 1"
+    },
+    {
+      "tower": "D",
+      "flat": "01",
+      "floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_range": "First+Odd",
+      "plan_id": "fp_045",
+      "type": "3.5BHK 3T TYPE 1"
+    },
+    {
+      "tower": "D",
+      "flat": "01",
+      "floors": [
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_range": "Third+Odd",
+      "plan_id": "fp_042",
+      "type": "3BHK 3T TYPE 1 (Third+Odd)"
+    },
+    {
+      "tower": "D",
+      "flat": "02",
+      "floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_range": "Ground+Even",
+      "plan_id": "fp_036",
+      "type": "3BHK 3T TYPE 1"
+    },
+    {
+      "tower": "D",
+      "flat": "02",
+      "floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_range": "First+Odd",
+      "plan_id": "fp_043",
+      "type": "3BHK 3T TYPE 1"
+    },
+    {
+      "tower": "D",
+      "flat": "03",
+      "floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_range": "Ground+Even",
+      "plan_id": "fp_039",
+      "type": "3BHK 3T TYPE 1"
+    },
+    {
+      "tower": "D",
+      "flat": "03",
+      "floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_range": "First+Odd",
+      "plan_id": "fp_046",
+      "type": "3BHK 3T TYPE 1"
+    },
+    {
+      "tower": "D",
+      "flat": "04",
+      "floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_range": "Ground+Even (image missing — using First+Odd)",
+      "plan_id": "fp_041",
+      "type": "4BHK 4T TYPE 1"
+    },
+    {
+      "tower": "D",
+      "flat": "04",
+      "floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_range": "First+Odd",
+      "plan_id": "fp_041",
+      "type": "4BHK 4T TYPE 1"
+    },
+    {
+      "tower": "D",
+      "flat": "05",
+      "floors": [
+        "Ground"
+      ],
+      "floor_range": "Ground",
+      "plan_id": "fp_038",
+      "type": "2BHK 2T TYPE 1"
+    },
+    {
+      "tower": "D",
+      "flat": "05",
+      "floors": [
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_range": "Second+Even",
+      "plan_id": "fp_040",
+      "type": "3BHK 3T TYPE 1 (Flat-05 Second+Even)"
+    },
+    {
+      "tower": "D",
+      "flat": "05",
+      "floors": [
+        "1st"
+      ],
+      "floor_range": "First",
+      "plan_id": "fp_044",
+      "type": "2BHK 2T TYPE 1"
+    }
+  ],
+  "summary": {
+    "total_towers": 4,
+    "towers": [
+      "A",
+      "B",
+      "C",
+      "D"
+    ],
+    "flats_per_tower": {
+      "A": 5,
+      "B": 6,
+      "C": 5,
+      "D": 5
+    },
+    "total_unique_flats": 21,
+    "floors_per_tower_with_apartments": 14,
+    "total_apartments": 294,
+    "total_floor_plan_images": 46,
+    "total_unit_plan_mappings": 47,
+    "explanation": "Each tower has G+13 floors = 14 floor levels where apartments exist. 21 unique flat types × 14 floors = 294 apartments. The 47 unit_plan_mappings cover every (flat × floor_range) combo where the floor plan changes — a single flat may use different plans on different floor ranges."
+  },
+  "per_apartment_lookup": [
+    {
+      "tower": "A",
+      "flat": "01",
+      "floor_range_label": "Ground+Even",
+      "applies_to_floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_numbers": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "type": "4BHK 4T TYPE 1",
+      "plan_id": "fp_006",
+      "plan_filename": "_0000s_0003s_0005_4-BHK.-Flat-No.01--Ground+ODD-Floors.png",
+      "r2_key": "floor-plans/tower-a/flat-01/4-bhk.-flat-no.01-groundplusodd-floors.png"
+    },
+    {
+      "tower": "A",
+      "flat": "01",
+      "floor_range_label": "Odd",
+      "applies_to_floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_numbers": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13
+      ],
+      "type": "4BHK 4T TYPE 1",
+      "plan_id": "fp_012",
+      "plan_filename": "_0001s_0000s_0005_4bhk-Towe-A-Flat_1-Odd.png",
+      "r2_key": "floor-plans/tower-a/flat-01/4bhk-towe-a-flat_1-odd.png"
+    },
+    {
+      "tower": "A",
+      "flat": "02",
+      "floor_range_label": "Ground+Even",
+      "applies_to_floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_numbers": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "type": "3BHK 3T TYPE 1",
+      "plan_id": "fp_001",
+      "plan_filename": "_0000s_0003s_0000_3-BHK.-Flat-No.02--Ground+Even-Floors.png",
+      "r2_key": "floor-plans/tower-a/flat-02/3-bhk.-flat-no.02-groundpluseven-floors.png"
+    },
+    {
+      "tower": "A",
+      "flat": "02",
+      "floor_range_label": "1st+Odd",
+      "applies_to_floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_numbers": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13
+      ],
+      "type": "3BHK 3T TYPE 1",
+      "plan_id": "fp_009",
+      "plan_filename": "_0001s_0000s_0003_3bhk-Tower-A-Flat_2-(1st-Odd).png",
+      "r2_key": "floor-plans/tower-a/flat-02/3bhk-tower-a-flat_2-(1st-odd).png"
+    },
+    {
+      "tower": "A",
+      "flat": "03",
+      "floor_range_label": "Ground+Even",
+      "applies_to_floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_numbers": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "type": "3BHK 3T TYPE 1a",
+      "plan_id": "fp_005",
+      "plan_filename": "_0000s_0003s_0004_3-BHK.-Flat-No.3--Ground+Even-Floors.png",
+      "r2_key": "floor-plans/tower-a/flat-03/3-bhk.-flat-no.3-groundpluseven-floors.png"
+    },
+    {
+      "tower": "A",
+      "flat": "03",
+      "floor_range_label": "Odd",
+      "applies_to_floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_numbers": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13
+      ],
+      "type": "3BHK 3T TYPE 1a",
+      "plan_id": "fp_008",
+      "plan_filename": "_0001s_0000s_0004_3bhk-Tower-A-Flat_3-Odd.png",
+      "r2_key": "floor-plans/tower-a/flat-03/3bhk-tower-a-flat_3-odd.png"
+    },
+    {
+      "tower": "A",
+      "flat": "04",
+      "floor_range_label": "Ground+Even",
+      "applies_to_floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_numbers": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "type": "3.5BHK 3T TYPE 1",
+      "plan_id": "fp_002",
+      "plan_filename": "_0000s_0003s_0001_3.5-BHK.-Flat-No.04--Ground+-Even-Floors.png",
+      "r2_key": "floor-plans/tower-a/flat-04/3.5-bhk.-flat-no.04-groundplus-even-floors.png"
+    },
+    {
+      "tower": "A",
+      "flat": "04",
+      "floor_range_label": "Odd (uses Ground+Even duplicate)",
+      "applies_to_floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_numbers": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13
+      ],
+      "type": "3.5BHK 3T TYPE 1",
+      "plan_id": "fp_010",
+      "plan_filename": "_0001s_0000s_0002_3.5bhk-Tower-A-Flat_4-ground-even-floors.png",
+      "r2_key": "floor-plans/tower-a/flat-04/3.5bhk-tower-a-flat_4-ground-even-floors.png"
+    },
+    {
+      "tower": "A",
+      "flat": "05",
+      "floor_range_label": "Ground+Even",
+      "applies_to_floors": [
+        "Ground"
+      ],
+      "floor_numbers": [
+        0
+      ],
+      "type": "2BHK 2T TYPE 1",
+      "plan_id": "fp_004",
+      "plan_filename": "_0000s_0003s_0002_2-BHK.-Flat-No.05--Ground+Even-Floors.png",
+      "r2_key": "floor-plans/tower-a/flat-05/2-bhk.-flat-no.05-groundpluseven-floors.png"
+    },
+    {
+      "tower": "A",
+      "flat": "05",
+      "floor_range_label": "Second+Even",
+      "applies_to_floors": [
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_numbers": [
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "type": "3BHK",
+      "plan_id": "fp_003",
+      "plan_filename": "_0000s_0003s_0003_3-BHK.-Flat-No.05--Second-+-Even-Floors.png",
+      "r2_key": "floor-plans/tower-a/flat-05/3-bhk.-flat-no.05-second-plus-even-floors.png"
+    },
+    {
+      "tower": "A",
+      "flat": "05",
+      "floor_range_label": "Ground (Odd plan)",
+      "applies_to_floors": [
+        "1st"
+      ],
+      "floor_numbers": [
+        1
+      ],
+      "type": "2BHK 2T TYPE 1",
+      "plan_id": "fp_007",
+      "plan_filename": "_0001s_0000s_0000_2bhk-Tower-A-Flat_5-GROUND-Odd.png",
+      "r2_key": "floor-plans/tower-a/flat-05/2bhk-tower-a-flat_5-ground-odd.png"
+    },
+    {
+      "tower": "A",
+      "flat": "05",
+      "floor_range_label": "Third+Odd",
+      "applies_to_floors": [
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_numbers": [
+        3,
+        5,
+        7,
+        9,
+        11,
+        13
+      ],
+      "type": "2BHK 2T TYPE 1",
+      "plan_id": "fp_011",
+      "plan_filename": "_0001s_0000s_0001_2bhk-Tower-A-Flat_5-third+Odd.png",
+      "r2_key": "floor-plans/tower-a/flat-05/2bhk-tower-a-flat_5-thirdplusodd.png"
+    },
+    {
+      "tower": "B",
+      "flat": "01",
+      "floor_range_label": "Ground",
+      "applies_to_floors": [
+        "Ground"
+      ],
+      "floor_numbers": [
+        0
+      ],
+      "type": "2BHK 2T TYPE 2",
+      "plan_id": "fp_016",
+      "plan_filename": "_0000s_0002s_0000_2-BHK.-Flat-No.01--Ground-Floors.png",
+      "r2_key": "floor-plans/tower-b/flat-01/2-bhk.-flat-no.01-ground-floors.png"
+    },
+    {
+      "tower": "B",
+      "flat": "01",
+      "floor_range_label": "Second+Even",
+      "applies_to_floors": [
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_numbers": [
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "type": "3.5BHK 3T TYPE 1",
+      "plan_id": "fp_018",
+      "plan_filename": "_0000s_0002s_0002_3.5-BHK.-Flat-No.01--Secound+-Even-Floors.png",
+      "r2_key": "floor-plans/tower-b/flat-01/3.5-bhk.-flat-no.01-secoundplus-even-floors.png"
+    },
+    {
+      "tower": "B",
+      "flat": "01",
+      "floor_range_label": "Second+Even (used on Odd)",
+      "applies_to_floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_numbers": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13
+      ],
+      "type": "3.5BHK 3T TYPE 1",
+      "plan_id": "fp_020",
+      "plan_filename": "_0001s_0001s_0002_3.5-BHK.-Flat-No.01--Secound+-Even-Floors.png",
+      "r2_key": "floor-plans/tower-b/flat-01/3.5-bhk.-flat-no.01-secoundplus-even-floors.png"
+    },
+    {
+      "tower": "B",
+      "flat": "02",
+      "floor_range_label": "Ground+Even",
+      "applies_to_floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_numbers": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "type": "3BHK 2T TYPE 2",
+      "plan_id": "fp_015",
+      "plan_filename": "_0000s_0002s_0004_3-BHK.-Flat-No.02--Ground+-Even-Floors.png",
+      "r2_key": "floor-plans/tower-b/flat-02/3-bhk.-flat-no.02-groundplus-even-floors.png"
+    },
+    {
+      "tower": "B",
+      "flat": "02",
+      "floor_range_label": "Ground+Even (used on Odd)",
+      "applies_to_floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_numbers": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13
+      ],
+      "type": "3BHK 2T TYPE 2",
+      "plan_id": "fp_021",
+      "plan_filename": "_0001s_0001s_0000_3-BHK.-Flat-No.02--Ground+-Even-Floors.png",
+      "r2_key": "floor-plans/tower-b/flat-02/3-bhk.-flat-no.02-groundplus-even-floors.png"
+    },
+    {
+      "tower": "B",
+      "flat": "03",
+      "floor_range_label": "Ground+Even",
+      "applies_to_floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_numbers": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "type": "3BHK 3T TYPE 1",
+      "plan_id": "fp_019",
+      "plan_filename": "_0000s_0002s_0001_3-BHK.-Flat-No.03--Ground+-Even-Floor.png",
+      "r2_key": "floor-plans/tower-b/flat-03/3-bhk.-flat-no.03-groundplus-even-floor.png"
+    },
+    {
+      "tower": "B",
+      "flat": "03",
+      "floor_range_label": "Ground+Even (used on Odd)",
+      "applies_to_floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_numbers": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13
+      ],
+      "type": "3BHK 3T TYPE 1",
+      "plan_id": "fp_024",
+      "plan_filename": "_0001s_0001s_0003_3-BHK.-Flat-No.03--Ground+-Even-Floor.png",
+      "r2_key": "floor-plans/tower-b/flat-03/3-bhk.-flat-no.03-groundplus-even-floor.png"
+    },
+    {
+      "tower": "B",
+      "flat": "04",
+      "floor_range_label": "Ground+Even",
+      "applies_to_floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_numbers": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "type": "3BHK 3T TYPE 2a",
+      "plan_id": "fp_017",
+      "plan_filename": "_0000s_0002s_0003_3-BHK.-Flat-No.04--Ground+-Even-Floors.png",
+      "r2_key": "floor-plans/tower-b/flat-04/3-bhk.-flat-no.04-groundplus-even-floors.png"
+    },
+    {
+      "tower": "B",
+      "flat": "04",
+      "floor_range_label": "Ground+Even (used on Odd)",
+      "applies_to_floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_numbers": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13
+      ],
+      "type": "3BHK 3T TYPE 2a",
+      "plan_id": "fp_023",
+      "plan_filename": "_0001s_0001s_0001_3-BHK.-Flat-No.04--Ground+-Even-Floors.png",
+      "r2_key": "floor-plans/tower-b/flat-04/3-bhk.-flat-no.04-groundplus-even-floors.png"
+    },
+    {
+      "tower": "B",
+      "flat": "05",
+      "floor_range_label": "Ground+Even",
+      "applies_to_floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_numbers": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "type": "3.5BHK 3T TYPE 1",
+      "plan_id": "fp_014",
+      "plan_filename": "_0000s_0002s_0005_3.5-BHK.-Flat-No.05--Ground+-Even-Floors.png",
+      "r2_key": "floor-plans/tower-b/flat-05/3.5-bhk.-flat-no.05-groundplus-even-floors.png"
+    },
+    {
+      "tower": "B",
+      "flat": "05",
+      "floor_range_label": "Ground+Even (used on Odd)",
+      "applies_to_floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_numbers": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13
+      ],
+      "type": "3.5BHK 3T TYPE 1",
+      "plan_id": "fp_022",
+      "plan_filename": "_0001s_0001s_0005_3.5-BHK.-Flat-No.05--Ground+-Even-Floors.png",
+      "r2_key": "floor-plans/tower-b/flat-05/3.5-bhk.-flat-no.05-groundplus-even-floors.png"
+    },
+    {
+      "tower": "B",
+      "flat": "06",
+      "floor_range_label": "Ground+Even",
+      "applies_to_floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_numbers": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "type": "3BHK 3T TYPE 3",
+      "plan_id": "fp_013",
+      "plan_filename": "_0000s_0002s_0006_3-BHK.-Flat-No.06--Ground+-Even-Floors.png",
+      "r2_key": "floor-plans/tower-b/flat-06/3-bhk.-flat-no.06-groundplus-even-floors.png"
+    },
+    {
+      "tower": "B",
+      "flat": "06",
+      "floor_range_label": "Ground+Even (used on Odd)",
+      "applies_to_floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_numbers": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13
+      ],
+      "type": "3BHK 3T TYPE 3",
+      "plan_id": "fp_025",
+      "plan_filename": "_0001s_0001s_0004_3-BHK.-Flat-No.06--Ground+-Even-Floors.png",
+      "r2_key": "floor-plans/tower-b/flat-06/3-bhk.-flat-no.06-groundplus-even-floors.png"
+    },
+    {
+      "tower": "C",
+      "flat": "01",
+      "floor_range_label": "Ground",
+      "applies_to_floors": [
+        "Ground"
+      ],
+      "floor_numbers": [
+        0
+      ],
+      "type": "2BHK 2T TYPE 1",
+      "plan_id": "fp_026",
+      "plan_filename": "_0000s_0001s_0000_2BKH-FLAT-NO.01,GROUND-FLOOR.png",
+      "r2_key": "floor-plans/tower-c/flat-01/2bkh-flat-no.01ground-floor.png"
+    },
+    {
+      "tower": "C",
+      "flat": "01",
+      "floor_range_label": "Second+Even",
+      "applies_to_floors": [
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_numbers": [
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "type": "2BHK 2T TYPE 1",
+      "plan_id": "fp_029",
+      "plan_filename": "_0000s_0001s_0003_2BKH-FLAT-NO.01,-SECOND+EVEN-FLOOR.png",
+      "r2_key": "floor-plans/tower-c/flat-01/2bkh-flat-no.01-secondpluseven-floor.png"
+    },
+    {
+      "tower": "C",
+      "flat": "01",
+      "floor_range_label": "First",
+      "applies_to_floors": [
+        "1st"
+      ],
+      "floor_numbers": [
+        1
+      ],
+      "type": "2BHK 2T TYPE 1",
+      "plan_id": "fp_033",
+      "plan_filename": "_0001s_0001s_0002_2-BHK.-Flat-No.01--First-Floors.png",
+      "r2_key": "floor-plans/tower-c/flat-01/2-bhk.-flat-no.01-first-floors.png"
+    },
+    {
+      "tower": "C",
+      "flat": "01",
+      "floor_range_label": "Third+Odd",
+      "applies_to_floors": [
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_numbers": [
+        3,
+        5,
+        7,
+        9,
+        11,
+        13
+      ],
+      "type": "3BHK 3T TYPE 1 (Third+Odd plan)",
+      "plan_id": "fp_031",
+      "plan_filename": "_0001s_0001s_0000_3-BHK.-Flat-No.01--Third+ODD-Floors.png",
+      "r2_key": "floor-plans/tower-c/flat-01/3-bhk.-flat-no.01-thirdplusodd-floors.png"
+    },
+    {
+      "tower": "C",
+      "flat": "02",
+      "floor_range_label": "Ground+Even",
+      "applies_to_floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_numbers": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "type": "3.5BHK 3T TYPE 2",
+      "plan_id": "fp_028",
+      "plan_filename": "_0000s_0001s_0002_3.5-BKH-FLAT-NO.02,-GROUND+EVEN-FLOOR.png",
+      "r2_key": "floor-plans/tower-c/flat-02/3.5-bkh-flat-no.02-groundpluseven-floor.png"
+    },
+    {
+      "tower": "C",
+      "flat": "02",
+      "floor_range_label": "First+Odd",
+      "applies_to_floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_numbers": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13
+      ],
+      "type": "3.5BHK 3T TYPE 2",
+      "plan_id": "fp_034",
+      "plan_filename": "_0001s_0001s_0003_3.5-BHK.-Flat-No.02--First+ODD-Floors.png",
+      "r2_key": "floor-plans/tower-c/flat-02/3.5-bhk.-flat-no.02-firstplusodd-floors.png"
+    },
+    {
+      "tower": "C",
+      "flat": "03&04",
+      "floor_range_label": "Ground+Even",
+      "applies_to_floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_numbers": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "type": "3BHK 3T TYPE 1",
+      "plan_id": "fp_030",
+      "plan_filename": "_0000s_0001s_0004_3BHK-FLAT-NO.03&04-Ground-Even-Floor.png",
+      "r2_key": "floor-plans/tower-c/flat-03and04/3bhk-flat-no.03and04-ground-even-floor.png"
+    },
+    {
+      "tower": "C",
+      "flat": "03&04",
+      "floor_range_label": "First+Odd",
+      "applies_to_floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_numbers": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13
+      ],
+      "type": "3BHK 3T TYPE 1",
+      "plan_id": "fp_032",
+      "plan_filename": "_0001s_0001s_0001_3-BHK-FLAT-no.03&04-First-+_ODD-Floor.png",
+      "r2_key": "floor-plans/tower-c/flat-03and04/3-bhk-flat-no.03and04-first-plus_odd-floor.png"
+    },
+    {
+      "tower": "C",
+      "flat": "05",
+      "floor_range_label": "Ground+Even",
+      "applies_to_floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_numbers": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "type": "4BHK 4T TYPE 1a",
+      "plan_id": "fp_027",
+      "plan_filename": "_0000s_0001s_0001_4-BKH-FLAT-NO.05,-GROUND+EVEN-FLOOR.png",
+      "r2_key": "floor-plans/tower-c/flat-05/4-bkh-flat-no.05-groundpluseven-floor.png"
+    },
+    {
+      "tower": "C",
+      "flat": "05",
+      "floor_range_label": "First+Odd",
+      "applies_to_floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_numbers": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13
+      ],
+      "type": "4BHK 4T TYPE 1a",
+      "plan_id": "fp_035",
+      "plan_filename": "_0001s_0001s_0004_4-BHK.-Flat-No.05--First+ODD-Floors.png",
+      "r2_key": "floor-plans/tower-c/flat-05/4-bhk.-flat-no.05-firstplusodd-floors.png"
+    },
+    {
+      "tower": "D",
+      "flat": "01",
+      "floor_range_label": "Ground+Even",
+      "applies_to_floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_numbers": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "type": "3.5BHK 3T TYPE 1",
+      "plan_id": "fp_037",
+      "plan_filename": "_0000s_0000s_0001_3.5-BKH-FLAT-NO.01,GROUND+EVEN-FLOOR.png",
+      "r2_key": "floor-plans/tower-d/flat-01/3.5-bkh-flat-no.01groundpluseven-floor.png"
+    },
+    {
+      "tower": "D",
+      "flat": "01",
+      "floor_range_label": "First+Odd",
+      "applies_to_floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_numbers": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13
+      ],
+      "type": "3.5BHK 3T TYPE 1",
+      "plan_id": "fp_045",
+      "plan_filename": "_0004_3.5BHK-FLAT-NO.01-FIRST-+-ODD-FLOORS.png",
+      "r2_key": "floor-plans/tower-d/flat-01/3.5bhk-flat-no.01-first-plus-odd-floors.png"
+    },
+    {
+      "tower": "D",
+      "flat": "01",
+      "floor_range_label": "Third+Odd",
+      "applies_to_floors": [
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_numbers": [
+        3,
+        5,
+        7,
+        9,
+        11,
+        13
+      ],
+      "type": "3BHK 3T TYPE 1 (Third+Odd)",
+      "plan_id": "fp_042",
+      "plan_filename": "_0001_3BHK-FLAT-NO.01-THIRD+ODD-FLOOR.png",
+      "r2_key": "floor-plans/tower-d/flat-01/3bhk-flat-no.01-thirdplusodd-floor.png"
+    },
+    {
+      "tower": "D",
+      "flat": "02",
+      "floor_range_label": "Ground+Even",
+      "applies_to_floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_numbers": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "type": "3BHK 3T TYPE 1",
+      "plan_id": "fp_036",
+      "plan_filename": "_0000s_0000s_0000_3-BKH-FLAT-NO.02,GROUND+EVEN-FLOOR.png",
+      "r2_key": "floor-plans/tower-d/flat-02/3-bkh-flat-no.02groundpluseven-floor.png"
+    },
+    {
+      "tower": "D",
+      "flat": "02",
+      "floor_range_label": "First+Odd",
+      "applies_to_floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_numbers": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13
+      ],
+      "type": "3BHK 3T TYPE 1",
+      "plan_id": "fp_043",
+      "plan_filename": "_0002_3BHK-FLAT-NO.02-FIRST-+-ODD-FLOORS_.png",
+      "r2_key": "floor-plans/tower-d/flat-02/3bhk-flat-no.02-first-plus-odd-floors_.png"
+    },
+    {
+      "tower": "D",
+      "flat": "03",
+      "floor_range_label": "Ground+Even",
+      "applies_to_floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_numbers": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "type": "3BHK 3T TYPE 1",
+      "plan_id": "fp_039",
+      "plan_filename": "_0000s_0000s_0003_3-BKH-FLAT-NO.03,GROUND+EVEN-FLOOR.png",
+      "r2_key": "floor-plans/tower-d/flat-03/3-bkh-flat-no.03groundpluseven-floor.png"
+    },
+    {
+      "tower": "D",
+      "flat": "03",
+      "floor_range_label": "First+Odd",
+      "applies_to_floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_numbers": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13
+      ],
+      "type": "3BHK 3T TYPE 1",
+      "plan_id": "fp_046",
+      "plan_filename": "_0005_3BHK-FLAT-NO.03-FIRST-+-ODD-FLOORS.png",
+      "r2_key": "floor-plans/tower-d/flat-03/3bhk-flat-no.03-first-plus-odd-floors.png"
+    },
+    {
+      "tower": "D",
+      "flat": "04",
+      "floor_range_label": "Ground+Even (image missing — using First+Odd)",
+      "applies_to_floors": [
+        "Ground",
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_numbers": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "type": "4BHK 4T TYPE 1",
+      "plan_id": "fp_041",
+      "plan_filename": "_0000_4BHK-FLAT-NO.04-FIRST-+-ODD-FLOORS.png",
+      "r2_key": "floor-plans/tower-d/flat-04/4bhk-flat-no.04-first-plus-odd-floors.png"
+    },
+    {
+      "tower": "D",
+      "flat": "04",
+      "floor_range_label": "First+Odd",
+      "applies_to_floors": [
+        "1st",
+        "3rd",
+        "5th",
+        "7th",
+        "9th",
+        "11th",
+        "13th"
+      ],
+      "floor_numbers": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13
+      ],
+      "type": "4BHK 4T TYPE 1",
+      "plan_id": "fp_041",
+      "plan_filename": "_0000_4BHK-FLAT-NO.04-FIRST-+-ODD-FLOORS.png",
+      "r2_key": "floor-plans/tower-d/flat-04/4bhk-flat-no.04-first-plus-odd-floors.png"
+    },
+    {
+      "tower": "D",
+      "flat": "05",
+      "floor_range_label": "Ground",
+      "applies_to_floors": [
+        "Ground"
+      ],
+      "floor_numbers": [
+        0
+      ],
+      "type": "2BHK 2T TYPE 1",
+      "plan_id": "fp_038",
+      "plan_filename": "_0000s_0000s_0002_2BKH-FLAT-NO.05,-GROUND-FLOOR.png",
+      "r2_key": "floor-plans/tower-d/flat-05/2bkh-flat-no.05-ground-floor.png"
+    },
+    {
+      "tower": "D",
+      "flat": "05",
+      "floor_range_label": "Second+Even",
+      "applies_to_floors": [
+        "2nd",
+        "4th",
+        "6th",
+        "8th",
+        "10th",
+        "12th"
+      ],
+      "floor_numbers": [
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "type": "3BHK 3T TYPE 1 (Flat-05 Second+Even)",
+      "plan_id": "fp_040",
+      "plan_filename": "_0000s_0000s_0004_3BHK-FLAT-NO.05-SECOND+EVEN-FLOOR.png",
+      "r2_key": "floor-plans/tower-d/flat-05/3bhk-flat-no.05-secondpluseven-floor.png"
+    },
+    {
+      "tower": "D",
+      "flat": "05",
+      "floor_range_label": "First",
+      "applies_to_floors": [
+        "1st"
+      ],
+      "floor_numbers": [
+        1
+      ],
+      "type": "2BHK 2T TYPE 1",
+      "plan_id": "fp_044",
+      "plan_filename": "_0003_2BHK-FLAT-NO.05-FIRST-FLOORS.png",
+      "r2_key": "floor-plans/tower-d/flat-05/2bhk-flat-no.05-first-floors.png"
+    }
+  ]
+}

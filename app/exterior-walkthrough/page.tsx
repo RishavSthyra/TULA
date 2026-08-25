@@ -34,6 +34,12 @@ function ExteriorWalkthroughHead({ initialPreviewKey }: { initialPreviewKey?: st
     <>
       <link rel="preconnect" href={workerDomain} crossOrigin="anonymous" />
       <link rel="dns-prefetch" href={workerDomain} />
+      <link
+        rel="preload"
+        as="image"
+        href="https://cdn.sthyra.com/TULA/Images/Whisper_of_Tree_Logo_Gold%201_01.png"
+        fetchPriority="high"
+      />
       {initialPreviewUrl ? <link
         rel="preload"
         as="image"

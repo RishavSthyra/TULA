@@ -1,5 +1,5 @@
-import TrifectaPreloader from "@/components/ui/Preloader";
+import TulaBrandPreloader from "@/components/ui/TulaBrandPreloader";
 
 export default function ExteriorWalkthroughLoading() {
-  return <TrifectaPreloader progress={42} />;
+  return <TulaBrandPreloader progress={4} />;
 }
