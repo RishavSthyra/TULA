@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Cormorant_Garamond } from "next/font/google";
 import type { InventoryApartment } from "@/types/inventory";
+import { formatBlockLabel } from "@/lib/inventory-display";
 import { buildWalkthroughHref } from "@/lib/walkthrough";
 
 type SelectedFlatDetailsPanelProps = {
@@ -126,8 +127,8 @@ const SelectedFlatDetailsPanel = forwardRef<
   const compactFacts = [
     {
       key: "tower",
-      label: "Tower",
-      value: apartment.tower,
+      label: "Block",
+      value: formatBlockLabel(apartment.tower),
       icon: Building2,
     },
     {
@@ -418,11 +419,11 @@ const SelectedFlatDetailsPanel = forwardRef<
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                 <div className={metaCardClassName}>
                   <p className="text-[10px] uppercase tracking-[0.24em] text-[#9a8054]">
-                    Tower
+                    Block
                   </p>
                   <div className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-[#1f3f2b]">
                     <Building2 className="h-4 w-4 text-[#a88a45]" />
-                    {apartment.tower}
+                    {formatBlockLabel(apartment.tower)}
                   </div>
                 </div>
 

@@ -43,6 +43,7 @@ import {
   isInventoryApartmentAllowedAtHotspot,
 } from "@/lib/master-plan-hotspots";
 import { readJsonResponse } from "@/lib/utils";
+import { formatBlockLabel } from "@/lib/inventory-display";
 import type { InventoryApartment, TowerType } from "@/types/inventory";
 import type { MasterPlanDeveloperConfig } from "@/types/developer-config";
 import { primeSignedAssetUrls } from "@/src/lib/signed-assets";
@@ -2513,7 +2514,7 @@ function MasterPlanFiltersCard({
               </p>
               <span className="inline-flex items-center gap-1 rounded-full border border-[#e3dece] bg-[#fbfaf4] px-2 py-0.5 text-[10px] font-medium text-[#456859]">
                 <Building2 className="h-3 w-3" />
-                {selectedTower}
+                {formatBlockLabel(selectedTower)}
               </span>
             </div>
             <p className="mt-0.5 text-[10px] text-[#718277]">
@@ -2582,12 +2583,12 @@ function MasterPlanFiltersCard({
 
         {isCompactOpen ? (
           <div className="mt-2.5 max-h-[31svh] space-y-2.5 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch] sm:max-h-[36svh]">
-            <FilterBlock compact compactDark label="Tower">
+            <FilterBlock compact compactDark label="Block">
               <FilterPillGroup
                 options={towerOptions}
                 value={selectedTower}
                 onChange={onTowerChange}
-                getLabel={(item) => item.replace("Tower ", "Tower ")}
+                getLabel={formatBlockLabel}
                 compactDark
               />
             </FilterBlock>
@@ -2721,12 +2722,12 @@ function MasterPlanFiltersCard({
 
         {isDesktopFilterOpen ? (
           <>
-            <FilterBlock label="Tower" compactDesktop={compactDesktop}>
+            <FilterBlock label="Block" compactDesktop={compactDesktop}>
               <FilterPillGroup
                 options={towerOptions}
                 value={selectedTower}
                 onChange={onTowerChange}
-                getLabel={(item) => item}
+                getLabel={formatBlockLabel}
                 compactDesktop={compactDesktop}
               />
             </FilterBlock>
@@ -2902,7 +2903,7 @@ function MasterPlanResultsCard({
                 <div>
                   <p className="text-sm font-semibold">Loading flats</p>
                   <p className="mt-1 text-xs text-emerald-950/58">
-                    Pulling the latest tower inventory.
+                    Pulling the latest block inventory.
                   </p>
                 </div>
               </motion.div>
@@ -3001,7 +3002,7 @@ function MasterPlanResultsCard({
                             className="inline-flex items-center gap-1.5"
                           >
                             <Building2 className={compact ? "h-3 w-3" : compactDesktop ? "h-3 w-3" : "h-3.5 w-3.5"} />
-                            {apartment.tower}
+                            {formatBlockLabel(apartment.tower)}
                           </span>
                           <span
                             className="inline-flex items-center gap-1.5"
