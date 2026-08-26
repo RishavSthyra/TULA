@@ -936,8 +936,8 @@ function MetricPill({
   children: React.ReactNode;
 }) {
   return (
-    <span className="inline-flex h-8 items-center gap-2 rounded-full border border-[#e8e0d2] bg-[#fffdf7]/88 px-3 text-[0.78rem] font-medium text-[#3e4b3d] shadow-[inset_0_1px_0_rgba(255,255,255,0.88)]">
-      <Icon className="size-3.5 text-[#38583b]" />
+    <span className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[#e8e0d2] bg-[#fffdf7]/88 px-2.5 text-[0.68rem] font-medium text-[#3e4b3d] shadow-[inset_0_1px_0_rgba(255,255,255,0.88)] sm:h-8 sm:gap-2 sm:px-3 sm:text-[0.78rem]">
+      <Icon className="size-3 text-[#38583b] sm:size-3.5" />
       {children}
     </span>
   );
@@ -1009,10 +1009,9 @@ export function CustomStyleExample() {
   const [routePoiId, setRoutePoiId] = useState<number | null>(null);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [userRoute, setUserRoute] = useState<RouteData | null>(null);
-  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [currentZoom, setCurrentZoom] = useState(15);
-  const [viewportWidth, setViewportWidth] = useState(1440);
-  const [showFilters, setShowFilters] = useState(true);
+  const [viewportWidth, setViewportWidth] = useState(0);
+  const [showFilters, setShowFilters] = useState(false);
   const [showPopular, setShowPopular] = useState(true);
   const [showPoiDetails, setShowPoiDetails] = useState(false);
   const [showDesktopSidebar, setShowDesktopSidebar] = useState(true);
@@ -1024,10 +1023,9 @@ export function CustomStyleExample() {
   const [distanceFilter, setDistanceFilter] = useState<DistanceFilter>("5km");
   const [sortMode, setSortMode] = useState<SortMode>("popularity");
   const [mapDisplayMode, setMapDisplayMode] = useState<MapDisplayMode>("normal");
-  const isMobileLayout = viewportWidth < 768;
   const isTabletLayout = viewportWidth >= 768 && viewportWidth < 1280;
+  const isCompactLayout = viewportWidth < 1280;
   const isCompactDesktop = viewportWidth >= 1280 && viewportWidth < 1560;
-  const filterInsetClass = "left-4 right-4 top-4";
   const poiIndexes = useMemo(() => {
     const byCategory = new Map<PoiCategory, Poi[]>(
       CATEGORY_ORDER.map((category) => [
@@ -1092,9 +1090,10 @@ export function CustomStyleExample() {
       const nextWidth = window.innerWidth;
       setViewportWidth(nextWidth);
 
-      if (nextWidth < 768) {
+      if (nextWidth < 1280) {
         setMobilePopularExpanded(false);
-        setIsMobileFiltersOpen(false);
+      } else {
+        setShowFilters(false);
       }
     };
 
@@ -1105,6 +1104,25 @@ export function CustomStyleExample() {
       window.removeEventListener("resize", syncViewportWidth);
     };
   }, []);
+
+  useEffect(() => {
+    if (!isCompactLayout || !showFilters) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowFilters(false);
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isCompactLayout, showFilters]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -1291,6 +1309,7 @@ export function CustomStyleExample() {
     setSelectedPoiId(poi.id);
     setShowPoiDetails(true);
     setShowDesktopSidebar(false);
+    setShowFilters(false);
     setMobilePopularExpanded(false);
 
     mapRef.current?.flyTo?.({
@@ -1301,7 +1320,7 @@ export function CustomStyleExample() {
   }, []);
 
   const handleFilteredPoiSelection = useCallback((poi: Poi) => {
-    setIsMobileFiltersOpen(false);
+    setShowFilters(false);
     handlePoiMarkerClick(poi);
   }, [handlePoiMarkerClick]);
 
@@ -1317,10 +1336,11 @@ export function CustomStyleExample() {
     setDistanceFilter("5km");
     setSortMode("popularity");
     setMapDisplayMode("normal");
-    setShowFilters(true);
+    setShowFilters(false);
     setShowPopular(true);
     setShowPoiDetails(false);
     setShowDesktopSidebar(true);
+    setMobilePopularExpanded(false);
     mapRef.current?.flyTo?.({
       center: [centerPlace.lng, centerPlace.lat],
       zoom: 15,
@@ -1334,6 +1354,16 @@ export function CustomStyleExample() {
     setShowPoiDetails(false);
     setShowDesktopSidebar(true);
   }, []);
+
+  const hideCompactPoiDetails = useCallback(() => {
+    setShowPoiDetails(false);
+
+    // Keep the selected POI only while its route is active so closing the
+    // compact card never removes the directions path.
+    if (routePoiId === null) {
+      setSelectedPoiId(null);
+    }
+  }, [routePoiId]);
 
   const stopAllRouteAnimations = useCallback(() => {
     userRouteRequestRef.current += 1;
@@ -1352,15 +1382,17 @@ export function CustomStyleExample() {
     suppressNextMapClearRef.current = true;
     setSelectedPoiId(poi.id);
     setRoutePoiId(poi.id);
-    setShowPoiDetails(true);
+    setShowPoiDetails(!isCompactLayout);
     setShowDesktopSidebar(false);
+    setShowFilters(false);
+    setMobilePopularExpanded(false);
 
     mapRef.current?.flyTo?.({
       center: [poi.lng, poi.lat],
       zoom: 13.8,
       duration: 1200,
     });
-  }, []);
+  }, [isCompactLayout]);
 
   const handleClusterPointClick = useCallback(
     (
@@ -1382,6 +1414,7 @@ export function CustomStyleExample() {
       setSelectedPoiId(poi.id);
       setShowPoiDetails(true);
       setShowDesktopSidebar(false);
+      setShowFilters(false);
       setMobilePopularExpanded(false);
 
       mapRef.current?.flyTo?.({
@@ -1424,7 +1457,7 @@ export function CustomStyleExample() {
         padding: {
           top: 120,
           right: 80,
-          bottom: isMobileFiltersOpen ? 340 : 140,
+          bottom: showFilters ? 420 : 140,
           left: 80,
         },
         duration: 1500,
@@ -1456,7 +1489,7 @@ export function CustomStyleExample() {
     if (userRouteAbortRef.current === controller) {
       userRouteAbortRef.current = null;
     }
-  }, [isMobileFiltersOpen]);
+  }, [showFilters]);
 
   
   const selectedPoi =
@@ -1503,7 +1536,7 @@ export function CustomStyleExample() {
   const userRouteColor = "#4d6a3d";
   const showClusters = currentZoom < POI_CLUSTER_SWITCH_ZOOM;
   const selectedDisplayPoi = selectedPoi ?? visiblePois[0] ?? pois[0] ?? null;
-  const desktopSidebarVisible = !isMobileLayout && showDesktopSidebar && !showPoiDetails;
+  const desktopSidebarVisible = !isCompactLayout && showDesktopSidebar && !showPoiDetails;
   const desktopSidebarWidthClass = isTabletLayout
     ? "w-[20rem]"
     : isCompactDesktop
@@ -1597,6 +1630,11 @@ export function CustomStyleExample() {
     ],
     [selectedCategories],
   );
+  const hasActiveFilters =
+    selectedCategories.length !== CATEGORY_ORDER.length ||
+    distanceFilter !== "5km" ||
+    sortMode !== "popularity" ||
+    mapDisplayMode !== "normal";
   const desktopSidebarCategories = useMemo(
     () =>
       CATEGORY_ORDER.map((category) => ({
@@ -1688,8 +1726,10 @@ export function CustomStyleExample() {
             showLocate
             onLocate={handleUserLocate}
             className={
-              isMobileLayout
-                ? `right-4 ${showPoiDetails ? "bottom-[22rem]" : showPopular && mobilePopularExpanded ? "bottom-[20rem]" : "bottom-[8.75rem]"}`
+              isCompactLayout
+                ? showFilters
+                  ? "hidden"
+                  : `right-3 sm:right-5 ${showPoiDetails || mobilePopularExpanded ? "bottom-auto top-[4.75rem] sm:top-[5.5rem]" : "bottom-[7rem] sm:bottom-[7.75rem]"}`
                 : `right-6 ${showPoiDetails ? "bottom-[26rem]" : "bottom-8"}`
             }
           />
@@ -1767,98 +1807,145 @@ export function CustomStyleExample() {
       </div>
 
       <div className="pointer-events-none absolute inset-0 z-20">
-        {isMobileLayout ? (
-          showFilters ? (
-            <section
-              className={`absolute ${filterInsetClass} max-w-[calc(100vw-2rem)] ${OVERLAY_TRANSITION}`}
-              data-state="open"
-            >
-              <div className={`pointer-events-auto ${FLOATING_PANEL} p-3 ${isMobileLayout ? "rounded-[1.35rem]" : "rounded-[1.6rem]"}`}>
-                <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex gap-2 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                      {topCategories.map((item) => {
-                        const Icon = item.icon;
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => {
-                              if (item.id === "all") {
-                                clearPoiSelection();
-                                setSelectedCategories(DEFAULT_SELECTED_CATEGORIES);
-                                return;
-                              }
+        {isCompactLayout ? (
+          <>
+            {!showPoiDetails ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setMobilePopularExpanded(false);
+                  setShowFilters(true);
+                }}
+                className={`absolute right-3 top-[max(env(safe-area-inset-top),1rem)] pointer-events-auto inline-flex min-h-11 items-center gap-2 px-3.5 text-[0.78rem] font-semibold sm:right-5 sm:min-h-12 sm:px-4 sm:text-sm ${FLOATING_BUTTON}`}
+                aria-label="Open map filters"
+                aria-expanded={showFilters}
+                aria-controls="compact-map-filter-drawer"
+              >
+                <ListFilter className="size-4" />
+                <span>Filters</span>
+                {hasActiveFilters ? (
+                  <span className="size-1.5 rounded-full bg-[#5b764f]" aria-hidden="true" />
+                ) : null}
+              </button>
+            ) : null}
 
-                              toggleCategory(item.id as PoiCategory);
-                            }}
-                            className={`shrink-0 rounded-full border px-3 py-1.5 text-[0.82rem] font-medium transition ${
-                              item.active
-                                ? `${PREMIUM_OLIVE_GRADIENT} border-[#51663f] text-[#f8f5ec]`
-                                : "border-[rgba(75,95,60,0.12)] bg-white/74 text-[#43533f] hover:bg-white"
-                            }`}
-                          >
-                            <span className="inline-flex items-center gap-2 whitespace-nowrap">
-                              <Icon className="size-4" />
-                              {item.label}
-                            </span>
-                          </button>
-                        );
-                      })}
+            {showFilters ? (
+              <div className="pointer-events-auto absolute inset-0 z-30">
+                <button
+                  type="button"
+                  className="absolute inset-0 cursor-default bg-[#142218]/38 backdrop-blur-[3px]"
+                  onClick={() => setShowFilters(false)}
+                  aria-label="Close map filters"
+                />
+                <section
+                  id="compact-map-filter-drawer"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="compact-map-filter-title"
+                  className="absolute inset-x-0 bottom-0 max-h-[78dvh] overflow-y-auto overscroll-contain rounded-t-[1.75rem] border-t border-[#dfcfac]/85 bg-[linear-gradient(180deg,rgba(255,252,245,0.995)_0%,rgba(244,238,226,0.985)_100%)] px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3.5 text-[#263b2b] shadow-[0_-24px_64px_rgba(28,44,30,0.22)] [scrollbar-width:none] sm:bottom-4 sm:left-1/2 sm:right-auto sm:w-[min(44rem,calc(100vw-2rem))] sm:-translate-x-1/2 sm:rounded-[2rem] sm:border sm:p-6 [&::-webkit-scrollbar]:hidden"
+                >
+                  <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-[#cec5b2] sm:mb-4" />
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-[0.62rem] font-bold uppercase tracking-[0.2em] text-[#63725d] sm:text-[0.68rem]">
+                        Explore nearby
+                      </p>
+                      <h2
+                        id="compact-map-filter-title"
+                        className={`${displaySerif.className} mt-1 text-lg font-semibold leading-none text-[#263b2b] sm:text-xl`}
+                      >
+                        Map Filters
+                      </h2>
                     </div>
-
-                    {isMobileFiltersOpen ? (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <PremiumSelect
-                          className="min-w-[10.5rem] flex-1 basis-[10.5rem]"
-                          value={distanceFilter}
-                          onChange={(value) => setDistanceFilter(value as DistanceFilter)}
-                          ariaLabel="Filter nearby places by distance"
-                          icon={LocateFixed}
-                          selectClassName="h-10 text-[0.82rem]"
-                          iconClassName="size-3.5"
-                          options={[
-                            { value: "5km", label: "Within 5 km" },
-                            { value: "10km", label: "Within 10 km" },
-                            { value: "all", label: "All Distances" },
-                          ]}
-                        />
-                        <PremiumSelect
-                          className="min-w-[10.5rem] flex-1 basis-[10.5rem]"
-                          value={sortMode}
-                          onChange={(value) => setSortMode(value as SortMode)}
-                          ariaLabel="Sort nearby places"
-                          icon={ChevronUp}
-                          selectClassName="h-10 text-[0.82rem]"
-                          iconClassName="size-3.5"
-                          options={[
-                            { value: "popularity", label: "Sort by: Popularity" },
-                            { value: "nearest", label: "Sort by: Nearby" },
-                            { value: "rating", label: "Sort by: Rating" },
-                          ]}
-                        />
-                        <PremiumSelect
-                          className="min-w-[10rem] flex-1 basis-[10rem]"
-                          value={mapDisplayMode}
-                          onChange={(value) => setMapDisplayMode(value as MapDisplayMode)}
-                          ariaLabel="Change map style"
-                          icon={Layers3}
-                          selectClassName="h-10 text-[0.82rem]"
-                          iconClassName="size-3.5"
-                          options={[
-                            { value: "normal", label: "Map: Normal" },
-                            { value: "carto", label: "Map: Carto" },
-                            { value: "3d", label: "Map: 3D" },
-                          ]}
-                        />
-                      </div>
-                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => setShowFilters(false)}
+                      className="flex size-11 shrink-0 items-center justify-center rounded-full border border-[#dfcfac]/80 bg-white/78 text-[#40543f] sm:size-12"
+                      aria-label="Close map filters"
+                    >
+                      <X className="size-4" />
+                    </button>
                   </div>
-                  <div className="flex items-center gap-2 xl:self-start">
+
+                  <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-3">
+                    {topCategories.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            if (item.id === "all") {
+                              clearPoiSelection();
+                              setSelectedCategories(DEFAULT_SELECTED_CATEGORIES);
+                              return;
+                            }
+
+                            toggleCategory(item.id as PoiCategory);
+                          }}
+                          className={`flex min-h-11 min-w-0 items-center gap-2 rounded-[0.95rem] border px-3 text-left text-[0.78rem] font-semibold transition sm:min-h-12 sm:px-3.5 sm:text-sm ${
+                            item.active
+                              ? `${PREMIUM_OLIVE_GRADIENT} border-[#51663f] text-[#f8f5ec]`
+                              : "border-[rgba(75,95,60,0.12)] bg-white/72 text-[#43533f] hover:bg-white"
+                          }`}
+                        >
+                          <Icon className="size-4 shrink-0" />
+                          <span className="truncate">{item.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-4 grid gap-2 sm:grid-cols-3 sm:gap-3">
+                    <PremiumSelect
+                      className="min-w-0"
+                      value={distanceFilter}
+                      onChange={(value) => setDistanceFilter(value as DistanceFilter)}
+                      ariaLabel="Filter nearby places by distance"
+                      icon={LocateFixed}
+                      selectClassName="h-11 rounded-[0.95rem] text-[0.78rem] sm:h-12 sm:text-[0.82rem]"
+                      iconClassName="size-3.5"
+                      options={[
+                        { value: "5km", label: "Within 5 km" },
+                        { value: "10km", label: "Within 10 km" },
+                        { value: "all", label: "All Distances" },
+                      ]}
+                    />
+                    <PremiumSelect
+                      className="min-w-0"
+                      value={sortMode}
+                      onChange={(value) => setSortMode(value as SortMode)}
+                      ariaLabel="Sort nearby places"
+                      icon={ChevronUp}
+                      selectClassName="h-11 rounded-[0.95rem] text-[0.78rem] sm:h-12 sm:text-[0.82rem]"
+                      iconClassName="size-3.5"
+                      options={[
+                        { value: "popularity", label: "Sort: Popularity" },
+                        { value: "nearest", label: "Sort: Nearby" },
+                        { value: "rating", label: "Sort: Rating" },
+                      ]}
+                    />
+                    <PremiumSelect
+                      className="min-w-0"
+                      value={mapDisplayMode}
+                      onChange={(value) => setMapDisplayMode(value as MapDisplayMode)}
+                      ariaLabel="Change map style"
+                      icon={Layers3}
+                      selectClassName="h-11 rounded-[0.95rem] text-[0.78rem] sm:h-12 sm:text-[0.82rem]"
+                      iconClassName="size-3.5"
+                      options={[
+                        { value: "normal", label: "Map: Normal" },
+                        { value: "carto", label: "Map: Carto" },
+                        { value: "3d", label: "Map: 3D" },
+                      ]}
+                    />
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3">
                     <button
                       type="button"
                       onClick={resetFilters}
-                      className="whitespace-nowrap px-2 text-sm font-medium text-[#4b5f48] transition hover:text-[#2c3f2b]"
+                      className="min-h-11 rounded-full border border-[#dfcfac]/80 bg-white/72 px-4 text-[0.78rem] font-semibold text-[#43533f] sm:min-h-12 sm:text-sm"
                     >
                       Clear All
                     </button>
@@ -1866,27 +1953,17 @@ export function CustomStyleExample() {
                       type="button"
                       onClick={() => {
                         setShowFilters(false);
-                        setIsMobileFiltersOpen(false);
+                        setMobilePopularExpanded(true);
                       }}
-                      className="flex size-10 shrink-0 items-center justify-center rounded-full border border-[rgba(75,95,60,0.12)] bg-white/75 text-[#4b5f48]"
-                      aria-label="Collapse filter controls"
+                      className={`min-h-11 rounded-full px-4 text-[0.78rem] font-semibold text-white shadow-[0_10px_20px_rgba(50,79,45,0.2)] sm:min-h-12 sm:text-sm ${PREMIUM_OLIVE_BUTTON}`}
                     >
-                      <X className="size-4" />
+                      Show {visiblePois.length} Places
                     </button>
                   </div>
-                </div>
+                </section>
               </div>
-            </section>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowFilters(true)}
-              className={`absolute right-4 top-[5.25rem] pointer-events-auto inline-flex items-center gap-2 px-4 py-2 text-sm font-medium ${FLOATING_BUTTON}`}
-            >
-              <ListFilter className="size-4" />
-              Filters
-            </button>
-          )
+            ) : null}
+          </>
         ) : desktopSidebarVisible ? (
           <section
             className={`absolute right-6 top-6 bottom-6 ${desktopSidebarWidthClass} pointer-events-none ${OVERLAY_TRANSITION}`}
@@ -2081,7 +2158,7 @@ export function CustomStyleExample() {
           </button>
         )}
 
-        {!isMobileLayout && showPoiDetails && selectedDisplayPoi ? (
+        {!isCompactLayout && showPoiDetails && selectedDisplayPoi ? (
           <section
             className={`absolute bottom-6 right-6 w-[26rem] ${isTabletLayout ? "w-[22rem]" : ""} ${FLOATING_PANEL} ${OVERLAY_TRANSITION}`}
             data-state="open"
@@ -2186,28 +2263,29 @@ export function CustomStyleExample() {
           </section>
         ) : null}
 
-        {isMobileLayout ? (
+        {isCompactLayout ? (
           <>
-            {showPopular && !showPoiDetails ? (
+            {showPopular && !showPoiDetails && !showFilters ? (
               <section
-                className={`absolute inset-x-3 ${FLOATING_PANEL} ${OVERLAY_TRANSITION}`}
-                style={{ bottom: "calc(env(safe-area-inset-bottom) + 5rem)" }}
+                className={`absolute inset-x-3 sm:left-1/2 sm:right-auto sm:w-[min(40rem,calc(100vw-2.5rem))] sm:-translate-x-1/2 ${FLOATING_PANEL} ${OVERLAY_TRANSITION}`}
+                style={{ bottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
                 data-state="open"
               >
-                <div className="pointer-events-auto p-2.5">
+                <div className="pointer-events-auto p-2 sm:p-2.5">
                   <button
                     type="button"
                     onClick={() => setMobilePopularExpanded((current) => !current)}
-                    className="flex w-full items-center justify-between gap-3 px-2 py-1.5 text-left"
+                    className="flex min-h-12 w-full items-center justify-between gap-3 px-2.5 py-1 text-left sm:min-h-14 sm:px-3"
+                    aria-expanded={mobilePopularExpanded}
                   >
                     <div>
-                      <p className="text-[0.92rem] font-semibold text-[#223326]">Popular Nearby</p>
-                      <p className="text-[0.72rem] text-[#6d746b]">{mobilePopularExpanded ? "Tap to collapse" : "Swipe through the best nearby places"}</p>
+                      <p className="text-[0.88rem] font-semibold text-[#223326] sm:text-base">Popular Nearby</p>
+                      <p className="text-[0.68rem] text-[#6d746b] sm:text-xs">{mobilePopularExpanded ? "Tap to collapse" : "Best places around the project"}</p>
                     </div>
                     <ChevronUp className={`size-3.5 text-[#445642] transition ${mobilePopularExpanded ? "" : "rotate-180"}`} />
                   </button>
                   {mobilePopularExpanded ? (
-                    <div className="mt-2 max-h-[48dvh] space-y-1 overflow-y-auto overscroll-contain pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <div className="mt-1.5 max-h-[48dvh] space-y-1 overflow-y-auto overscroll-contain pr-1 [scrollbar-width:none] sm:max-h-[44dvh] [&::-webkit-scrollbar]:hidden">
                       {listedPois.map((poi) => {
                         const meta = categoryMeta[poi.category];
                         const linkedRoute = routeLookup.get(poi.id);
@@ -2218,16 +2296,16 @@ export function CustomStyleExample() {
                             key={poi.id}
                             type="button"
                             onClick={() => handleFilteredPoiSelection(poi)}
-                            className="flex w-full items-center gap-2.5 rounded-[1rem] border border-transparent bg-white/55 px-2 py-2 text-left"
+                            className="flex w-full items-center gap-2 rounded-[0.9rem] border border-transparent bg-white/55 px-2 py-1.5 text-left sm:gap-2.5 sm:py-2"
                           >
-                            <div className="relative h-[3.8rem] w-[4.2rem] shrink-0 overflow-hidden rounded-[0.9rem] border border-[rgba(75,95,60,0.14)] bg-[#e9e1d3]">
+                            <div className="relative h-12 w-14 shrink-0 overflow-hidden rounded-[0.8rem] border border-[rgba(75,95,60,0.14)] bg-[#e9e1d3] sm:h-14 sm:w-16">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={getPoiImage(poi)} alt={poi.name} className="h-full w-full object-cover" />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="truncate text-[0.84rem] font-semibold text-[#243428]">{poi.name}</p>
-                              <p className="text-[0.72rem] text-[#6f766a]">{meta.label}</p>
-                              <div className="mt-1 flex flex-wrap gap-x-2 text-[0.66rem] text-[#4e5e49]">
+                              <p className="truncate text-[0.78rem] font-semibold text-[#243428] sm:text-sm">{poi.name}</p>
+                              <p className="text-[0.66rem] text-[#6f766a] sm:text-xs">{meta.label}</p>
+                              <div className="mt-0.5 flex flex-wrap gap-x-2 text-[0.62rem] text-[#4e5e49] sm:text-[0.7rem]">
                                 <span>{metrics.distance}</span>
                                 <span>{metrics.duration}</span>
                                 {poi.rating ? <span>{poi.rating.toFixed(1)} ★</span> : null}
@@ -2245,50 +2323,50 @@ export function CustomStyleExample() {
 
             {showPoiDetails && selectedDisplayPoi ? (
               <section
-                className={`absolute inset-x-3 ${FLOATING_PANEL} ${OVERLAY_TRANSITION}`}
-                style={{ bottom: "calc(env(safe-area-inset-bottom) + 5rem)" }}
+                className={`absolute inset-x-3 max-h-[68dvh] overflow-y-auto overscroll-contain sm:left-1/2 sm:right-auto sm:w-[min(40rem,calc(100vw-2.5rem))] sm:-translate-x-1/2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${FLOATING_PANEL} ${OVERLAY_TRANSITION}`}
+                style={{ bottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
                 data-state="open"
               >
-                <div className="pointer-events-auto p-3">
-                  <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-[#d8d1c0]" />
-                  <div className="mb-3 flex items-center justify-between">
-                    <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(75,95,60,0.12)] bg-white/80 px-3 py-1 text-xs font-semibold text-[#41533f]">
+                <div className="pointer-events-auto p-3 sm:p-4">
+                  <div className="mx-auto mb-2.5 h-1 w-10 rounded-full bg-[#d8d1c0] sm:mb-3" />
+                  <div className="mb-2.5 flex items-center justify-between sm:mb-3">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(75,95,60,0.12)] bg-white/80 px-2.5 py-1 text-[0.68rem] font-semibold text-[#41533f] sm:px-3 sm:text-xs">
                       <SelectedIcon className="size-3.5" />
                       {selectedMeta.label}
                     </span>
                     <button
                       type="button"
-                      onClick={clearActiveRoute}
+                      onClick={hideCompactPoiDetails}
                       className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[rgba(75,95,60,0.12)] bg-white/78 text-[#4e5e49]"
                       aria-label="Close selected place details"
                     >
                       <X className="size-4" />
                     </button>
                   </div>
-                  <div className="overflow-hidden rounded-[1.2rem] border border-[rgba(75,95,60,0.14)] bg-[#e9e1d3]">
+                  <div className="overflow-hidden rounded-[1rem] border border-[rgba(75,95,60,0.14)] bg-[#e9e1d3] sm:rounded-[1.2rem]">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={selectedMainImage} alt={selectedDisplayPoi.name} className="h-44 w-full object-cover" />
+                    <img src={selectedMainImage} alt={selectedDisplayPoi.name} className="h-32 w-full object-cover sm:h-44" />
                   </div>
-                  <div className="mt-4">
-                    <h2 className={`${displaySerif.className} text-[1.8rem] font-semibold leading-tight text-[#253529]`}>
+                  <div className="mt-3 sm:mt-4">
+                    <h2 className={`${displaySerif.className} text-[1.35rem] font-semibold leading-tight text-[#253529] sm:text-[1.65rem]`}>
                       {selectedDisplayPoi.name}
                     </h2>
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    <div className="mt-2 flex flex-wrap gap-1.5 sm:mt-3 sm:gap-2">
                       <MetricPill icon={LocateFixed}>{selectedRouteMetrics.distance}</MetricPill>
                       <MetricPill icon={Clock3}>{selectedRouteMetrics.duration}</MetricPill>
                       <MetricPill icon={Star}>{selectedDisplayPoi.rating?.toFixed(1) ?? "4.4"}</MetricPill>
                     </div>
-                    <p className="mt-3 text-sm leading-6 text-[#72786f]">{detailDescription}</p>
+                    <p className="mt-2 text-xs leading-5 text-[#72786f] sm:mt-3 sm:text-[0.82rem] sm:leading-5">{detailDescription}</p>
                   </div>
-                  <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3">
                     <button
                       type="button"
-                      className="inline-flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-[#e6ddce] bg-[#fffdf8] px-4 text-sm font-semibold text-[#405040]"
+                      className="inline-flex h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-[#e6ddce] bg-[#fffdf8] px-2 text-[0.7rem] font-semibold text-[#405040] sm:h-12 sm:gap-2 sm:px-4 sm:text-sm"
                     >
                       <CalendarDays className="size-4" />
                       Schedule Visit
                     </button>
-                    <button className="inline-flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-[#e6ddce] bg-[#fffdf8] px-4 text-sm font-semibold text-[#405040]">
+                    <button className="inline-flex h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-[#e6ddce] bg-[#fffdf8] px-2 text-[0.7rem] font-semibold text-[#405040] sm:h-12 sm:gap-2 sm:px-4 sm:text-sm">
                       <Share2 className="size-4" />
                       Share
                     </button>
@@ -2296,7 +2374,7 @@ export function CustomStyleExample() {
                   <button
                     type="button"
                     onClick={() => handleViewRoute(selectedDisplayPoi)}
-                    className={`mt-3 inline-flex h-12 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(50,79,45,0.24)] ${PREMIUM_OLIVE_BUTTON}`}
+                    className={`mt-2 inline-flex h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 text-[0.76rem] font-semibold text-white shadow-[0_10px_20px_rgba(50,79,45,0.24)] sm:mt-3 sm:h-12 sm:text-sm ${PREMIUM_OLIVE_BUTTON}`}
                   >
                     <Navigation className="size-4" />
                     Get Directions
@@ -2309,11 +2387,11 @@ export function CustomStyleExample() {
       </div>
 
       {(isLoading || isUserRouteLoading) && (
-        <div className="pointer-events-none absolute inset-x-0 top-4 z-30 flex justify-center px-4">
-          <div className="rounded-full border border-[#e3dacb] bg-[#fffdf8]/92 px-5 py-3 text-[#263b2b] shadow-xl backdrop-blur-2xl">
+        <div className="pointer-events-none absolute inset-x-0 top-[4.75rem] z-30 flex justify-center px-3 sm:top-4 sm:px-4">
+          <div className="max-w-full rounded-full border border-[#e3dacb] bg-[#fffdf8]/92 px-4 py-2.5 text-[#263b2b] shadow-xl backdrop-blur-2xl sm:px-5 sm:py-3">
             <div className="flex items-center gap-3">
-              <Loader2 className="size-5 animate-spin text-[#41683f]" />
-              <span className="text-sm text-[#596659]">
+              <Loader2 className="size-4 shrink-0 animate-spin text-[#41683f] sm:size-5" />
+              <span className="truncate text-xs text-[#596659] sm:text-sm">
                 {isUserRouteLoading
                   ? "Tracing your route to Trifecta Veranza..."
                   : "Loading Trifecta Veranza Map..."}

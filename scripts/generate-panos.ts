@@ -13,11 +13,16 @@ const CPU_THREADS =
     ? os.availableParallelism()
     : os.cpus().length
 
-sharp.concurrency(CPU_THREADS)
+const SHARP_THREADS_PER_JOB = Math.max(1, Math.floor(CPU_THREADS / 4))
+
+sharp.concurrency(SHARP_THREADS_PER_JOB)
 sharp.simd(true)
 
-const FILE_CONCURRENCY = Math.max(1, Math.min(4, Math.floor(CPU_THREADS / 4)))
-const TILE_CONCURRENCY = Math.max(16, CPU_THREADS * 2)
+// A decoded 12288 x 6144 RGB pano is about 216 MB. Processing one pano at a
+// time keeps memory stable while its independent tiles use all CPU cores.
+const FILE_CONCURRENCY = 1
+const TILE_CONCURRENCY = Math.max(4, Math.min(16, CPU_THREADS))
+const WEBP_LOSSLESS_EFFORT = 0
 
 // set these based on your pano size
 // for 12288 x 6144 use:
@@ -50,6 +55,10 @@ function pathExists(targetPath: string): boolean {
   return fs.existsSync(targetPath)
 }
 
+function getTilePath(tilesFolder: string, job: Pick<TileJob, "col" | "row">) {
+  return path.join(tilesFolder, `tile_${job.col}_${job.row}.webp`)
+}
+
 function isAlreadyProcessed(folder: string): boolean {
   const previewPath = path.join(folder, "preview.jpg")
   const metaPath = path.join(folder, "meta.json")
@@ -60,11 +69,23 @@ function isAlreadyProcessed(folder: string): boolean {
   if (!pathExists(metaPath)) return false
   if (!pathExists(tilesFolder)) return false
 
-  const tileFiles = fs
-    .readdirSync(tilesFolder)
-    .filter((file) => /\.jpg$/i.test(file))
+  try {
+    const meta = JSON.parse(fs.readFileSync(metaPath, "utf8")) as {
+      tileFormat?: string
+      tileUrl?: string
+    }
+    const tileFiles = fs
+      .readdirSync(tilesFolder)
+      .filter((file) => /\.webp$/i.test(file))
 
-  return tileFiles.length > 0
+    return (
+      meta.tileFormat === "webp" &&
+      meta.tileUrl === "tiles/tile_{col}_{row}.webp" &&
+      tileFiles.length === TARGET_COLS * TARGET_ROWS
+    )
+  } catch {
+    return false
+  }
 }
 
 async function runInBatches<T>(
@@ -95,8 +116,7 @@ async function processImage(file: string): Promise<void> {
   ensureDir(folder)
   ensureDir(tilesFolder)
 
-  const baseImage = sharp(inputPath, SHARP_INPUT_OPTIONS)
-  const meta = await baseImage.metadata()
+  const meta = await sharp(inputPath, SHARP_INPUT_OPTIONS).metadata()
 
   if (!meta.width || !meta.height) {
     throw new Error(`Could not read dimensions for ${file}`)
@@ -123,17 +143,6 @@ async function processImage(file: string): Promise<void> {
     )
   }
 
-  await baseImage
-    .clone()
-    .resize({
-      width: PREVIEW_WIDTH,
-      withoutEnlargement: true,
-    })
-    .jpeg({
-      quality: 90,
-    })
-    .toFile(path.join(folder, "preview.jpg"))
-
   const tileJobs: TileJob[] = []
 
   for (let row = 0; row < rows; row++) {
@@ -149,28 +158,58 @@ async function processImage(file: string): Promise<void> {
     }
   }
 
-  await runInBatches(tileJobs, TILE_CONCURRENCY, async (job) => {
-    const tilePath = path.join(
-      tilesFolder,
-      `tile_${job.col}_${job.row}.jpg`
+  const previewPath = path.join(folder, "preview.jpg")
+  const pendingTileJobs = tileJobs.filter(
+    (job) => !pathExists(getTilePath(tilesFolder, job))
+  )
+  const shouldGeneratePreview = !pathExists(previewPath)
+
+  if (shouldGeneratePreview || pendingTileJobs.length > 0) {
+    const { data: pixels, info } = await sharp(
+      inputPath,
+      SHARP_INPUT_OPTIONS
     )
+      .raw()
+      .toBuffer({ resolveWithObject: true })
+    const rawInput = {
+      raw: {
+        width: info.width,
+        height: info.height,
+        channels: info.channels,
+      },
+    } as const
 
-    if (pathExists(tilePath)) return
+    if (shouldGeneratePreview) {
+      await sharp(pixels, rawInput)
+        .resize({
+          width: PREVIEW_WIDTH,
+          withoutEnlargement: true,
+        })
+        .jpeg({
+          quality: 90,
+        })
+        .toFile(previewPath)
+    }
 
-    await baseImage
-      .clone()
-      .extract({
-        left: job.left,
-        top: job.top,
-        width: job.width,
-        height: job.height,
-      })
-      .jpeg({
-        quality: 95,
-        chromaSubsampling: "4:4:4",
-      })
-      .toFile(tilePath)
-  })
+    await runInBatches(
+      pendingTileJobs,
+      TILE_CONCURRENCY,
+      async (job) => {
+        await sharp(pixels, rawInput)
+          .extract({
+            left: job.left,
+            top: job.top,
+            width: job.width,
+            height: job.height,
+          })
+          .webp({
+            lossless: true,
+            effort: WEBP_LOSSLESS_EFFORT,
+          })
+          .toFile(getTilePath(tilesFolder, job))
+      }
+    )
+  }
 
   const metaJson = {
     width: fullWidth,
@@ -180,8 +219,8 @@ async function processImage(file: string): Promise<void> {
     tileWidth,
     tileHeight,
     preview: "preview.jpg",
-    tileFormat: "jpg",
-    tileUrl: "tiles/tile_{col}_{row}.jpg",
+    tileFormat: "webp",
+    tileUrl: "tiles/tile_{col}_{row}.webp",
   }
 
   fs.writeFileSync(
@@ -211,6 +250,8 @@ async function run(): Promise<void> {
   }
 
   console.log("CPU:", CPU_THREADS)
+  console.log("Sharp threads per job:", SHARP_THREADS_PER_JOB)
+  console.log("tile concurrency:", TILE_CONCURRENCY)
   console.log("grid:", `${TARGET_COLS} x ${TARGET_ROWS}`)
 
   const totalStart = Date.now()

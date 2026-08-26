@@ -9,22 +9,6 @@ import {
   isAnyWalkthroughPath,
 } from "@/lib/site-navigation";
 
-function shouldUseMergedChrome() {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  const compactViewport = window.matchMedia("(max-width: 1279px)").matches;
-  const primaryPointerCoarse = window.matchMedia("(pointer: coarse)").matches;
-  const finePointerAvailable =
-    window.matchMedia("(pointer: fine)").matches ||
-    window.matchMedia("(any-pointer: fine)").matches;
-
-  return (
-    compactViewport || (primaryPointerCoarse && !finePointerAvailable)
-  );
-}
-
 function shouldUseCompactDesktopCtas(pathname: string) {
   if (typeof window === "undefined" || pathname !== "/master-plan") {
     return false;
@@ -41,11 +25,9 @@ function shouldUseCompactDesktopCtas(pathname: string) {
 export default function RouteChrome() {
   const pathname = usePathname();
   const [isMasterPlanFlatOpen, setIsMasterPlanFlatOpen] = useState(false);
-  const [shouldMergeDockIntoCta, setShouldMergeDockIntoCta] = useState(
-    shouldUseMergedChrome,
-  );
+  const [shouldMergeDockIntoCta, setShouldMergeDockIntoCta] = useState(false);
   const [shouldAddCompactDesktopCtasToDock, setShouldAddCompactDesktopCtasToDock] =
-    useState(() => shouldUseCompactDesktopCtas(pathname));
+    useState(false);
   const isAdminRoute = pathname.startsWith("/admin");
   const isHomeRoute = pathname === "/";
   const isAmenitiesRoute = pathname === "/amenities";
@@ -163,9 +145,9 @@ export default function RouteChrome() {
 
   return (
     <>
-      {!shouldHideDock ? (
-        <DesktopSiteRail className="fixed left-6 top-1/2 z-50 -translate-y-1/2 2xl:left-7" />
-      ) : null}
+      <DesktopSiteRail
+        className={`fixed left-6 top-1/2 z-50 -translate-y-1/2 2xl:left-7 ${shouldHideDock ? "!hidden" : ""}`}
+      />
 
       {!isDocklessRoute && !isAmenitiesRoute ? <MobileSiteNav /> : null}
 

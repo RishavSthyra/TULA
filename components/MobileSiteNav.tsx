@@ -46,6 +46,8 @@ export default function MobileSiteNav() {
   const navItemRefs = useRef<(HTMLElement | null)[]>([]);
   const actionRefs = useRef<(HTMLElement | null)[]>([]);
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const isAreaMapRoute = pathname === "/area-map";
 
   useEffect(() => {
     if (!isRendered || !isOpen) return;
@@ -64,7 +66,29 @@ export default function MobileSiteNav() {
 
     if (!overlay || !panel) return;
 
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
     timelineRef.current?.kill();
+
+    if (prefersReducedMotion) {
+      gsap.set(
+        [
+          overlay,
+          panel,
+          header,
+          closeButton,
+          flower,
+          ...navItemsToAnimate,
+          ...actions,
+        ],
+        { clearProps: "all" },
+      );
+      closeButton?.focus();
+      return;
+    }
+
     gsap.set(overlay, { autoAlpha: 0 });
     gsap.set(panel, {
       yPercent: 105,
@@ -139,6 +163,7 @@ export default function MobileSiteNav() {
         0.56,
       );
 
+    timeline.eventCallback("onComplete", () => closeButton?.focus());
     timelineRef.current = timeline;
 
     return () => {
@@ -175,6 +200,14 @@ export default function MobileSiteNav() {
     if (!overlay || !panel) {
       setIsOpen(false);
       setIsRendered(false);
+      triggerRef.current?.focus();
+      return;
+    }
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setIsOpen(false);
+      setIsRendered(false);
+      window.requestAnimationFrame(() => triggerRef.current?.focus());
       return;
     }
 
@@ -184,6 +217,7 @@ export default function MobileSiteNav() {
       onComplete: () => {
         setIsOpen(false);
         setIsRendered(false);
+        window.requestAnimationFrame(() => triggerRef.current?.focus());
       },
     });
 
@@ -231,6 +265,19 @@ export default function MobileSiteNav() {
     timelineRef.current = timeline;
   };
 
+  useEffect(() => {
+    if (!isRendered) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeMenu();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  });
+
   const openQuote = () => {
     window.dispatchEvent(new Event(TRIFECTA_LEAD_OPEN_EVENT));
     closeMenu();
@@ -251,11 +298,15 @@ export default function MobileSiteNav() {
           <nav
             ref={panelRef}
             aria-label="Mobile site navigation"
-            className="absolute inset-x-0 bottom-0 overflow-hidden rounded-t-[2.15rem] border-x-0 border-b-0 border-t border-[#dfcfac]/85 bg-[linear-gradient(180deg,rgba(255,252,245,0.99)_0%,rgba(244,238,226,0.975)_100%)] px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-5 text-[#263b2b] shadow-[0_-28px_76px_rgba(28,44,30,0.24),inset_0_1px_0_rgba(255,255,255,0.97)] sm:inset-x-0 sm:bottom-0 sm:rounded-t-[2.5rem] sm:px-7 sm:pb-[calc(env(safe-area-inset-bottom)+1.4rem)] sm:pt-7"
+            className={`absolute bottom-0 max-h-[92dvh] overflow-y-auto overscroll-contain border-[#dfcfac]/85 bg-[linear-gradient(180deg,rgba(255,252,245,0.99)_0%,rgba(244,238,226,0.975)_100%)] text-[#263b2b] shadow-[0_-28px_76px_rgba(28,44,30,0.24),inset_0_1px_0_rgba(255,255,255,0.97)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+              isAreaMapRoute
+                ? "inset-x-0 rounded-t-[1.75rem] border-x-0 border-b-0 border-t px-4 pb-[calc(env(safe-area-inset-bottom)+0.85rem)] pt-4 sm:bottom-4 sm:left-1/2 sm:right-auto sm:w-[min(34rem,calc(100vw-2rem))] sm:-translate-x-1/2 sm:rounded-[2rem] sm:border sm:px-6 sm:pb-6 sm:pt-6"
+                : "inset-x-0 rounded-t-[2.15rem] border-x-0 border-b-0 border-t px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-5 sm:rounded-t-[2.5rem] sm:px-7 sm:pb-[calc(env(safe-area-inset-bottom)+1.4rem)] sm:pt-7"
+            }`}
           >
             <div
               ref={flowerRef}
-              className="pointer-events-none absolute -right-5 -top-6 h-44 w-44 sm:-right-4 sm:-top-8 sm:h-60 sm:w-60"
+              className={`pointer-events-none absolute -right-5 -top-6 ${isAreaMapRoute ? "h-36 w-36 opacity-70 sm:h-48 sm:w-48" : "h-44 w-44 sm:-right-4 sm:-top-8 sm:h-60 sm:w-60"}`}
             >
               <Image
                 src="/flowerUI.png"
@@ -266,11 +317,16 @@ export default function MobileSiteNav() {
               />
             </div>
 
-            <div ref={headerRef} className="relative z-10 mb-7">
+            <div
+              ref={headerRef}
+              className={`relative z-10 ${isAreaMapRoute ? "mb-4 sm:mb-5" : "mb-7"}`}
+            >
               <p className="text-[0.66rem] font-bold uppercase tracking-[0.32em] text-[#53684a]">
                 TULA
               </p>
-              <h2 className="mt-2 text-[2rem] font-semibold leading-none text-[#28442f]">
+              <h2
+                className={`mt-2 font-semibold leading-none text-[#28442f] ${isAreaMapRoute ? "text-[1.35rem] sm:text-[1.65rem]" : "text-[2rem]"}`}
+              >
                 Navigation
               </h2>
             </div>
@@ -279,7 +335,7 @@ export default function MobileSiteNav() {
               ref={closeButtonRef}
               type="button"
               onClick={closeMenu}
-              className="absolute right-5 top-5 z-20 flex size-12 items-center justify-center rounded-full border border-[#dfcfac]/90 bg-[#fffdf8]/88 text-[#40543f] shadow-[0_12px_28px_rgba(43,52,37,0.12),inset_0_1px_0_rgba(255,255,255,0.95)] sm:right-7 sm:top-7 sm:size-14"
+              className={`absolute z-20 flex items-center justify-center rounded-full border border-[#dfcfac]/90 bg-[#fffdf8]/88 text-[#40543f] shadow-[0_12px_28px_rgba(43,52,37,0.12),inset_0_1px_0_rgba(255,255,255,0.95)] ${isAreaMapRoute ? "right-4 top-4 size-11 sm:right-6 sm:top-6 sm:size-12" : "right-5 top-5 size-12 sm:right-7 sm:top-7 sm:size-14"}`}
               aria-label="Close navigation menu"
             >
               <X className="size-5" />
@@ -299,7 +355,7 @@ export default function MobileSiteNav() {
                     ref={(node) => {
                       navItemRefs.current[index] = node;
                     }}
-                    className={`group relative flex h-[4.35rem] items-center justify-between px-4 text-base font-semibold transition active:scale-[0.99] sm:h-[4.75rem] sm:px-5 ${
+                    className={`group relative flex items-center justify-between font-semibold transition active:scale-[0.99] ${isAreaMapRoute ? "h-[3.55rem] px-3 text-[0.82rem] sm:h-16 sm:px-4 sm:text-sm" : "h-[4.35rem] px-4 text-base sm:h-[4.75rem] sm:px-5"} ${
                       isActive
                         ? "bg-[linear-gradient(90deg,rgba(91,118,79,0.2)_0%,rgba(91,118,79,0.08)_40%,rgba(255,253,248,0)_100%)] text-[#29412f]"
                         : "text-[#304238]"
@@ -310,9 +366,9 @@ export default function MobileSiteNav() {
                         isActive ? "bg-[#5b764f]" : "bg-transparent"
                       }`}
                     />
-                    <span className="inline-flex min-w-0 items-center gap-4">
+                    <span className={`inline-flex min-w-0 items-center ${isAreaMapRoute ? "gap-3" : "gap-4"}`}>
                       <span
-                        className={`flex size-10 shrink-0 items-center justify-center rounded-full ${
+                        className={`flex shrink-0 items-center justify-center rounded-full ${isAreaMapRoute ? "size-9 sm:size-10" : "size-10"} ${
                           isActive
                             ? "bg-[#5b764f] text-[#fff8e8] shadow-[0_10px_20px_rgba(43,72,43,0.16)]"
                             : "border border-[#dfcfac]/80 bg-[#f7f1e5] text-[#40543f]"
@@ -332,13 +388,13 @@ export default function MobileSiteNav() {
               })}
             </div>
 
-            <div className="relative z-10 mt-6 grid grid-cols-3 gap-3">
+            <div className={`relative z-10 grid grid-cols-3 ${isAreaMapRoute ? "mt-4 gap-2 sm:mt-5 sm:gap-3" : "mt-6 gap-3"}`}>
               <a
                 ref={(node) => {
                   actionRefs.current[0] = node;
                 }}
                 href="tel:+918088004411"
-                className="flex h-14 items-center justify-center rounded-full border border-[#e1d5bf] bg-[#fffdf8]/82 text-[#40543f] shadow-[0_10px_22px_rgba(43,52,37,0.055)]"
+                className={`flex items-center justify-center rounded-full border border-[#e1d5bf] bg-[#fffdf8]/82 text-[#40543f] shadow-[0_10px_22px_rgba(43,52,37,0.055)] ${isAreaMapRoute ? "h-11 sm:h-12" : "h-14"}`}
                 aria-label="Call"
               >
                 <Phone className="size-4.5" />
@@ -348,7 +404,7 @@ export default function MobileSiteNav() {
                   actionRefs.current[1] = node;
                 }}
                 href="/Veranza Floorplan_ E-Brochure_V3_02-03-26 (2).pdf"
-                className="flex h-14 items-center justify-center rounded-full border border-[#e1d5bf] bg-[#fffdf8]/82 text-[#40543f] shadow-[0_10px_22px_rgba(43,52,37,0.055)]"
+                className={`flex items-center justify-center rounded-full border border-[#e1d5bf] bg-[#fffdf8]/82 text-[#40543f] shadow-[0_10px_22px_rgba(43,52,37,0.055)] ${isAreaMapRoute ? "h-11 sm:h-12" : "h-14"}`}
                 aria-label="Download brochure"
               >
                 <FileDown className="size-4.5" />
@@ -359,7 +415,7 @@ export default function MobileSiteNav() {
                 }}
                 type="button"
                 onClick={openQuote}
-                className="flex h-14 items-center justify-center rounded-full border border-[#6c8659] bg-[radial-gradient(circle_at_32%_25%,#69895e_0%,#45603c_58%,#2a452d_100%)] text-white shadow-[0_14px_30px_rgba(43,72,43,0.2)]"
+                className={`flex items-center justify-center rounded-full border border-[#6c8659] bg-[radial-gradient(circle_at_32%_25%,#69895e_0%,#45603c_58%,#2a452d_100%)] text-white shadow-[0_14px_30px_rgba(43,72,43,0.2)] ${isAreaMapRoute ? "h-11 sm:h-12" : "h-14"}`}
                 aria-label="Get a quote"
               >
                 <Send className="size-4.5" />
@@ -370,11 +426,18 @@ export default function MobileSiteNav() {
       ) : null}
 
       {!isRendered ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-[max(env(safe-area-inset-bottom),1rem)] z-[70] flex justify-start px-4 sm:px-6">
+        <div
+          className={`pointer-events-none fixed inset-x-0 z-[70] flex justify-start ${
+            isAreaMapRoute
+              ? "top-[max(env(safe-area-inset-top),1rem)] px-3 sm:px-5"
+              : "bottom-[max(env(safe-area-inset-bottom),1rem)] px-4 sm:px-6"
+          }`}
+        >
           <button
+            ref={triggerRef}
             type="button"
             onClick={openMenu}
-            className="pointer-events-auto flex size-13 items-center justify-center rounded-full border border-[#dfcfac]/80 bg-[linear-gradient(180deg,rgba(255,252,245,0.96),rgba(241,237,226,0.94))] text-[#304238] shadow-[0_18px_42px_rgba(30,46,30,0.18),inset_0_1px_0_rgba(255,255,255,0.95)]"
+            className={`pointer-events-auto flex items-center justify-center rounded-full border border-[#dfcfac]/80 bg-[linear-gradient(180deg,rgba(255,252,245,0.96),rgba(241,237,226,0.94))] text-[#304238] shadow-[0_18px_42px_rgba(30,46,30,0.18),inset_0_1px_0_rgba(255,255,255,0.95)] ${isAreaMapRoute ? "size-11 sm:size-12" : "size-13"}`}
             aria-label="Open navigation menu"
             aria-expanded={false}
           >

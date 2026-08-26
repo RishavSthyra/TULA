@@ -166,11 +166,11 @@ export const DEFAULT_DEVELOPER_RUNTIME_CONFIG: DeveloperRuntimeConfig = {
     fallbackImageKey: "images/first_frame_again.png",
   },
   exterior: {
-    panoBasePath: "TULA/Panos/exterior-pano-remaining",
+    panoBasePath: "TULA/Panos/exterior-pano-remaining-optimised",
     nodes: exteriorNodes as ExteriorPanoNodeSource[],
     initialNodeId: "PANO_Spline_F0000",
     initialPreviewKey:
-      "TULA/Panos/exterior-pano-remaining/LS_PANO_Spline_F0000/preview.jpg",
+      "TULA/Panos/exterior-pano-remaining-optimised/LS_PANO_Spline_F0000/preview.jpg",
     minimapKey: "images/Final_5.avif",
     fallbackImageKey: "images/exterior-minimap-fallback.jpg",
     title: "Trifecta Exterior Walkthrough",
