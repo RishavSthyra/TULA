@@ -66,8 +66,6 @@ export type AmenitiesPageData = {
 
 type AmenitiesPageClientProps = {
   data: AmenitiesPageData;
-  brandName?: string;
-  brandSubline?: string;
   onExplore3D?: (amenity: AmenityPageItem) => void;
 };
 
@@ -137,37 +135,6 @@ function getFiniteMediaDuration(video: HTMLVideoElement) {
 
 function twoDigits(value: number) {
   return String(value).padStart(2, "0");
-}
-
-function BrandTreeMark() {
-  return (
-    <svg
-      viewBox="0 0 58 70"
-      aria-hidden="true"
-      fill="none"
-      className="h-[46px] w-[38px] shrink-0 drop-shadow-[0_5px_18px_rgba(0,0,0,0.34)] sm:h-[58px] sm:w-[48px]"
-    >
-      <path d="M29 66V17" stroke="currentColor" strokeWidth="1.2" />
-      <path
-        d="M29 15C24 21 20 27 18 34M29 15C34 21 38 27 40 34M29 23C20 26 13 31 8 38M29 23C38 26 45 31 50 38M29 31C18 35 10 42 5 50M29 31C40 35 48 42 53 50M29 39C18 43 11 50 8 58M29 39C40 43 47 50 50 58"
-        stroke="currentColor"
-        strokeWidth="1.1"
-        strokeLinecap="round"
-      />
-      <path
-        d="M29 5C24 9 22 13 22 18M29 5C34 9 36 13 36 18M21 11C16 14 13 18 12 23M37 11C42 14 45 18 46 23M14 19C9 23 7 28 7 33M44 19C49 23 51 28 51 33"
-        stroke="currentColor"
-        strokeWidth="1"
-        strokeLinecap="round"
-      />
-      <path
-        d="M14 62C20 59 24 58 29 58C34 58 38 59 44 62"
-        stroke="currentColor"
-        strokeWidth="1.1"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
 }
 
 function AmenityThumbnail({
@@ -529,8 +496,6 @@ const VideoPlayerControls = memo(function VideoPlayerControls({
 
 export default function AmenitiesPageClient({
   data,
-  brandName = "Whispers",
-  brandSubline = "of the Pines",
   onExplore3D,
 }: AmenitiesPageClientProps) {
   const router = useRouter();
@@ -969,21 +934,19 @@ export default function AmenitiesPageClient({
           type="button"
           onClick={() => router.back()}
           aria-label="Go back"
-          className="inline-flex items-center gap-2.5 bg-transparent p-0 text-[#efdda5] transition hover:text-[#fff0bd] sm:gap-3"
+          className="inline-flex shrink-0 items-center bg-transparent p-0 transition hover:opacity-90"
         >
-          <BrandTreeMark />
-          <span className="flex min-w-[104px] flex-col items-start leading-[0.86] text-left sm:min-w-[136px]">
-            <span
-              className={`${displaySerif.className} text-[24px] tracking-[0.01em] drop-shadow-[0_4px_18px_rgba(0,0,0,0.4)] sm:text-[31px]`}
-            >
-              {brandName}
-            </span>
-            <span
-              className={`${displaySerif.className} mt-[6px] text-[13px] tracking-[0.035em] drop-shadow-[0_4px_18px_rgba(0,0,0,0.4)] sm:mt-[7px] sm:text-[17px]`}
-            >
-              {brandSubline}
-            </span>
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://cdn.sthyra.com/TULA/Images/Whisper_of_Tree_Logo_Gold%201.avif"
+            alt="Whisper of Trees"
+            width={512}
+            height={220}
+            loading="eager"
+            decoding="async"
+            draggable={false}
+            className="h-[2.75rem] w-auto max-w-[8.5rem] select-none object-contain drop-shadow-[0_5px_18px_rgba(0,0,0,0.4)] sm:h-[3.75rem] sm:max-w-[11rem]"
+          />
         </button>
 
         <span className="mx-4 h-[40px] w-px bg-[linear-gradient(180deg,transparent,rgba(234,217,166,0.46),transparent)] sm:ml-[26px] sm:mr-[38px] sm:h-[51px]" />

@@ -10,6 +10,7 @@ import {
 } from "react";
 import gsap from "gsap";
 import { Howl, Howler } from "howler";
+import PreloaderCornerLogo from "@/components/ui/PreloaderCornerLogo";
 
 type CinematicIntroProps = {
   onComplete?: () => void;
@@ -594,6 +595,8 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
         pointerEvents: "auto",
       }}
     >
+      <PreloaderCornerLogo />
+
       {/* Atmospheric background layers */}
       <div
         ref={greenGlowRef}

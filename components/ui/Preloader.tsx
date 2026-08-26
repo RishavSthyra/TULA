@@ -3,6 +3,7 @@
 import React from "react"
 import { motion, useReducedMotion } from "framer-motion"
 import { Cormorant_Garamond } from "next/font/google"
+import PreloaderCornerLogo from "@/components/ui/PreloaderCornerLogo"
 
 const luxeItalic = Cormorant_Garamond({
   subsets: ["latin"],
@@ -29,6 +30,7 @@ export default function TrifectaPreloader({
       transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
       className="fixed inset-0 z-[9999] overflow-hidden bg-[#050505]"
     >
+      <PreloaderCornerLogo />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(201,168,109,0.16),transparent_34%),radial-gradient(circle_at_50%_55%,rgba(255,255,255,0.06),transparent_28%),linear-gradient(180deg,#070707_0%,#050505_45%,#020202_100%)]" />
       <motion.div
         animate={

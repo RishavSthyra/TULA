@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import PreloaderCornerLogo from "@/components/ui/PreloaderCornerLogo";
 
 const TULA_LOGO_URL =
   "https://cdn.sthyra.com/TULA/Images/Whisper_of_Tree_Logo_Gold%201_01.png";
@@ -29,6 +30,7 @@ export default function TulaBrandPreloader({
       role="status"
       aria-label={`Loading exterior panoramas ${clampedProgress}%`}
     >
+      <PreloaderCornerLogo />
       <div className="absolute inset-[-8%] bg-[radial-gradient(ellipse_62%_46%_at_18%_74%,rgba(34,120,70,0.28)_0%,rgba(15,60,36,0.16)_46%,transparent_74%),radial-gradient(ellipse_54%_40%_at_86%_18%,rgba(28,104,62,0.20)_0%,transparent_70%),radial-gradient(ellipse_74%_58%_at_50%_42%,rgba(34,98,57,0.31)_0%,rgba(13,45,28,0.18)_42%,transparent_72%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_62%_48%_at_50%_48%,transparent_0%,rgba(0,0,0,0.18)_52%,rgba(0,0,0,0.86)_100%)]" />
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.72)_0%,transparent_24%,transparent_70%,rgba(0,0,0,0.78)_100%)]" />
