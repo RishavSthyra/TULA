@@ -111,6 +111,7 @@ const SelectedFlatDetailsPanel = forwardRef<
     [apartment.roomDimensions],
   );
   const statusStyles = getStatusStyles(apartment.status);
+  const formattedAreaSqft = `${Math.round(apartment.areaSqft)} sq ft`;
   const handleOpenWalkthrough = useCallback(() => {
     router.push(
       buildWalkthroughHref({
@@ -133,14 +134,14 @@ const SelectedFlatDetailsPanel = forwardRef<
     },
     {
       key: "config",
-      label: "Configuration",
-      value: apartment.unitType,
+      label: "Config",
+      value: `${apartment.bhk} BHK`,
       icon: BedDouble,
     },
     {
       key: "area",
       label: "Saleable Area",
-      value: `${apartment.areaSqft} sqft`,
+      value: formattedAreaSqft,
       icon: Expand,
     },
     {
@@ -429,14 +430,11 @@ const SelectedFlatDetailsPanel = forwardRef<
 
                 <div className={metaCardClassName}>
                   <p className="text-[10px] uppercase tracking-[0.24em] text-[#9a8054]">
-                    Configuration
+                    Config
                   </p>
                   <div className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-[#1f3f2b]">
                     <BedDouble className="h-4 w-4 text-[#a88a45]" />
                     {apartment.bhk} BHK
-                    <span className="block text-[10px] font-medium text-[#687468]">
-                      {apartment.unitType}
-                    </span>
                   </div>
                 </div>
 
@@ -456,10 +454,7 @@ const SelectedFlatDetailsPanel = forwardRef<
                   </p>
                   <div className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-[#1f3f2b]">
                     <Expand className="h-4 w-4 text-[#a88a45]" />
-                    {apartment.areaSqft} sqft
-                    <span className="block text-[10px] font-medium text-[#687468]">
-                      Carpet {apartment.carpetAreaSqft} · Balcony {apartment.balconyAreaSqft}
-                    </span>
+                    {formattedAreaSqft}
                   </div>
                 </div>
 
