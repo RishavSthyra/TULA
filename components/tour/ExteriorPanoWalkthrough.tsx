@@ -1445,10 +1445,10 @@ export default function ExteriorPanoWalkthrough({
     [],
   );
 
-  const beginFlythrough = useCallback(async () => {
+  const beginFlythrough = useCallback(async (showPreviewOverlay = true) => {
     const runId = ++flythroughRunIdRef.current;
 
-    setIsPreviewOverlayVisible(true);
+    setIsPreviewOverlayVisible(showPreviewOverlay);
     flythroughPhaseRef.current = "swap";
     setFlythroughPhase("swap");
 
@@ -2299,20 +2299,11 @@ export default function ExteriorPanoWalkthrough({
             : degToRad(options.viewYawDegrees);
 
         const targetPromise = resolvePano(targetId, { previewPriority: "high" });
-        const targetPreviewUrl = await preloadNodePreview(targetId, "high").catch(
-          () => null,
-        );
-        if (targetPreviewUrl) {
-          await preparePreviewOverlay(targetPreviewUrl);
-          flythroughRunId = await beginFlythrough();
-        }
+        await preloadNodePreview(targetId, "high").catch(() => null);
 
         const target = await targetPromise;
         const targetWarmupRunId = startWarmupRun();
-        if (flythroughRunId === null) {
-          await preparePreviewOverlay(target.previewUrl);
-          flythroughRunId = await beginFlythrough();
-        }
+        flythroughRunId = await beginFlythrough(false);
         void preloadResolvedFocusTiles(
           target,
           {
@@ -2658,15 +2649,7 @@ export default function ExteriorPanoWalkthrough({
             const targetPromise = resolvePano(targetId, {
               previewPriority: "high",
             });
-            const targetPreviewUrl = await preloadNodePreview(
-              targetId,
-              "high",
-            ).catch(() => null);
-
-            if (targetPreviewUrl) {
-              await preparePreviewOverlay(targetPreviewUrl);
-              flythroughRunId = await beginFlythrough();
-            }
+            await preloadNodePreview(targetId, "high").catch(() => null);
 
             target = await targetPromise;
           } catch {
@@ -2676,10 +2659,7 @@ export default function ExteriorPanoWalkthrough({
           }
 
           const targetWarmupRunId = startWarmupRun();
-          if (flythroughRunId === null) {
-            await preparePreviewOverlay(target.previewUrl);
-            flythroughRunId = await beginFlythrough();
-          }
+          flythroughRunId = await beginFlythrough(false);
           void preloadResolvedFocusTiles(
             target,
             {
