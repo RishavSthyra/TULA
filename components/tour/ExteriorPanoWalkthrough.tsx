@@ -479,15 +479,23 @@ function getViewDirectionalCandidates(
   );
 }
 
-function withoutBasePreview(panorama: ExteriorPanoramaSource) {
-  if (typeof panorama === "string" || !("tileUrl" in panorama) || !("baseUrl" in panorama)) {
+function buildPreviewOnlyFallback(
+  panorama: ExteriorPanoramaSource,
+  previewUrl: string | null | undefined,
+): ExteriorPanoramaSource | null {
+  if (!previewUrl) {
     return null;
   }
 
-  const tileOnlyPanorama = { ...panorama };
-  delete (tileOnlyPanorama as { baseUrl?: string }).baseUrl;
+  if (typeof panorama === "string" || !("tileUrl" in panorama)) {
+    return previewUrl;
+  }
 
-  return tileOnlyPanorama;
+  return {
+    ...panorama,
+    baseUrl: previewUrl,
+    tileUrl: () => null,
+  };
 }
 
 function ArrowButton({
@@ -1122,7 +1130,6 @@ export default function ExteriorPanoWalkthrough({
   activeNodeIdRef.current = activeNodeId;
   const prefersCoarsePointerRef = useRef(false);
   const isCompactExperienceRef = useRef(false);
-  const preferTileOnlyPanoramaRef = useRef(false);
   const fallbackPreviewLoadIdRef = useRef(0);
   const previewOverlayLoadIdRef = useRef(0);
   const previewOverlayHideTimeoutRef = useRef<
@@ -1438,17 +1445,6 @@ export default function ExteriorPanoWalkthrough({
     [],
   );
 
-  const showPreviewOverlay = useCallback(async (previewUrl: string | null | undefined) => {
-    if (!preferTileOnlyPanoramaRef.current) {
-      return;
-    }
-
-    const prepared = await preparePreviewOverlay(previewUrl);
-    if (prepared) {
-      setIsPreviewOverlayVisible(true);
-    }
-  }, [preparePreviewOverlay]);
-
   const beginFlythrough = useCallback(async () => {
     const runId = ++flythroughRunIdRef.current;
 
@@ -1562,27 +1558,14 @@ export default function ExteriorPanoWalkthrough({
             nodeId,
             panoId: node.panoId,
             meta,
-            panorama:
-              (preferTileOnlyPanoramaRef.current
-                ? withoutBasePreview(
-                    buildPhotoSpherePanorama(
-                      node.panoId,
-                      meta,
-                      cdnBaseUrl,
-                      true,
-                      signedPreviewUrl,
-                      signedTileUrls,
-                    ),
-                  )
-                : null) ??
-              buildPhotoSpherePanorama(
-                node.panoId,
-                meta,
-                cdnBaseUrl,
-                true,
-                signedPreviewUrl,
-                signedTileUrls,
-              ),
+            panorama: buildPhotoSpherePanorama(
+              node.panoId,
+              meta,
+              cdnBaseUrl,
+              true,
+              signedPreviewUrl,
+              signedTileUrls,
+            ),
             previewUrl: signedPreviewUrl,
             mode: "tiles",
           } satisfies ResolvedPano;
@@ -1717,14 +1700,13 @@ export default function ExteriorPanoWalkthrough({
 
     let cancelled = false;
     let localViewer: Viewer | null = null;
-    let retriedInitialWithoutBase = false;
     let retriedInitialPreviewImage = false;
 
     void (async () => {
+      const isAppleTouchDevice = isAppleTouchPanoramaDevice();
       prefersCoarsePointerRef.current =
         window.matchMedia?.("(pointer: coarse)").matches ||
         navigator.maxTouchPoints > 0;
-      preferTileOnlyPanoramaRef.current = isAppleTouchPanoramaDevice();
       isCompactExperienceRef.current =
         window.matchMedia?.("(max-width: 1279px)").matches ||
         prefersCoarsePointerRef.current;
@@ -1774,15 +1756,16 @@ export default function ExteriorPanoWalkthrough({
           ? clamp(degToRad(initialNode.pitch), MIN_PITCH, MAX_PITCH)
           : 0;
       const initialZoom = initialAmenity?.startingPano.viewZoom ?? DEFAULT_ZOOM;
-      const initialTileOnlyPanorama = withoutBasePreview(initialResolved.panorama);
-
-      await showPreviewOverlay(initialResolved.previewUrl);
+      const initialPreviewFallback = buildPreviewOnlyFallback(
+        initialResolved.panorama,
+        initialResolved.previewUrl,
+      );
 
       if (process.env.NODE_ENV !== "production") {
         console.log("Exterior pano viewer size", {
           w: viewerHostRef.current.clientWidth,
           h: viewerHostRef.current.clientHeight,
-          appleTouch: preferTileOnlyPanoramaRef.current,
+          appleTouch: isAppleTouchDevice,
           fallbackMode: isAppleTouchFallbackMode,
         });
       }
@@ -1792,14 +1775,14 @@ export default function ExteriorPanoWalkthrough({
         ...(initialResolved.mode === "tiles"
           ? {
               adapter: EquirectangularTilesAdapter.withConfig({
-                resolution: preferTileOnlyPanoramaRef.current
+                resolution: isAppleTouchDevice
                   ? EXTERIOR_APPLE_TOUCH_SPHERE_RESOLUTION
                   : isCompactExperienceRef.current
                     ? EXTERIOR_COMPACT_SPHERE_RESOLUTION
                     : EXTERIOR_SPHERE_RESOLUTION,
                 showErrorTile: false,
-                baseBlur: !preferTileOnlyPanoramaRef.current,
-                antialias: !preferTileOnlyPanoramaRef.current,
+                baseBlur: true,
+                antialias: true,
               }),
             }
           : {}),
@@ -1822,9 +1805,9 @@ export default function ExteriorPanoWalkthrough({
         maxFov: EXTERIOR_MAX_FOV,
         moveInertia: true,
         rendererParameters: {
-          antialias: !preferTileOnlyPanoramaRef.current,
+          antialias: true,
           powerPreference:
-            initialResolved.mode === "tiles" && !preferTileOnlyPanoramaRef.current
+            initialResolved.mode === "tiles" && !isAppleTouchDevice
               ? "high-performance"
               : "default",
         },
@@ -1932,31 +1915,11 @@ export default function ExteriorPanoWalkthrough({
       localViewer.addEventListener("panorama-error", ({ error }) => {
         console.error("Exterior panorama error:", error);
         localViewer?.hideError();
-        if (!retriedInitialWithoutBase && initialTileOnlyPanorama && localViewer) {
-          retriedInitialWithoutBase = true;
-          setLoadState(createLoadState("preview", "Retrying panorama"));
-          void localViewer
-            .setPanorama(initialTileOnlyPanorama, {
-              position: {
-                yaw: initialYaw,
-                pitch: initialPitch,
-              },
-              zoom: initialZoom,
-              showLoader: false,
-            })
-            .catch((fallbackError) => {
-              console.error("Exterior initial tile-only fallback failed:", fallbackError);
-              localViewer?.hideError();
-              hidePreviewOverlay(0);
-              setLoadState(createLoadState("error", "Panorama unavailable"));
-            });
-          return;
-        }
-        if (!retriedInitialPreviewImage && initialResolved.previewUrl && localViewer) {
+        if (!retriedInitialPreviewImage && initialPreviewFallback && localViewer) {
           retriedInitialPreviewImage = true;
           setLoadState(createLoadState("preview", "Retrying panorama"));
           void localViewer
-            .setPanorama(initialResolved.previewUrl, {
+            .setPanorama(initialPreviewFallback, {
               position: {
                 yaw: initialYaw,
                 pitch: initialPitch,
@@ -2040,7 +2003,6 @@ export default function ExteriorPanoWalkthrough({
     initialRequestedNodeId,
     isAppleTouchFallbackMode,
     resolvePano,
-    showPreviewOverlay,
     updateMinimapHeading,
   ]);
 
@@ -2299,7 +2261,7 @@ export default function ExteriorPanoWalkthrough({
 
         try {
           const target = await resolvePano(targetId, { previewPriority: "high" });
-          if (preferTileOnlyPanoramaRef.current || isAppleTouchFallbackMode) {
+          if (isAppleTouchFallbackMode) {
             await preparePreviewOverlay(target.previewUrl);
           }
           flythroughRunId = await beginFlythrough();
@@ -2353,9 +2315,6 @@ export default function ExteriorPanoWalkthrough({
 
       try {
         const target = await resolvePano(targetId, { previewPriority: "high" });
-        if (preferTileOnlyPanoramaRef.current) {
-          await preparePreviewOverlay(target.previewUrl);
-        }
         flythroughRunId = await beginFlythrough();
         const currentPosition = viewer.getPosition();
         const targetPitch = clamp(
@@ -2394,8 +2353,10 @@ export default function ExteriorPanoWalkthrough({
         try {
           completed = await viewer.setPanorama(target.panorama, panoramaOptions);
         } catch (previewTransitionError) {
-          const fallbackPanorama =
-            withoutBasePreview(target.panorama) ?? target.previewUrl;
+          const fallbackPanorama = buildPreviewOnlyFallback(
+            target.panorama,
+            target.previewUrl,
+          );
           if (!fallbackPanorama) {
             throw previewTransitionError;
           }
@@ -2612,7 +2573,7 @@ export default function ExteriorPanoWalkthrough({
               const target = await resolvePano(targetId, {
                 previewPriority: "high",
               });
-              if (preferTileOnlyPanoramaRef.current || isAppleTouchFallbackMode) {
+              if (isAppleTouchFallbackMode) {
                 await preparePreviewOverlay(target.previewUrl);
               }
               flythroughRunId = await beginFlythrough();
@@ -2698,9 +2659,6 @@ export default function ExteriorPanoWalkthrough({
             continue;
           }
 
-          if (preferTileOnlyPanoramaRef.current) {
-            await preparePreviewOverlay(target.previewUrl);
-          }
           const flythroughRunId = await beginFlythrough();
 
           try {
@@ -2756,8 +2714,10 @@ export default function ExteriorPanoWalkthrough({
             navigated = true;
             break;
           } catch (previewTransitionError) {
-            const fallbackPanorama =
-              withoutBasePreview(target.panorama) ?? target.previewUrl;
+            const fallbackPanorama = buildPreviewOnlyFallback(
+              target.panorama,
+              target.previewUrl,
+            );
 
             if (!fallbackPanorama) {
               cancelFlythrough();
