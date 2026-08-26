@@ -2,7 +2,6 @@
 
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import DevtoolsGuard from "@/components/DevtoolsGuard";
 import RouteChrome from "@/components/RouteChrome";
 import TrifectaRemoteControlBridge from "@/components/TrifectaRemoteControlBridge";
 
@@ -18,7 +17,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="relative app-shell w-full overflow-x-hidden">
-      <DevtoolsGuard />
       <TrifectaRemoteControlBridge />
       <RouteChrome />
       <main className="app-shell w-full">{children}</main>

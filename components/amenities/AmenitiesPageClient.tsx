@@ -11,7 +11,12 @@ import {
   useState,
 } from "react";
 import { Cormorant_Garamond, Montserrat } from "next/font/google";
-import { AnimatePresence, motion, MotionConfig } from "framer-motion";
+import {
+  AnimatePresence,
+  motion,
+  MotionConfig,
+  useReducedMotion,
+} from "framer-motion";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
@@ -95,6 +100,8 @@ type VideoWithFrameCallback = HTMLVideoElement & {
 
 const CAROUSEL_OFFSETS = [-3, -2, -1, 0, 1, 2, 3] as const;
 const CAROUSEL_TRANSITION_MS = 580;
+const COMPACT_UI_AUTO_HIDE_MS = 2000;
+const COMPACT_UI_MEDIA_QUERY = "(max-width: 1279px)";
 
 function hasMediaSource(value?: string) {
   return Boolean(value && value.trim().length > 0);
@@ -532,6 +539,7 @@ export default function AmenitiesPageClient({
   const transitionTokenRef = useRef(0);
   const carouselTransitionLockedRef = useRef(false);
   const carouselUnlockTimerRef = useRef<number | null>(null);
+  const compactUiHideTimerRef = useRef<number | null>(null);
 
   const [activeId, setActiveId] = useState(data.items[0]?.id ?? "");
   const [displayedAmenityId, setDisplayedAmenityId] = useState(
@@ -540,6 +548,31 @@ export default function AmenitiesPageClient({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
+  const [isCompactViewport, setIsCompactViewport] = useState(false);
+  const [isCompactUiVisible, setIsCompactUiVisible] = useState(true);
+  const prefersReducedMotion = useReducedMotion();
+
+  const clearCompactUiHideTimer = useCallback(() => {
+    if (compactUiHideTimerRef.current === null) {
+      return;
+    }
+
+    window.clearTimeout(compactUiHideTimerRef.current);
+    compactUiHideTimerRef.current = null;
+  }, []);
+
+  const revealCompactUi = useCallback(() => {
+    if (!isCompactViewport) {
+      return;
+    }
+
+    clearCompactUiHideTimer();
+    setIsCompactUiVisible(true);
+    compactUiHideTimerRef.current = window.setTimeout(() => {
+      setIsCompactUiVisible(false);
+      compactUiHideTimerRef.current = null;
+    }, COMPACT_UI_AUTO_HIDE_MS);
+  }, [clearCompactUiHideTimer, isCompactViewport]);
 
   const activeIndex = useMemo(() => {
     const index = data.items.findIndex((item) => item.id === activeId);
@@ -628,8 +661,42 @@ export default function AmenitiesPageClient({
       if (carouselUnlockTimerRef.current !== null) {
         window.clearTimeout(carouselUnlockTimerRef.current);
       }
+
+      clearCompactUiHideTimer();
     };
-  }, []);
+  }, [clearCompactUiHideTimer]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(COMPACT_UI_MEDIA_QUERY);
+    const syncCompactViewport = () => {
+      setIsCompactViewport(mediaQuery.matches);
+
+      if (!mediaQuery.matches) {
+        clearCompactUiHideTimer();
+        setIsCompactUiVisible(true);
+      }
+    };
+
+    syncCompactViewport();
+    mediaQuery.addEventListener("change", syncCompactViewport);
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncCompactViewport);
+    };
+  }, [clearCompactUiHideTimer]);
+
+  useEffect(() => {
+    if (!isCompactViewport) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(revealCompactUi);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      clearCompactUiHideTimer();
+    };
+  }, [activeId, clearCompactUiHideTimer, isCompactViewport, revealCompactUi]);
 
   const toggleFullscreen = useCallback(async () => {
     if (typeof document === "undefined") {
@@ -847,6 +914,7 @@ export default function AmenitiesPageClient({
   return (
     <main
       ref={stageRef}
+      onPointerDown={revealCompactUi}
       className={`${interfaceSans.className} relative isolate h-[100dvh] min-h-[100dvh] w-full overflow-hidden bg-[#050907] text-[#f7efd8]`}
     >
       {/* Full-screen amenity media */}
@@ -953,9 +1021,28 @@ export default function AmenitiesPageClient({
       </header>
 
       {/* Hero copy — directly on media, no card/container */}
-      <section
+      <motion.section
         className="absolute bottom-[280px] left-5 z-10 w-[calc(100vw-40px)] sm:bottom-auto sm:left-[34px] sm:top-[33.5%] sm:w-[calc(100vw-72px)]"
         aria-live="polite"
+        aria-hidden={isCompactViewport && !isCompactUiVisible}
+        inert={isCompactViewport && !isCompactUiVisible ? true : undefined}
+        initial={false}
+        animate={{
+          opacity: isCompactViewport && !isCompactUiVisible ? 0 : 1,
+          x:
+            isCompactViewport && !isCompactUiVisible && !prefersReducedMotion
+              ? -72
+              : 0,
+        }}
+        transition={{
+          duration: prefersReducedMotion ? 0.2 : 0.62,
+          ease: [0.22, 1, 0.36, 1],
+        }}
+        style={{
+          pointerEvents:
+            isCompactViewport && !isCompactUiVisible ? "none" : "auto",
+          willChange: isCompactViewport ? "transform, opacity" : "auto",
+        }}
       >
         <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#f2ead5]/[0.88] drop-shadow-[0_4px_18px_rgba(0,0,0,0.7)] sm:mb-[17px] sm:text-[13px]">
           {heroEyebrow}
@@ -981,12 +1068,32 @@ export default function AmenitiesPageClient({
           <Orbit className="h-[24px] w-[24px] stroke-[1.5]" aria-hidden="true" />
           <span>Explore in 3D</span>
         </button>
-      </section>
+      </motion.section>
 
       {/* Flat filmstrip carousel — replaces the old rounded 3D deck */}
-      <section
-        className="absolute bottom-[72px] left-1/2 z-20 h-[204px] w-[calc(100vw-20px)] -translate-x-1/2 sm:bottom-[76px] sm:w-[min(1120px,88vw)] xl:w-[min(1320px,90vw)]"
+      <motion.section
+        className="absolute bottom-[72px] left-1/2 z-20 h-[204px] w-[calc(100vw-20px)] sm:bottom-[76px] sm:w-[min(1120px,88vw)] xl:w-[min(1320px,90vw)]"
         aria-label="Amenity carousel"
+        aria-hidden={isCompactViewport && !isCompactUiVisible}
+        inert={isCompactViewport && !isCompactUiVisible ? true : undefined}
+        initial={false}
+        animate={{
+          opacity: isCompactViewport && !isCompactUiVisible ? 0 : 1,
+          x: "-50%",
+          y:
+            isCompactViewport && !isCompactUiVisible && !prefersReducedMotion
+              ? 132
+              : 0,
+        }}
+        transition={{
+          duration: prefersReducedMotion ? 0.2 : 0.68,
+          ease: [0.22, 1, 0.36, 1],
+        }}
+        style={{
+          pointerEvents:
+            isCompactViewport && !isCompactUiVisible ? "none" : "auto",
+          willChange: isCompactViewport ? "transform, opacity" : "auto",
+        }}
       >
         <button
           type="button"
@@ -1058,7 +1165,7 @@ export default function AmenitiesPageClient({
             );
           })}
         </div>
-      </section>
+      </motion.section>
 
       <VideoPlayerControls
         videoRef={videoRef}
@@ -1069,6 +1176,15 @@ export default function AmenitiesPageClient({
         onTogglePlayback={togglePlayback}
         onToggleMuted={toggleMuted}
       />
+
+      {isCompactViewport && !isCompactUiVisible ? (
+        <button
+          type="button"
+          onPointerDown={revealCompactUi}
+          className="absolute inset-0 z-40 cursor-default bg-transparent"
+          aria-label="Show amenity details and carousel"
+        />
+      ) : null}
     </main>
   );
 }
