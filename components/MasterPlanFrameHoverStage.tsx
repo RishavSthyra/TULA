@@ -438,8 +438,12 @@ function getHighlightFillMaterial(color: string, opacity: number) {
   return material;
 }
 
-function getHighlightLineMaterial(color: string, thickness: number) {
-  const key = `${color}:${thickness}`;
+function getHighlightLineMaterial(
+  color: string,
+  thickness: number,
+  opacity = 1,
+) {
+  const key = `${color}:${thickness}:${opacity}`;
   const cachedMaterial = HIGHLIGHT_LINE_MATERIAL_CACHE.get(key);
 
   if (cachedMaterial) {
@@ -449,8 +453,11 @@ function getHighlightLineMaterial(color: string, thickness: number) {
   const material = new LineBasicMaterial({
     color,
     depthTest: false,
+    depthWrite: false,
     linewidth: thickness,
+    opacity,
     toneMapped: false,
+    transparent: opacity < 1,
   });
 
   HIGHLIGHT_LINE_MATERIAL_CACHE.set(key, material);
@@ -2068,6 +2075,7 @@ const HighlightEdgeLines = memo(function HighlightEdgeLines({
   color,
   geometry,
   matrix,
+  opacity = 1,
   scaleMultiplier = 1,
   renderOrder,
   thickness = 1,
@@ -2075,6 +2083,7 @@ const HighlightEdgeLines = memo(function HighlightEdgeLines({
   color: string;
   geometry: Mesh["geometry"];
   matrix: Matrix4;
+  opacity?: number;
   scaleMultiplier?: number;
   renderOrder: number;
   thickness?: number;
@@ -2084,8 +2093,8 @@ const HighlightEdgeLines = memo(function HighlightEdgeLines({
     [geometry],
   );
   const material = useMemo(
-    () => getHighlightLineMaterial(color, thickness),
-    [color, thickness],
+    () => getHighlightLineMaterial(color, thickness, opacity),
+    [color, opacity, thickness],
   );
   const renderMatrix = useMemo(
     () =>
@@ -2137,15 +2146,15 @@ const HighlightOverlay = memo(function HighlightOverlay({
       isMobileHighlightProfile
         ? {
             fill: palette.fill,
-            fillOpacity: Math.max(palette.fillOpacity, 0.2),
-            innerEdge: palette.fill,
-            outerEdge: palette.fill,
+            fillOpacity: Math.min(palette.fillOpacity, 0.08),
+            innerEdge: palette.innerEdge,
+            outerEdge: palette.outerEdge,
           }
         : isTabletHighlightProfile
           ? {
               fill: palette.fill,
-              fillOpacity: Math.max(palette.fillOpacity - 0.04, 0.14),
-              innerEdge: palette.outerEdge,
+              fillOpacity: Math.min(palette.fillOpacity, 0.1),
+              innerEdge: palette.innerEdge,
               outerEdge: palette.outerEdge,
             }
         : palette,
@@ -2190,10 +2199,18 @@ const HighlightOverlay = memo(function HighlightOverlay({
       meshData,
       palette: {
         ...palette,
-        fillOpacity: Math.min(palette.fillOpacity + 0.08, 0.3),
+        fillOpacity: isTouchHighlightProfile
+          ? Math.min(palette.fillOpacity + 0.04, 0.14)
+          : Math.min(palette.fillOpacity + 0.08, 0.3),
       },
     }));
-  }, [apartments, getApartmentStatus, getEffectivePalette, selectedApartmentId]);
+  }, [
+    apartments,
+    getApartmentStatus,
+    getEffectivePalette,
+    isTouchHighlightProfile,
+    selectedApartmentId,
+  ]);
   const filteredMeshes = useMemo(() => {
     const next: Array<{
       meshData: HoverMeshData;
@@ -2237,13 +2254,17 @@ const HighlightOverlay = memo(function HighlightOverlay({
     selectedApartmentId,
   ]);
   const renderFill = renderMode !== "light";
-  const renderInnerEdges = !isMobileHighlightProfile;
+  const renderInnerEdges = true;
   const renderOuterEdges = renderMode === "full" && !isTouchHighlightProfile;
   const renderSelectedOuterEdge = renderMode !== "light";
-  const edgeThickness =
-    isTabletHighlightProfile ? 1 : renderMode === "light" ? 1 : 2;
-  const filteredEdgeScaleMultiplier = isTouchHighlightProfile ? 1.003 : 1.006;
-  const focusedEdgeScaleMultiplier = isTouchHighlightProfile ? 1.004 : 1.008;
+  const edgeThickness = isTouchHighlightProfile
+    ? 1
+    : renderMode === "light"
+      ? 1
+      : 2;
+  const compactEdgeOpacity = isMobileHighlightProfile ? 0.32 : 0.4;
+  const filteredEdgeScaleMultiplier = isTouchHighlightProfile ? 1.0015 : 1.006;
+  const focusedEdgeScaleMultiplier = isTouchHighlightProfile ? 1.002 : 1.008;
   const shouldSimplifyFilteredEdges =
     renderMode !== "full" ||
     isTouchHighlightProfile ||
@@ -2281,6 +2302,7 @@ const HighlightOverlay = memo(function HighlightOverlay({
               color={meshData.palette.innerEdge}
               geometry={meshData.meshData.geometry}
               matrix={meshData.meshData.matrix}
+              opacity={isTouchHighlightProfile ? compactEdgeOpacity : 1}
               renderOrder={11}
               scaleMultiplier={filteredEdgeScaleMultiplier}
               thickness={edgeThickness}
@@ -2319,8 +2341,10 @@ const HighlightOverlay = memo(function HighlightOverlay({
               color={meshData.palette.outerEdge}
               geometry={meshData.meshData.geometry}
               matrix={meshData.meshData.matrix}
+              opacity={isTouchHighlightProfile ? 0.52 : 1}
               renderOrder={16}
-              thickness={4}
+              scaleMultiplier={focusedEdgeScaleMultiplier}
+              thickness={isTouchHighlightProfile ? 1 : 4}
             />
           ) : null}
         </group>
@@ -2347,6 +2371,7 @@ const HighlightOverlay = memo(function HighlightOverlay({
               color={meshData.palette.innerEdge}
               geometry={meshData.meshData.geometry}
               matrix={meshData.meshData.matrix}
+              opacity={compactEdgeOpacity}
               renderOrder={13}
               scaleMultiplier={focusedEdgeScaleMultiplier}
               thickness={edgeThickness}

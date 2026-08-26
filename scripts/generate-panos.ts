@@ -4,7 +4,7 @@ import os from "os"
 import sharp from "sharp"
 
 const INPUT = "./raw-panos"
-const OUTPUT = "./public/exterior-pano-remaining"
+const OUTPUT = "./public/exterior-pano-remaining-optimised"
 
 const PREVIEW_WIDTH = 2000
 
@@ -22,7 +22,8 @@ sharp.simd(true)
 // time keeps memory stable while its independent tiles use all CPU cores.
 const FILE_CONCURRENCY = 1
 const TILE_CONCURRENCY = Math.max(4, Math.min(16, CPU_THREADS))
-const WEBP_LOSSLESS_EFFORT = 0
+const WEBP_TILE_QUALITY = 92
+const WEBP_TILE_EFFORT = 6
 
 // set these based on your pano size
 // for 12288 x 6144 use:
@@ -59,6 +60,27 @@ function getTilePath(tilesFolder: string, job: Pick<TileJob, "col" | "row">) {
   return path.join(tilesFolder, `tile_${job.col}_${job.row}.webp`)
 }
 
+function getPendingTilePath(
+  tilesFolder: string,
+  job: Pick<TileJob, "col" | "row">
+) {
+  return path.join(tilesFolder, `tile_${job.col}_${job.row}.partial.webp`)
+}
+
+function assertNoLegacyJpegTiles(tilesFolder: string): void {
+  if (!pathExists(tilesFolder)) return
+
+  const legacyTiles = fs
+    .readdirSync(tilesFolder)
+    .filter((file) => /\.jpe?g$/i.test(file))
+
+  if (legacyTiles.length > 0) {
+    throw new Error(
+      `Legacy JPEG tiles found in ${tilesFolder}. Use the clean optimized output directory instead of mixing JPEG and WebP tiles.`
+    )
+  }
+}
+
 function isAlreadyProcessed(folder: string): boolean {
   const previewPath = path.join(folder, "preview.jpg")
   const metaPath = path.join(folder, "meta.json")
@@ -76,7 +98,7 @@ function isAlreadyProcessed(folder: string): boolean {
     }
     const tileFiles = fs
       .readdirSync(tilesFolder)
-      .filter((file) => /\.webp$/i.test(file))
+      .filter((file) => /^tile_\d+_\d+\.webp$/i.test(file))
 
     return (
       meta.tileFormat === "webp" &&
@@ -107,6 +129,8 @@ async function processImage(file: string): Promise<void> {
 
   const folder = path.join(OUTPUT, panoId)
   const tilesFolder = path.join(folder, "tiles")
+
+  assertNoLegacyJpegTiles(tilesFolder)
 
   if (isAlreadyProcessed(folder)) {
     console.log(`skipping: ${file} already processed`)
@@ -195,18 +219,36 @@ async function processImage(file: string): Promise<void> {
       pendingTileJobs,
       TILE_CONCURRENCY,
       async (job) => {
-        await sharp(pixels, rawInput)
-          .extract({
-            left: job.left,
-            top: job.top,
-            width: job.width,
-            height: job.height,
-          })
-          .webp({
-            lossless: true,
-            effort: WEBP_LOSSLESS_EFFORT,
-          })
-          .toFile(getTilePath(tilesFolder, job))
+        const tilePath = getTilePath(tilesFolder, job)
+        const pendingTilePath = getPendingTilePath(tilesFolder, job)
+
+        if (pathExists(pendingTilePath)) {
+          fs.rmSync(pendingTilePath)
+        }
+
+        try {
+          await sharp(pixels, rawInput)
+            .extract({
+              left: job.left,
+              top: job.top,
+              width: job.width,
+              height: job.height,
+            })
+            .webp({
+              quality: WEBP_TILE_QUALITY,
+              effort: WEBP_TILE_EFFORT,
+              preset: "picture",
+              smartSubsample: true,
+            })
+            .toFile(pendingTilePath)
+
+          fs.renameSync(pendingTilePath, tilePath)
+        } catch (error) {
+          if (pathExists(pendingTilePath)) {
+            fs.rmSync(pendingTilePath)
+          }
+          throw error
+        }
       }
     )
   }
@@ -241,7 +283,7 @@ async function run(): Promise<void> {
 
   const files = fs
     .readdirSync(INPUT)
-    .filter((file) => /\.(png|jpg|jpeg|webp)$/i.test(file))
+    .filter((file) => /\.webp$/i.test(file))
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
 
   if (files.length === 0) {
@@ -253,6 +295,8 @@ async function run(): Promise<void> {
   console.log("Sharp threads per job:", SHARP_THREADS_PER_JOB)
   console.log("tile concurrency:", TILE_CONCURRENCY)
   console.log("grid:", `${TARGET_COLS} x ${TARGET_ROWS}`)
+  console.log("WebP tile quality:", WEBP_TILE_QUALITY)
+  console.log("WebP tile effort:", WEBP_TILE_EFFORT)
 
   const totalStart = Date.now()
 
