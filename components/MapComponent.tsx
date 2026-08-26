@@ -1803,7 +1803,7 @@ export function CustomStyleExample() {
             : null}
         </MapView>
 
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(248,245,236,0.96)_0%,rgba(248,245,236,0.52)_16%,rgba(248,245,236,0.06)_44%,transparent_58%),radial-gradient(circle_at_80%_86%,rgba(248,245,236,0.58)_0%,rgba(248,245,236,0.18)_24%,transparent_48%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_86%,rgba(248,245,236,0.58)_0%,rgba(248,245,236,0.18)_24%,transparent_48%)]" />
       </div>
 
       <div className="pointer-events-none absolute inset-0 z-20">
@@ -2394,7 +2394,7 @@ export function CustomStyleExample() {
               <span className="truncate text-xs text-[#596659] sm:text-sm">
                 {isUserRouteLoading
                   ? "Tracing your route to Trifecta Veranza..."
-                  : "Loading Trifecta Veranza Map..."}
+                  : "Loading Whisper of Trees Map..."}
               </span>
             </div>
           </div>

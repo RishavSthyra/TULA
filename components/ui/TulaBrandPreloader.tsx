@@ -43,11 +43,19 @@ export default function TulaBrandPreloader({
             duration: reduceMotion ? 0.2 : 0.85,
             ease: [0.22, 1, 0.36, 1],
           }}
-          className="flex w-[min(70vw,520px)] flex-col items-center"
+          className="flex flex-col items-center"
+          style={{ width: "clamp(200px, 34vw, 520px)" }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            className="block h-auto max-h-[54vh] w-full select-none object-contain drop-shadow-[0_20px_52px_rgba(0,0,0,0.72)]"
+            className="select-none drop-shadow-[0_20px_52px_rgba(0,0,0,0.72)]"
+            style={{
+              display: "block",
+              width: "100%",
+              height: "auto",
+              maxHeight: "clamp(220px, 42vh, 540px)",
+              objectFit: "contain",
+            }}
             src={TULA_LOGO_URL}
             alt="TULA — Whisper of Trees"
             width={1152}
@@ -57,12 +65,19 @@ export default function TulaBrandPreloader({
             fetchPriority="high"
             draggable={false}
           />
-          <span className="mt-[clamp(0.8rem,1.8vh,1.25rem)] text-center text-[clamp(0.72rem,1.05vw,0.98rem)] font-normal uppercase leading-[1.2] tracking-[0.08em] text-[#eee7d7]/75">
+          <span
+            className="text-center font-normal uppercase leading-[1.2] tracking-[0.08em] text-[#eee7d7]/75"
+            style={{
+              marginTop: "clamp(0.55rem, 1.3vh, 1.25rem)",
+              fontSize: "clamp(0.56rem, 0.8vw, 0.98rem)",
+            }}
+          >
             By Tula Properties
           </span>
 
           <div
-            className="mt-7 h-px w-full overflow-hidden bg-white/12"
+            className="h-px w-full overflow-hidden bg-white/12"
+            style={{ marginTop: "clamp(1rem, 2vh, 1.75rem)" }}
             aria-hidden
           >
             <motion.div

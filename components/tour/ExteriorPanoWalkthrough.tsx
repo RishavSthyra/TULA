@@ -928,8 +928,8 @@ function ExteriorMinimapPanel({
   if (!isExpanded) {
     return (
       <div className={`${uiFont.className} relative text-white ${className ?? ""}`}>
-        <div className="mb-2 flex items-center justify-end gap-2 pr-1 text-[9px] font-bold uppercase tracking-[0.28em] text-white/78">
-          <MapPin className="h-3.5 w-3.5 stroke-[1.7]" />
+        <div className="mb-1.5 flex items-center justify-end gap-1 pr-1 text-[7px] font-bold uppercase tracking-[0.2em] text-white/78 sm:mb-2 sm:gap-1.5 sm:text-[8px] sm:tracking-[0.24em] xl:gap-2 xl:text-[9px] xl:tracking-[0.28em]">
+          <MapPin className="h-2.5 w-2.5 stroke-[1.7] sm:h-3 sm:w-3 xl:h-3.5 xl:w-3.5" />
           <span>Amenity Map</span>
         </div>
         <div className="relative ml-auto w-fit">
