@@ -710,8 +710,9 @@ export default function MasterPlanLayout({
     !isSpecialVideoReversing;
   const isFlatPanelOpen = Boolean(
     selectedApartment ||
-      shouldShowCompactSpecialVideoPanel ||
-      (isSpecialVideoCompleted && specialVideoApartment),
+      specialVideoApartment ||
+      isSpecialVideoLaunching ||
+      isSpecialVideoOpen,
   );
   const shouldEnableCompactStageScrubbing = !isMobileViewport;
   const compactTouchHighlightProfile = isMobileViewport
@@ -728,7 +729,7 @@ export default function MasterPlanLayout({
       : "-mt-1 min-h-0 flex-1 px-0 pb-0"
     : "mt-2 min-h-0 flex-1 px-3 pb-3";
   const shouldShowDesktopSidebar =
-    !shouldUseCompactLayout && !isLeaving && !selectedApartment;
+    !shouldUseCompactLayout && !isLeaving && !isFlatPanelOpen;
   const shouldShowTopViewFullscreen =
     isTopViewMode &&
     !selectedTower &&
@@ -1289,6 +1290,7 @@ export default function MasterPlanLayout({
     setSelectedApartmentMeshId(null);
 
     if (selectedTower) {
+      setIsDesktopSidebarOpen(true);
       setIsMobileSheetOpen(true);
     }
   }, [selectedTower]);
@@ -1315,6 +1317,7 @@ export default function MasterPlanLayout({
     setSpecialVideoApartment(null);
     setSpecialVideoFreezeFrameUrl(null);
     setIsSpecialVideoFreezeFrameVisible(false);
+    setIsDesktopSidebarOpen(true);
     specialVideoLoadedUrlRef.current = null;
   }, []);
 
@@ -1352,9 +1355,9 @@ export default function MasterPlanLayout({
         typeof performance !== "undefined" ? performance.now() : Date.now();
 
       setSelectedTower(apartment.tower);
-      setIsDesktopSidebarOpen(true);
 
       if (isSpecialVideoApartment(apartment, specialUnitVideoConfigs)) {
+        setIsDesktopSidebarOpen(false);
         setSelectedApartment(null);
         setSelectedApartmentMeshId(null);
         setIsMobileSheetOpen(false);
@@ -1397,6 +1400,7 @@ export default function MasterPlanLayout({
       }
 
       closeSpecialUnitVideo();
+      setIsDesktopSidebarOpen(false);
       setSelectedApartment(apartment);
       setSelectedApartmentMeshId(apartmentMeshId);
       setIsMobileSheetOpen(false);

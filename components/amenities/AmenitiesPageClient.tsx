@@ -25,7 +25,6 @@ import {
   Map,
   Maximize2,
   Minimize2,
-  Orbit,
   Pause,
   Play,
   Volume2,
@@ -66,7 +65,6 @@ export type AmenitiesPageData = {
 
 type AmenitiesPageClientProps = {
   data: AmenitiesPageData;
-  onExplore3D?: (amenity: AmenityPageItem) => void;
 };
 
 type OrientationLockValue =
@@ -494,10 +492,7 @@ const VideoPlayerControls = memo(function VideoPlayerControls({
   );
 });
 
-export default function AmenitiesPageClient({
-  data,
-  onExplore3D,
-}: AmenitiesPageClientProps) {
+export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) {
   const router = useRouter();
   const stageRef = useRef<HTMLElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -717,23 +712,6 @@ export default function AmenitiesPageClient({
     }
   }, [isMuted]);
 
-  const handleExplore3D = useCallback(() => {
-    if (!activeAmenity) {
-      return;
-    }
-
-    if (onExplore3D) {
-      onExplore3D(activeAmenity);
-      return;
-    }
-
-    window.dispatchEvent(
-      new CustomEvent("amenity:explore3d", {
-        detail: activeAmenity,
-      }),
-    );
-  }, [activeAmenity, onExplore3D]);
-
   useEffect(() => {
     scheduleAmenityVideoWarmup({
       profile: "amenities",
@@ -873,7 +851,6 @@ export default function AmenitiesPageClient({
 
   const activePosition = twoDigits(activeIndex + 1);
   const totalPosition = twoDigits(data.items.length);
-  const heroEyebrow = activeAmenity.category || data.eyebrow || "Amenity";
   const hasVideo = hasMediaSource(displayedAmenity.videoSrc);
 
   return (
@@ -982,56 +959,6 @@ export default function AmenitiesPageClient({
           </button>
         </div>
       </header>
-
-      {/* Hero copy — directly on media, no card/container */}
-      <motion.section
-        className="absolute bottom-[280px] left-5 z-10 w-[calc(100vw-40px)] sm:bottom-auto sm:left-[34px] sm:top-[33.5%] sm:w-[calc(100vw-72px)]"
-        aria-live="polite"
-        aria-hidden={isCompactViewport && !isCompactUiVisible}
-        inert={isCompactViewport && !isCompactUiVisible ? true : undefined}
-        initial={false}
-        animate={{
-          opacity: isCompactViewport && !isCompactUiVisible ? 0 : 1,
-          x:
-            isCompactViewport && !isCompactUiVisible && !prefersReducedMotion
-              ? -72
-              : 0,
-        }}
-        transition={{
-          duration: prefersReducedMotion ? 0.2 : 0.62,
-          ease: [0.22, 1, 0.36, 1],
-        }}
-        style={{
-          pointerEvents:
-            isCompactViewport && !isCompactUiVisible ? "none" : "auto",
-          willChange: isCompactViewport ? "transform, opacity" : "auto",
-        }}
-      >
-        <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#f2ead5]/[0.88] drop-shadow-[0_4px_18px_rgba(0,0,0,0.7)] sm:mb-[17px] sm:text-[13px]">
-          {heroEyebrow}
-        </p>
-
-        <h1
-          className="m-0 whitespace-nowrap text-[clamp(2.05rem,7.6vw,4.75rem)] font-medium leading-[0.95] tracking-[-0.04em] text-[#efdda2] drop-shadow-[0_18px_48px_rgba(0,0,0,0.48)] sm:text-[clamp(3.25rem,4.6vw,5.6rem)]"
-        >
-          {activeAmenity.title}
-        </h1>
-
-        <span className="mt-6 block h-[2px] w-[39px] bg-[#d7b767] shadow-[0_0_12px_rgba(215,183,103,0.25)] sm:mt-[27px]" />
-
-        <p className="mt-5 max-w-[440px] text-[14px] leading-[1.55] text-[#faf5e7]/[0.92] drop-shadow-[0_4px_16px_rgba(0,0,0,0.62)] sm:mt-[20px] sm:text-[17px]">
-          {activeAmenity.shortDescription}
-        </p>
-
-        <button
-          type="button"
-          onClick={handleExplore3D}
-          className="mt-6 inline-flex items-center gap-3 bg-transparent p-0 text-[14px] font-medium text-[#e7cb79] drop-shadow-[0_4px_15px_rgba(0,0,0,0.6)] transition hover:-translate-y-0.5 hover:text-[#ffe6a0] sm:mt-[27px] sm:text-[15px]"
-        >
-          <Orbit className="h-[24px] w-[24px] stroke-[1.5]" aria-hidden="true" />
-          <span>Explore in 3D</span>
-        </button>
-      </motion.section>
 
       {/* Flat filmstrip carousel — replaces the old rounded 3D deck */}
       <motion.section

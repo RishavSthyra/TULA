@@ -16,7 +16,6 @@ import {
   Check,
   Clipboard,
   Maximize2,
-  MapPin,
   Menu,
   Minimize2,
   Pause,
@@ -41,11 +40,17 @@ import {
 import { primeSignedAssetUrls } from "@/src/lib/signed-assets";
 import { useSignedAssetUrls } from "@/src/lib/use-signed-assets";
 import {
-  EXTERIOR_MINIMAP_BOUNDS,
-  EXTERIOR_MINIMAP_IMAGE_LAYOUT,
   exteriorAmenities,
   type ExteriorAmenity,
 } from "@/data/exteriorAmenities";
+import {
+  EXTERIOR_MINIMAP_BOUNDS,
+  EXTERIOR_MINIMAP_IMAGE_LAYOUT,
+  EXTERIOR_MINIMAP_IMAGE_URL,
+  EXTERIOR_MINIMAP_LOCATIONS,
+  EXTERIOR_PANO_WORLD_UNITS_PER_METRE,
+  type ExteriorMinimapLocation,
+} from "@/data/exteriorMinimap";
 import {
   clamp,
   degToRad,
@@ -187,6 +192,11 @@ type MinimapPoint = {
   leftPercent: number;
   topPercent: number;
 };
+
+type ExteriorMinimapMarker = ExteriorMinimapLocation &
+  MinimapPoint & {
+    amenity: ExteriorAmenity | null;
+  };
 
 function waitForMotion(milliseconds: number) {
   return new Promise<void>((resolve) => {
@@ -714,7 +724,7 @@ function ExteriorMinimapGraphic({
     topPercent: number;
   }>;
   minimapTrailPolyline: string;
-  minimapDots: Array<ExteriorAmenity & { leftPercent: number; topPercent: number }>;
+  minimapDots: ExteriorMinimapMarker[];
   activeAmenityId: string | null;
   activeMinimapPoint: MinimapPoint;
   jumpToAmenity: (amenity: ExteriorAmenity) => Promise<boolean>;
@@ -733,7 +743,7 @@ function ExteriorMinimapGraphic({
     <div className="relative h-full w-full overflow-hidden bg-[#101612]">
       <Image
         src={minimapImageSrc}
-        alt="Trifecta amenity minimap"
+        alt="Whispers of Trees exterior amenity minimap"
         unoptimized
         width={EXTERIOR_MINIMAP_IMAGE_LAYOUT.width}
         height={EXTERIOR_MINIMAP_IMAGE_LAYOUT.height}
@@ -780,29 +790,38 @@ function ExteriorMinimapGraphic({
         />
       ) : null}
 
-      {minimapDots.map((amenity) => (
+      {minimapDots.map((marker) => (
         <button
-          key={amenity.id}
+          key={marker.id}
           type="button"
-          aria-label={`Go to ${amenity.name}`}
-          title={amenity.name}
+          aria-label={
+            marker.amenity
+              ? `Go to ${marker.name}`
+              : `${marker.name} location`
+          }
+          title={marker.name}
           tabIndex={isCompact ? -1 : 0}
+          disabled={!marker.amenity}
           onClick={(event) => {
             event.stopPropagation();
-            if (!isCompact) {
-              void jumpToAmenity(amenity);
+            if (!isCompact && marker.amenity) {
+              void jumpToAmenity(marker.amenity);
             }
           }}
           className={`group absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border transition ${
-            isCompact ? "pointer-events-none" : "hover:scale-110"
+            isCompact
+              ? "pointer-events-none"
+              : marker.amenity
+                ? "hover:scale-110"
+                : "cursor-default"
           } ${
-            activeAmenityId === amenity.id
+            activeAmenityId === marker.exteriorAmenityId
               ? "border-white/90 bg-[#8bd3a7] shadow-[0_0_0_3px_rgba(120,201,149,0.2),0_0_12px_rgba(120,201,149,0.34)]"
               : "border-white/76 bg-white/82 shadow-[0_0_0_2px_rgba(0,0,0,0.18)]"
           }`}
           style={{
-            left: `${amenity.leftPercent * 100}%`,
-            top: `${amenity.topPercent * 100}%`,
+            left: `${marker.leftPercent * 100}%`,
+            top: `${marker.topPercent * 100}%`,
           }}
         />
       ))}
@@ -825,7 +844,12 @@ function ExteriorMinimapGraphic({
         className={`walkthrough-compact-minimap relative aspect-square cursor-pointer overflow-hidden rounded-full border border-white/16 bg-black/72 shadow-[0_18px_44px_rgba(0,0,0,0.44),inset_0_1px_0_rgba(255,255,255,0.1)] outline-none transition focus-visible:ring-2 focus-visible:ring-[#78c995]/80 ${className ?? ""}`}
         style={{ touchAction: "manipulation" }}
       >
-        <div className="walkthrough-minimap-heading-layer absolute left-1/2 top-1/2 aspect-[16/9] w-[225%] will-change-transform">
+        <div
+          className="walkthrough-minimap-heading-layer absolute left-1/2 top-1/2 w-[225%] will-change-transform"
+          style={{
+            aspectRatio: `${EXTERIOR_MINIMAP_IMAGE_LAYOUT.width} / ${EXTERIOR_MINIMAP_IMAGE_LAYOUT.height}`,
+          }}
+        >
           <div
             className="relative h-full w-full will-change-transform"
             style={{
@@ -918,7 +942,7 @@ function ExteriorMinimapPanel({
     topPercent: number;
   }>;
   minimapTrailPolyline: string;
-  minimapDots: Array<ExteriorAmenity & { leftPercent: number; topPercent: number }>;
+  minimapDots: ExteriorMinimapMarker[];
   activeAmenityId: string | null;
   activeMinimapPoint: MinimapPoint;
   jumpToAmenity: (amenity: ExteriorAmenity) => Promise<boolean>;
@@ -928,10 +952,6 @@ function ExteriorMinimapPanel({
   if (!isExpanded) {
     return (
       <div className={`${uiFont.className} relative text-white ${className ?? ""}`}>
-        <div className="mb-1.5 flex items-center justify-end gap-1 pr-1 text-[7px] font-bold uppercase tracking-[0.2em] text-white/78 sm:mb-2 sm:gap-1.5 sm:text-[8px] sm:tracking-[0.24em] xl:gap-2 xl:text-[9px] xl:tracking-[0.28em]">
-          <MapPin className="h-2.5 w-2.5 stroke-[1.7] sm:h-3 sm:w-3 xl:h-3.5 xl:w-3.5" />
-          <span>Amenity Map</span>
-        </div>
         <div className="relative ml-auto w-fit">
           <ExteriorMinimapGraphic
             variant="compact"
@@ -1160,7 +1180,7 @@ export default function ExteriorPanoWalkthrough({
     () => amenities.find((amenity) => amenity.nodeIds.includes(activeNodeId)) ?? null,
     [activeNodeId, amenities],
   );
-  const signedMinimapImageUrl = LOCAL_EXTERIOR_MINIMAP_IMAGE_URL;
+  const signedMinimapImageUrl = EXTERIOR_MINIMAP_IMAGE_URL;
   const fallbackMinimapImageUrl = LOCAL_EXTERIOR_MINIMAP_IMAGE_URL;
   const activeAmenityId = useMemo(
     () => activeAmenity?.id ?? null,
@@ -1203,35 +1223,59 @@ export default function ExteriorPanoWalkthrough({
     itemCount: visibleExteriorAmenities.length,
     targetVisibleCards: 4,
   });
-  const projectMinimapPoint = useCallback((coordinate: Vec3) => {
-    const xRange = Math.max(
-      EXTERIOR_MINIMAP_BOUNDS.topRight.x - EXTERIOR_MINIMAP_BOUNDS.bottomLeft.x,
-      1,
-    );
-    const yRange = Math.max(
-      EXTERIOR_MINIMAP_BOUNDS.bottomLeft.y - EXTERIOR_MINIMAP_BOUNDS.topRight.y,
-      1,
-    );
+  const projectMinimapPoint = useCallback(
+    (coordinate: { x: number; y: number }) => {
+      const horizontal = {
+        x:
+          EXTERIOR_MINIMAP_BOUNDS.topRight.x -
+          EXTERIOR_MINIMAP_BOUNDS.topLeft.x,
+        y:
+          EXTERIOR_MINIMAP_BOUNDS.topRight.y -
+          EXTERIOR_MINIMAP_BOUNDS.topLeft.y,
+      };
+      const vertical = {
+        x:
+          EXTERIOR_MINIMAP_BOUNDS.bottomRight.x -
+          EXTERIOR_MINIMAP_BOUNDS.topRight.x,
+        y:
+          EXTERIOR_MINIMAP_BOUNDS.bottomRight.y -
+          EXTERIOR_MINIMAP_BOUNDS.topRight.y,
+      };
+      const delta = {
+        x: coordinate.x - EXTERIOR_MINIMAP_BOUNDS.topLeft.x,
+        y: coordinate.y - EXTERIOR_MINIMAP_BOUNDS.topLeft.y,
+      };
+      const determinant =
+        horizontal.x * vertical.y - horizontal.y * vertical.x;
 
-    return {
-      leftPercent: clamp(
-        (coordinate.x - EXTERIOR_MINIMAP_BOUNDS.bottomLeft.x) / xRange,
-        0,
-        1,
-      ),
-      topPercent: clamp(
-        (coordinate.y - EXTERIOR_MINIMAP_BOUNDS.topRight.y) / yRange,
-        0,
-        1,
-      ),
-    };
-  }, []);
+      if (Math.abs(determinant) < Number.EPSILON) {
+        return { leftPercent: 0.5, topPercent: 0.5 };
+      }
+
+      return {
+        leftPercent: clamp(
+          (delta.x * vertical.y - delta.y * vertical.x) / determinant,
+          0,
+          1,
+        ),
+        topPercent: clamp(
+          (horizontal.x * delta.y - horizontal.y * delta.x) / determinant,
+          0,
+          1,
+        ),
+      };
+    },
+    [],
+  );
   const activeMinimapPoint = useMemo<MinimapPoint>(() => {
     if (!activeNode) {
       return { leftPercent: 0.5, topPercent: 0.5 };
     }
 
-    return projectMinimapPoint(activeNode.rawPosition);
+    return projectMinimapPoint({
+      x: activeNode.rawPosition.x / EXTERIOR_PANO_WORLD_UNITS_PER_METRE,
+      y: activeNode.rawPosition.y / EXTERIOR_PANO_WORLD_UNITS_PER_METRE,
+    });
   }, [activeNode, projectMinimapPoint]);
   const updateMinimapHeading = useCallback(
     (yaw: number) => {
@@ -1272,11 +1316,18 @@ export default function ExteriorPanoWalkthrough({
     [graph.byId],
   );
   const minimapDots = useMemo(() => {
-    return visibleExteriorAmenities.map((amenity) => ({
-      ...amenity,
-      ...projectMinimapPoint(amenity.coordinate),
+    const amenityById = new Map(
+      amenities.map((amenity) => [amenity.id, amenity]),
+    );
+
+    return EXTERIOR_MINIMAP_LOCATIONS.map((location) => ({
+      ...location,
+      amenity: location.exteriorAmenityId
+        ? amenityById.get(location.exteriorAmenityId) ?? null
+        : null,
+      ...projectMinimapPoint(location.coordinate),
     }));
-  }, [projectMinimapPoint, visibleExteriorAmenities]);
+  }, [amenities, projectMinimapPoint]);
   const minimapTrailPoints = useMemo(() => {
     const orderedNodeIds = [...visitedTrailNodeIds, activeNodeId].filter(
       (nodeId, index, list) => index === 0 || nodeId !== list[index - 1],
@@ -1292,7 +1343,10 @@ export default function ExteriorPanoWalkthrough({
 
         return {
           nodeId,
-          ...projectMinimapPoint(node.rawPosition),
+          ...projectMinimapPoint({
+            x: node.rawPosition.x / EXTERIOR_PANO_WORLD_UNITS_PER_METRE,
+            y: node.rawPosition.y / EXTERIOR_PANO_WORLD_UNITS_PER_METRE,
+          }),
         };
       })
       .filter(

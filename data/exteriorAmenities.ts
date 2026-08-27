@@ -908,25 +908,6 @@ function resolveAmenityImage(
   return getAmenityPreviewImage(legacyStartingNodeId ?? primaryNodeId);
 }
 
-export const EXTERIOR_MINIMAP_IMAGE_URL =
-  "images/Final_5.avif";
-
-export const EXTERIOR_MINIMAP_BOUNDS = {
-  bottomLeft: {
-    x: -16008,
-    y: 7020,
-  },
-  topRight: {
-    x: 10615,
-    y: -8635,
-  },
-} as const;
-
-export const EXTERIOR_MINIMAP_IMAGE_LAYOUT = {
-  width: 1920,
-  height: 1080,
-} as const;
-
 export const exteriorAmenities: ExteriorAmenity[] = amenityDefinitions.map(
   (amenity) => {
     const fallbackPrimaryNodeId = getAmenityPrimaryNodeId(amenity);
