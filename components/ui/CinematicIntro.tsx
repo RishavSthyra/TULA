@@ -39,7 +39,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
   readyToComplete = true,
   loaderNodeRef,
 }: CinematicIntroStageProps) {
-  const [isActive, setIsActive] = useState(false);
+  const [isActive, setIsActive] = useState(true);
   const [showSoundPrompt, setShowSoundPrompt] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
   const loaderRef = useRef<HTMLDivElement>(null);
@@ -47,7 +47,6 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
   const goldLeakRef = useRef<HTMLDivElement>(null);
   const mistRef = useRef<HTMLDivElement>(null);
   const vignetteRef = useRef<HTMLDivElement>(null);
-  const hasStartedRef = useRef(false);
 
   const screen1Line1Ref = useRef<HTMLSpanElement>(null);
   const screen1Line2Ref = useRef<HTMLSpanElement>(null);
@@ -251,26 +250,6 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
       audioRef.current = null;
     };
   }, [playIntroAudio, shouldPlay]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!shouldPlay()) return;
-
-    let disposed = false;
-
-    const startIntro = () => {
-      if (disposed) return;
-      if (hasStartedRef.current) return;
-      hasStartedRef.current = true;
-      setIsActive(true);
-    };
-
-    startIntro();
-
-    return () => {
-      disposed = true;
-    };
-  }, [shouldPlay]);
 
   useEffect(() => {
     if (!isActive) return;
@@ -619,6 +598,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           background:
             "linear-gradient(112deg, transparent 24%, rgba(200,169,106,0.03) 46%, rgba(200,169,106,0.1) 55%, rgba(255,238,192,0.025) 64%, transparent 78%)",
           pointerEvents: "none",
+          transform: "translate3d(-40px, 0, 0)",
           willChange: "transform",
         }}
       />
@@ -666,6 +646,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           inset: 0,
           background:
             "radial-gradient(ellipse 62% 48% at 50% 48%, transparent 0%, rgba(0,0,0,0.18) 52%, rgba(0,0,0,0.86) 100%)",
+          opacity: 0.35,
           pointerEvents: "none",
           willChange: "opacity",
         }}
@@ -845,6 +826,12 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           justify-content: center;
           padding: clamp(2rem, 6vw, 5rem);
           pointer-events: none;
+        }
+
+        .cinematic-copy,
+        .cinematic-reveal__welcome,
+        .cinematic-reveal__brand {
+          opacity: 0;
         }
 
         .cinematic-screen--opening {
