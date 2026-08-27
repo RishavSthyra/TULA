@@ -5,29 +5,12 @@ import { useEffect, useState } from "react";
 import QuoteRequestController from "@/components/QuoteRequestController";
 import DesktopSiteRail from "@/components/DesktopSiteRail";
 import MobileSiteNav from "@/components/MobileSiteNav";
-import {
-  isAnyWalkthroughPath,
-} from "@/lib/site-navigation";
-
-function shouldUseCompactDesktopCtas(pathname: string) {
-  if (typeof window === "undefined" || pathname !== "/master-plan") {
-    return false;
-  }
-
-  return (
-    window.matchMedia("(min-width: 1280px) and (max-width: 1699px)").matches &&
-    window.matchMedia("(pointer: fine)").matches &&
-    !window.matchMedia("(pointer: coarse)").matches &&
-    !window.matchMedia("(any-pointer: coarse)").matches
-  );
-}
+import { isAnyWalkthroughPath } from "@/lib/site-navigation";
 
 export default function RouteChrome() {
   const pathname = usePathname();
   const [isMasterPlanFlatOpen, setIsMasterPlanFlatOpen] = useState(false);
   const [shouldMergeDockIntoCta, setShouldMergeDockIntoCta] = useState(false);
-  const [shouldAddCompactDesktopCtasToDock, setShouldAddCompactDesktopCtasToDock] =
-    useState(false);
   const isAdminRoute = pathname.startsWith("/admin");
   const isHomeRoute = pathname === "/";
   const isAmenitiesRoute = pathname === "/amenities";
@@ -41,14 +24,14 @@ export default function RouteChrome() {
   const isDocklessRoute = pathname === "/test";
   const shouldMergeLinksForRoute =
     shouldMergeDockIntoCta || isWalkthroughRoute || isProjectOverviewRoute;
+  const shouldHideMasterPlanNavigation =
+    pathname === "/master-plan" && isMasterPlanFlatOpen;
   const shouldHideDock =
     isHomeRoute ||
     isAmenitiesRoute ||
     isDocklessRoute ||
     shouldMergeLinksForRoute ||
-    (pathname === "/master-plan" &&
-      isMasterPlanFlatOpen &&
-      !shouldAddCompactDesktopCtasToDock);
+    shouldHideMasterPlanNavigation;
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -81,39 +64,6 @@ export default function RouteChrome() {
       anyFinePointerMedia.removeEventListener("change", syncTouchViewport);
     };
   }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const compactDesktopMedia = window.matchMedia(
-      "(min-width: 1280px) and (max-width: 1699px)",
-    );
-    const finePointerMedia = window.matchMedia("(pointer: fine)");
-    const coarsePointerMedia = window.matchMedia("(pointer: coarse)");
-    const anyCoarsePointerMedia = window.matchMedia("(any-pointer: coarse)");
-
-    const syncCompactDesktopCtas = () => {
-      setShouldAddCompactDesktopCtasToDock(shouldUseCompactDesktopCtas(pathname));
-    };
-
-    syncCompactDesktopCtas();
-    compactDesktopMedia.addEventListener("change", syncCompactDesktopCtas);
-    finePointerMedia.addEventListener("change", syncCompactDesktopCtas);
-    coarsePointerMedia.addEventListener("change", syncCompactDesktopCtas);
-    anyCoarsePointerMedia.addEventListener("change", syncCompactDesktopCtas);
-
-    return () => {
-      compactDesktopMedia.removeEventListener("change", syncCompactDesktopCtas);
-      finePointerMedia.removeEventListener("change", syncCompactDesktopCtas);
-      coarsePointerMedia.removeEventListener("change", syncCompactDesktopCtas);
-      anyCoarsePointerMedia.removeEventListener(
-        "change",
-        syncCompactDesktopCtas,
-      );
-    };
-  }, [pathname]);
 
   useEffect(() => {
     if (pathname !== "/master-plan" || typeof document === "undefined") {
@@ -149,7 +99,11 @@ export default function RouteChrome() {
         className={`fixed left-6 top-1/2 z-50 -translate-y-1/2 2xl:left-7 ${shouldHideDock ? "!hidden" : ""}`}
       />
 
-      {!isDocklessRoute && !isAmenitiesRoute ? <MobileSiteNav /> : null}
+      {!isDocklessRoute &&
+      !isAmenitiesRoute &&
+      !shouldHideMasterPlanNavigation ? (
+        <MobileSiteNav />
+      ) : null}
 
       <QuoteRequestController
         mergeRouteLinks={!shouldMergeDockIntoCta && shouldMergeLinksForRoute}

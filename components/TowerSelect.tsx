@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image, { type StaticImageData } from "next/image";
+import Image from "next/image";
 import { CheckCircle2, ChevronRight, X } from "lucide-react";
-import towerAimg from "@/assets/New-a.jpg"
-import towerBimg from "@/assets/New-B.jpg"
+import { TOWER_SELECTION_IMAGE_URL } from "@/lib/tower-selection-assets";
 import type { TowerType } from "@/types/inventory";
 
 export type { TowerType } from "@/types/inventory";
@@ -26,7 +25,7 @@ const towerCards: Array<{
   accentMuted: string;
   accentCheck: string;
   description: string;
-  image: StaticImageData;
+  image: string;
   imageAlt: string;
   imageClass: string;
   mobileImageClass: string;
@@ -37,11 +36,11 @@ const towerCards: Array<{
     accentMuted: "border-zinc-200 bg-white hover:border-zinc-300",
     accentCheck: "text-cyan-600",
     description: "Premium residences with open park-facing views.",
-    image: towerAimg,
+    image: TOWER_SELECTION_IMAGE_URL,
     imageAlt: "Tower A exterior",
     imageClass:
-      "absolute -bottom-[8%] -left-[10%] h-[122%] w-auto max-w-none object-contain object-bottom-left",
-    mobileImageClass: "scale-[1.28] object-cover object-[34%_100%]",
+      "absolute inset-y-0 left-0 h-full w-[138%] max-w-none object-cover object-left",
+    mobileImageClass: "object-cover object-left",
   },
   {
     value: "Tower B",
@@ -49,11 +48,11 @@ const towerCards: Array<{
     accentMuted: "border-zinc-200 bg-white hover:border-zinc-300",
     accentCheck: "text-violet-600",
     description: "Larger layouts with clubhouse and skyline access.",
-    image: towerBimg,
+    image: TOWER_SELECTION_IMAGE_URL,
     imageAlt: "Tower B exterior",
     imageClass:
-      "absolute -bottom-[10%] -left-[8%] h-[126%] w-auto max-w-none object-contain object-bottom-left",
-    mobileImageClass: "scale-[1.28] object-cover object-[34%_100%]",
+      "absolute inset-y-0 left-0 h-full w-[138%] max-w-none object-cover object-left",
+    mobileImageClass: "object-cover object-left",
   },
 ];
 
@@ -118,9 +117,11 @@ function TowerSelectPanel({
                         src={towerCard.image}
                         alt={towerCard.imageAlt}
                         fill
+                        unoptimized
                         sizes="(max-width: 639px) 80px, 96px"
                         className={`object-cover ${towerCard.mobileImageClass}`}
                       />
+                      <div className="pointer-events-none absolute inset-y-0 right-0 z-[1] w-[42%] bg-gradient-to-r from-transparent via-white/70 to-white" />
                     </div>
 
                     <div className="min-w-0 flex-1">
@@ -224,14 +225,16 @@ function TowerSelectPanel({
           </div>
         </div>
 
-        <div className={compactDesktop ? "space-y-2.5" : "space-y-3 2xl:space-y-3.5"}>
+        <div
+          className={
+            compactDesktop ? "space-y-2.5" : "space-y-3 2xl:space-y-3.5"
+          }
+        >
           {towerCards.map((towerCard) => {
             const isActive = selectedTower === towerCard.value;
 
             return (
-              <div
-                key={towerCard.value}
-              >
+              <div key={towerCard.value}>
                 <button
                   type="button"
                   onClick={() => onSelectTower(towerCard.value)}
@@ -268,12 +271,16 @@ function TowerSelectPanel({
                       <Image
                         src={towerCard.image}
                         alt={towerCard.imageAlt}
-                        className={`${towerCard.imageClass} origin-bottom-left w-full object-cover object-bottom-right transition  duration-300 ${
+                        width={3840}
+                        height={2160}
+                        unoptimized
+                        className={`${towerCard.imageClass} origin-bottom-left transition duration-300 ${
                           isActive
                             ? "grayscale-0 scale-[1.02]"
                             : " scale-[1.02] group-hover:grayscale-0 group-hover:scale-[1.06]"
                         }`}
                       />
+                      <div className="pointer-events-none absolute inset-y-0 right-0 z-[1] w-[40%] bg-gradient-to-r from-transparent via-white/75 to-white" />
                     </div>
 
                     <div
@@ -283,7 +290,13 @@ function TowerSelectPanel({
                           : "px-3 py-3 2xl:px-3.5 2xl:py-3.5"
                       }`}
                     >
-                      <div className={compactDesktop ? "max-w-[136px]" : "max-w-[170px] 2xl:max-w-[190px]"}>
+                      <div
+                        className={
+                          compactDesktop
+                            ? "max-w-[136px]"
+                            : "max-w-[170px] 2xl:max-w-[190px]"
+                        }
+                      >
                         <h3
                           className={`font-medium tracking-[-0.03em] text-zinc-950 ${
                             compactDesktop
@@ -402,7 +415,7 @@ export default function TowerSelect({
             onSelectTower={handleSelectTower}
           />
         </div>
-      </div> 
+      </div>
     </div>
   );
 }

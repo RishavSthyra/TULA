@@ -2,6 +2,7 @@ import HomePageClient from "@/components/HomePageClient";
 import { getPublishedDeveloperRuntimeConfig } from "@/lib/developer-config";
 import { buildPageMetadata } from "@/lib/metadata";
 import { signR2AssetKeys } from "@/lib/server/r2-signed-assets";
+import { TOWER_SELECTION_IMAGE_URL } from "@/lib/tower-selection-assets";
 import trialData from "@/data/master-plan-3dsmax-trial.json";
 
 const HOME_FORWARD_VIDEO_URL =
@@ -36,5 +37,18 @@ export default async function HomePage() {
   };
   const signedHomeCriticalAssets = signR2AssetKeys(Object.values(home));
 
-  return <HomePageClient config={home} initialSignedAssetUrls={signedHomeCriticalAssets} />;
+  return (
+    <>
+      <link
+        rel="preload"
+        as="image"
+        href={TOWER_SELECTION_IMAGE_URL}
+        fetchPriority="high"
+      />
+      <HomePageClient
+        config={home}
+        initialSignedAssetUrls={signedHomeCriticalAssets}
+      />
+    </>
+  );
 }

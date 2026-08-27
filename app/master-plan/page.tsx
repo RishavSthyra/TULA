@@ -9,6 +9,7 @@ import {
 } from "@/lib/server/r2-signed-assets";
 import { filterSignableAssetKeys } from "@/lib/master-plan-asset-keys";
 import { getThreeDsMaxMasterPlanConfig } from "@/lib/master-plan-3dsmax-trial";
+import { TOWER_SELECTION_IMAGE_URL } from "@/lib/tower-selection-assets";
 
 export const metadata = buildPageMetadata({
   title: "Master Plan",
@@ -73,6 +74,12 @@ export default async function MasterPlanPage() {
         fetchPriority="high"
       />
       <link rel="preload" as="video" href={masterPlanVideoUrl} />
+      <link
+        rel="preload"
+        as="image"
+        href={TOWER_SELECTION_IMAGE_URL}
+        fetchPriority="high"
+      />
       <div className="">
         <MasterPlanLayout
           initialApartments={initialApartments}
