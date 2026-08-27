@@ -98,8 +98,7 @@ type VideoWithFrameCallback = HTMLVideoElement & {
 
 const CAROUSEL_OFFSETS = [-3, -2, -1, 0, 1, 2, 3] as const;
 const CAROUSEL_TRANSITION_MS = 580;
-const COMPACT_UI_AUTO_HIDE_MS = 2000;
-const COMPACT_UI_MEDIA_QUERY = "(max-width: 1279px)";
+const DECK_AUTO_HIDE_MS = 2000;
 
 function hasMediaSource(value?: string): value is string {
   return Boolean(value && value.trim().length > 0);
@@ -500,7 +499,7 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
   const transitionTokenRef = useRef(0);
   const carouselTransitionLockedRef = useRef(false);
   const carouselUnlockTimerRef = useRef<number | null>(null);
-  const compactUiHideTimerRef = useRef<number | null>(null);
+  const deckHideTimerRef = useRef<number | null>(null);
 
   const [activeId, setActiveId] = useState(data.items[0]?.id ?? "");
   const [displayedAmenityId, setDisplayedAmenityId] = useState(
@@ -509,31 +508,26 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
-  const [isCompactViewport, setIsCompactViewport] = useState(false);
-  const [isCompactUiVisible, setIsCompactUiVisible] = useState(true);
+  const [isDeckVisible, setIsDeckVisible] = useState(true);
   const prefersReducedMotion = useReducedMotion();
 
-  const clearCompactUiHideTimer = useCallback(() => {
-    if (compactUiHideTimerRef.current === null) {
+  const clearDeckHideTimer = useCallback(() => {
+    if (deckHideTimerRef.current === null) {
       return;
     }
 
-    window.clearTimeout(compactUiHideTimerRef.current);
-    compactUiHideTimerRef.current = null;
+    window.clearTimeout(deckHideTimerRef.current);
+    deckHideTimerRef.current = null;
   }, []);
 
-  const revealCompactUi = useCallback(() => {
-    if (!isCompactViewport) {
-      return;
-    }
-
-    clearCompactUiHideTimer();
-    setIsCompactUiVisible(true);
-    compactUiHideTimerRef.current = window.setTimeout(() => {
-      setIsCompactUiVisible(false);
-      compactUiHideTimerRef.current = null;
-    }, COMPACT_UI_AUTO_HIDE_MS);
-  }, [clearCompactUiHideTimer, isCompactViewport]);
+  const revealDeck = useCallback(() => {
+    clearDeckHideTimer();
+    setIsDeckVisible(true);
+    deckHideTimerRef.current = window.setTimeout(() => {
+      setIsDeckVisible(false);
+      deckHideTimerRef.current = null;
+    }, DECK_AUTO_HIDE_MS);
+  }, [clearDeckHideTimer]);
 
   const activeIndex = useMemo(() => {
     const index = data.items.findIndex((item) => item.id === activeId);
@@ -623,41 +617,18 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
         window.clearTimeout(carouselUnlockTimerRef.current);
       }
 
-      clearCompactUiHideTimer();
+      clearDeckHideTimer();
     };
-  }, [clearCompactUiHideTimer]);
+  }, [clearDeckHideTimer]);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia(COMPACT_UI_MEDIA_QUERY);
-    const syncCompactViewport = () => {
-      setIsCompactViewport(mediaQuery.matches);
-
-      if (!mediaQuery.matches) {
-        clearCompactUiHideTimer();
-        setIsCompactUiVisible(true);
-      }
-    };
-
-    syncCompactViewport();
-    mediaQuery.addEventListener("change", syncCompactViewport);
-
-    return () => {
-      mediaQuery.removeEventListener("change", syncCompactViewport);
-    };
-  }, [clearCompactUiHideTimer]);
-
-  useEffect(() => {
-    if (!isCompactViewport) {
-      return;
-    }
-
-    const frameId = window.requestAnimationFrame(revealCompactUi);
+    const frameId = window.requestAnimationFrame(revealDeck);
 
     return () => {
       window.cancelAnimationFrame(frameId);
-      clearCompactUiHideTimer();
+      clearDeckHideTimer();
     };
-  }, [activeId, clearCompactUiHideTimer, isCompactViewport, revealCompactUi]);
+  }, [activeId, clearDeckHideTimer, revealDeck]);
 
   const toggleFullscreen = useCallback(async () => {
     if (typeof document === "undefined") {
@@ -887,7 +858,7 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
   return (
     <main
       ref={stageRef}
-      onPointerDown={revealCompactUi}
+      onPointerDown={revealDeck}
       className={`${interfaceSans.className} relative isolate h-[100dvh] min-h-[100dvh] w-full overflow-hidden bg-[#050706] text-white`}
     >
       {/* Full-screen amenity media */}
@@ -996,25 +967,21 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
       <motion.section
         className="absolute bottom-[72px] left-1/2 z-20 h-[204px] w-[calc(100vw-20px)] sm:bottom-[76px] sm:w-[min(1120px,88vw)] xl:w-[min(1320px,90vw)]"
         aria-label="Amenity carousel"
-        aria-hidden={isCompactViewport && !isCompactUiVisible}
-        inert={isCompactViewport && !isCompactUiVisible ? true : undefined}
+        aria-hidden={!isDeckVisible}
+        inert={!isDeckVisible ? true : undefined}
         initial={false}
         animate={{
-          opacity: isCompactViewport && !isCompactUiVisible ? 0 : 1,
+          opacity: isDeckVisible ? 1 : 0,
           x: "-50%",
-          y:
-            isCompactViewport && !isCompactUiVisible && !prefersReducedMotion
-              ? 132
-              : 0,
+          y: !isDeckVisible && !prefersReducedMotion ? 132 : 0,
         }}
         transition={{
           duration: prefersReducedMotion ? 0.2 : 0.68,
           ease: [0.22, 1, 0.36, 1],
         }}
         style={{
-          pointerEvents:
-            isCompactViewport && !isCompactUiVisible ? "none" : "auto",
-          willChange: isCompactViewport ? "transform, opacity" : "auto",
+          pointerEvents: isDeckVisible ? "auto" : "none",
+          willChange: "transform, opacity",
         }}
       >
         <button
@@ -1099,10 +1066,10 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
         onToggleMuted={toggleMuted}
       />
 
-      {isCompactViewport && !isCompactUiVisible ? (
+      {!isDeckVisible ? (
         <button
           type="button"
-          onPointerDown={revealCompactUi}
+          onPointerDown={revealDeck}
           className="absolute inset-0 z-40 cursor-default bg-transparent"
           aria-label="Show amenity details and carousel"
         />

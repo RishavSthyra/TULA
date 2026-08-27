@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import HeroSection from "@/components/sections/HeroSection";
 import CinematicIntro from "@/components/ui/CinematicIntro";
 import { scheduleAmenityVideoWarmup } from "@/lib/amenity-video-warmup";
+import { preloadBrochureImageSet } from "@/lib/brochure-image-preload";
 import {
   getMasterPlanFrameCdnUrl,
   getMasterPlanFramePreloadSequence,
@@ -12,7 +13,7 @@ import { primeSignedAssetUrls } from "@/src/lib/signed-assets";
 import { useSignedAssetUrls } from "@/src/lib/use-signed-assets";
 import type { HomeDeveloperConfig } from "@/types/developer-config";
 import {
-  BROCHURE_FIRST_PAGE_SRC,
+  BROCHURE_PAGES,
   PROJECT_OVERVIEW_BACKGROUND_SRC,
 } from "@/lib/brochure-pages";
 
@@ -26,37 +27,11 @@ type IdleWindow = Window &
   };
 
 const HERO_VIDEO_RETRY_INTERVAL_MS = 850;
-const TEMPORARY_HOME_HERO_IMAGE_URL =
-  "/HomeImage First Draft.jpeg";
+const HERO_CRITICAL_PRELOAD_TIMEOUT_MS = 12_000;
 const PROJECT_OVERVIEW_CRITICAL_IMAGES = [
   PROJECT_OVERVIEW_BACKGROUND_SRC,
-  BROCHURE_FIRST_PAGE_SRC,
-] as const;
-const cachedProjectOverviewImages = new Map<string, HTMLImageElement>();
-
-function cacheProjectOverviewImage(src: string) {
-  if (
-    typeof window === "undefined" ||
-    !src ||
-    cachedProjectOverviewImages.has(src)
-  ) {
-    return;
-  }
-
-  const image = new window.Image();
-  image.decoding = "async";
-  image.fetchPriority = "high";
-  cachedProjectOverviewImages.set(src, image);
-
-  image.onerror = () => {
-    cachedProjectOverviewImages.delete(src);
-  };
-  image.src = src;
-
-  if (typeof image.decode === "function") {
-    void image.decode().catch(() => undefined);
-  }
-}
+  ...BROCHURE_PAGES.slice(0, 3).map((page) => page.src),
+];
 
 function getVideoLoadProgress(video: HTMLVideoElement) {
   const duration = video.duration;
@@ -85,17 +60,6 @@ function getVideoLoadProgress(video: HTMLVideoElement) {
   return 0.08;
 }
 
-function shouldUseMobileHeroVideo() {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  return (
-    window.matchMedia("(max-width: 1279px)").matches ||
-    window.matchMedia("(pointer: coarse)").matches
-  );
-}
-
 export default function HomePageClient({
   config,
   initialSignedAssetUrls = {},
@@ -116,15 +80,14 @@ export default function HomePageClient({
   primeSignedAssetUrls(initialSignedAssetUrls);
   const loaderStartedAtRef = useRef(0);
   const heroReadyRef = useRef(false);
-  const heroObjectUrlRef = useRef<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(true);
   const [introComplete, setIntroComplete] = useState(false);
   const [heroReady, setHeroReady] = useState(false);
+  const [criticalHeroAssetsReady, setCriticalHeroAssetsReady] = useState(false);
+  const [projectOverviewAssetsReady, setProjectOverviewAssetsReady] =
+    useState(false);
   const [heroVideoSrc, setHeroVideoSrc] = useState<string | null>(null);
-  const [useStaticHeroIntro, setUseStaticHeroIntro] = useState(() =>
-    typeof window !== "undefined" ? shouldUseMobileHeroVideo() : false,
-  );
   const signedAssetUrls = useSignedAssetUrls([
     ENTRY_VIDEO_URL,
     HERO_LOOP_VIDEO_URL,
@@ -172,39 +135,11 @@ export default function HomePageClient({
   }, [heroReady]);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const compactViewportMedia = window.matchMedia("(max-width: 1279px)");
-    const coarsePointerMedia = window.matchMedia("(pointer: coarse)");
-    const syncStaticHeroIntro = () => {
-      setUseStaticHeroIntro(
-        compactViewportMedia.matches || coarsePointerMedia.matches,
-      );
-    };
-
-    syncStaticHeroIntro();
-    compactViewportMedia.addEventListener("change", syncStaticHeroIntro);
-    coarsePointerMedia.addEventListener("change", syncStaticHeroIntro);
-
-    return () => {
-      compactViewportMedia.removeEventListener("change", syncStaticHeroIntro);
-      coarsePointerMedia.removeEventListener("change", syncStaticHeroIntro);
-    };
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (heroObjectUrlRef.current) {
-        URL.revokeObjectURL(heroObjectUrlRef.current);
-        heroObjectUrlRef.current = null;
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!heroReady) {
+    if (
+      !heroReady ||
+      !criticalHeroAssetsReady ||
+      !projectOverviewAssetsReady
+    ) {
       return;
     }
 
@@ -219,7 +154,37 @@ export default function HomePageClient({
     return () => {
       window.clearTimeout(timer);
     };
-  }, [heroReady]);
+  }, [criticalHeroAssetsReady, heroReady, projectOverviewAssetsReady]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !loading) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void preloadBrochureImageSet(PROJECT_OVERVIEW_CRITICAL_IMAGES, {
+      priorityUrls: PROJECT_OVERVIEW_CRITICAL_IMAGES,
+      concurrency: 4,
+      onProgress: (completed, total) => {
+        if (cancelled || total === 0) {
+          return;
+        }
+
+        setProgress((currentProgress) =>
+          Math.max(currentProgress, Math.min(96, Math.round((completed / total) * 96))),
+        );
+      },
+    }).then(() => {
+      if (!cancelled) {
+        setProjectOverviewAssetsReady(true);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loading]);
 
   useEffect(() => {
     if (!heroReady || typeof window === "undefined") {
@@ -237,10 +202,6 @@ export default function HomePageClient({
 
   const handleHeroVideoProgressChange = useCallback((nextProgress: number) => {
     setProgress((currentProgress) => {
-      if (heroReadyRef.current) {
-        return 100;
-      }
-
       const targetValue = Math.round(
         Math.max(currentProgress, Math.min(nextProgress * 100, 96)),
       );
@@ -270,16 +231,13 @@ export default function HomePageClient({
     let heroProgressInterval: number | null = null;
     let preloadAnimationFrame: number | null = null;
     let heroPlayRetryInterval: number | null = null;
+    let criticalPreloadTimeout: number | null = null;
     let currentHeroWarmVideo: HTMLVideoElement | null = null;
     const heroWarmVideoCleanups: Array<() => void> = [];
     let disposed = false;
 
     const updateLoaderProgress = (nextProgress: number) => {
       setProgress((currentProgress) => {
-        if (heroReadyRef.current) {
-          return 100;
-        }
-
         const targetValue = Math.round(
           Math.max(currentProgress, Math.min(nextProgress, 96)),
         );
@@ -359,11 +317,11 @@ export default function HomePageClient({
       return video;
     };
 
-    const initialHeroVideoSource = useStaticHeroIntro
-      ? null
-      : signedHeroVideoUrl;
-
-    PROJECT_OVERVIEW_CRITICAL_IMAGES.forEach(cacheProjectOverviewImage);
+    const initialHeroVideoSource = signedHeroVideoUrl;
+    const criticalPosterSource =
+      signedHeroPosterUrl ??
+      signedHeroStageFallbackImageUrl ??
+      signedHeroMobileStaticImageUrl;
 
     appendPreloadLinksPaced(
       [
@@ -373,10 +331,9 @@ export default function HomePageClient({
           fetchPriority: "high" as const,
         })),
         {
-          href: useStaticHeroIntro
-            ? signedHeroMobileStaticImageUrl
-            : signedHeroStageFallbackImageUrl,
+          href: criticalPosterSource,
           as: "image",
+          fetchPriority: "high",
         },
         ...(initialHeroVideoSource
           ? [{ href: initialHeroVideoSource, as: "video" as const }]
@@ -405,12 +362,97 @@ export default function HomePageClient({
       } => Boolean(link.href)),
     );
 
+    const criticalVideoStates = new Map<
+      HTMLVideoElement,
+      { progress: number; settled: boolean }
+    >();
+    let criticalTrackingInitialized = false;
+    let posterProgress = criticalPosterSource ? 0 : 1;
+    let posterSettled = !criticalPosterSource;
+
+    const reportCriticalPreloadState = () => {
+      const videoStates = [...criticalVideoStates.values()];
+      const totalProgress =
+        posterProgress +
+        videoStates.reduce((sum, state) => sum + state.progress, 0);
+      const itemCount = videoStates.length + 1;
+
+      updateLoaderProgress((totalProgress / itemCount) * 100);
+
+      if (
+        criticalTrackingInitialized &&
+        posterSettled &&
+        videoStates.every((state) => state.settled) &&
+        !disposed
+      ) {
+        if (criticalPreloadTimeout !== null) {
+          window.clearTimeout(criticalPreloadTimeout);
+          criticalPreloadTimeout = null;
+        }
+        setCriticalHeroAssetsReady(true);
+      }
+    };
+
+    const trackCriticalVideo = (video: HTMLVideoElement) => {
+      const state = {
+        progress: getVideoLoadProgress(video),
+        settled: video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA,
+      };
+      criticalVideoStates.set(video, state);
+
+      const updateProgress = () => {
+        state.progress = Math.max(state.progress, getVideoLoadProgress(video));
+        reportCriticalPreloadState();
+      };
+      const settleVideo = () => {
+        state.progress = 1;
+        state.settled = true;
+        reportCriticalPreloadState();
+      };
+
+      video.addEventListener("loadedmetadata", updateProgress);
+      video.addEventListener("loadeddata", updateProgress);
+      video.addEventListener("progress", updateProgress);
+      video.addEventListener("canplay", settleVideo, { once: true });
+      video.addEventListener("error", settleVideo, { once: true });
+
+      heroWarmVideoCleanups.push(() => {
+        video.removeEventListener("loadedmetadata", updateProgress);
+        video.removeEventListener("loadeddata", updateProgress);
+        video.removeEventListener("progress", updateProgress);
+        video.removeEventListener("canplay", settleVideo);
+        video.removeEventListener("error", settleVideo);
+      });
+    };
+
+    if (criticalPosterSource) {
+      const posterImage = new window.Image();
+      posterImage.decoding = "async";
+      posterImage.fetchPriority = "high";
+
+      const settlePoster = () => {
+        posterProgress = 1;
+        posterSettled = true;
+        reportCriticalPreloadState();
+      };
+
+      posterImage.onload = settlePoster;
+      posterImage.onerror = settlePoster;
+      posterImage.src = criticalPosterSource;
+      void posterImage.decode().then(settlePoster).catch(() => undefined);
+
+      heroWarmVideoCleanups.push(() => {
+        posterImage.onload = null;
+        posterImage.onerror = null;
+      });
+    }
+
     if (signedEntryVideoUrl) {
       warmVideoSource(signedEntryVideoUrl);
     }
-    if (signedHeroLoopVideoUrl) {
-      warmVideoSource(signedHeroLoopVideoUrl);
-    }
+    const warmReverseHeroVideo = signedHeroLoopVideoUrl
+      ? warmVideoSource(signedHeroLoopVideoUrl)
+      : null;
     if (signedMasterPlanScrubVideoUrl) {
       warmVideoSource(signedMasterPlanScrubVideoUrl);
     }
@@ -420,14 +462,27 @@ export default function HomePageClient({
       : null;
     currentHeroWarmVideo = warmHeroVideoFromMediaElement;
 
-    const reportHeroProgressFromMediaElement = () => {
-      const warmVideo = currentHeroWarmVideo;
+    if (warmHeroVideoFromMediaElement) {
+      trackCriticalVideo(warmHeroVideoFromMediaElement);
+    }
+    if (warmReverseHeroVideo) {
+      trackCriticalVideo(warmReverseHeroVideo);
+    }
 
-      if (!warmVideo) {
-        return;
+    criticalTrackingInitialized = true;
+    criticalPreloadTimeout = window.setTimeout(() => {
+      if (!disposed) {
+        updateLoaderProgress(96);
+        setCriticalHeroAssetsReady(true);
       }
+    }, HERO_CRITICAL_PRELOAD_TIMEOUT_MS);
+    reportCriticalPreloadState();
 
-      updateLoaderProgress(getVideoLoadProgress(warmVideo) * 100);
+    const reportHeroProgressFromMediaElement = () => {
+      criticalVideoStates.forEach((state, video) => {
+        state.progress = Math.max(state.progress, getVideoLoadProgress(video));
+      });
+      reportCriticalPreloadState();
     };
 
     const publishHeroVideoSource = () => {
@@ -568,6 +623,9 @@ export default function HomePageClient({
       if (heroPlayRetryInterval !== null) {
         window.clearInterval(heroPlayRetryInterval);
       }
+      if (criticalPreloadTimeout !== null) {
+        window.clearTimeout(criticalPreloadTimeout);
+      }
       heroWarmVideoCleanups.forEach((cleanup) => cleanup());
       createdLinks.forEach((link) => link.remove());
       warmVideos.forEach((video) => {
@@ -581,17 +639,23 @@ export default function HomePageClient({
     signedEntryVideoUrl,
     signedHeroLoopVideoUrl,
     signedHeroMobileStaticImageUrl,
+    signedHeroPosterUrl,
     signedHeroStageFallbackImageUrl,
     signedHeroVideoUrl,
     signedMasterPlanScrubVideoUrl,
-    useStaticHeroIntro,
   ]);
 
   return (
     <>
       {!introComplete ? (
         <CinematicIntro
-          progress={heroReady ? 100 : progress}
+          progress={
+            heroReady &&
+            criticalHeroAssetsReady &&
+            projectOverviewAssetsReady
+              ? 100
+              : progress
+          }
           readyToComplete={!loading}
           onComplete={handleIntroComplete}
         />
@@ -609,8 +673,6 @@ export default function HomePageClient({
           heroVideoSrc={heroVideoSrc}
           heroLoopVideoSrc={signedHeroLoopVideoUrl}
           staticHeroImageSrc={signedHeroMobileStaticImageUrl}
-          temporaryStaticHeroImageSrc={TEMPORARY_HOME_HERO_IMAGE_URL}
-          useStaticHeroIntro={useStaticHeroIntro}
           playIntroAnimation={!loading}
           onHeroReadyChange={setHeroReady}
           onHeroVideoProgressChange={handleHeroVideoProgressChange}

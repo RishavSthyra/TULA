@@ -1,5 +1,6 @@
 export const TOTAL_MASTER_PLAN_FRAMES = 360;
-export const MASTER_PLAN_SCRUB_HQ_VIDEO_PATH = "videos/360_scrub_optimized_g3.mp4";
+export const MASTER_PLAN_SCRUB_HQ_VIDEO_PATH =
+  "https://cdn.sthyra.com/TULA/Videos/360final2LAST2_GOP3_HQ.mp4";
 export const MASTER_PLAN_SCRUB_MOBILE_VIDEO_PATH = "videos/360_scrub_g3_mobile.mp4";
 export const MASTER_PLAN_SCRUB_HQ_HLS_PATH = "/master-plan-scrub/hq/index.m3u8";
 
@@ -15,7 +16,7 @@ export const MASTER_PLAN_SCRUB_INTERACTION_HLS_PATH =
 export const MASTER_PLAN_SCRUB_VIDEO_PATH = MASTER_PLAN_SCRUB_HQ_VIDEO_PATH;
 
 // Flip this to `true` when the production scrub asset is replaced by 60 fps media.
-export const USE_60_FPS_MASTER_PLAN_SCRUB = false;
+export const USE_60_FPS_MASTER_PLAN_SCRUB = true;
 export const MASTER_PLAN_SCRUB_VIDEO_FPS: 30 | 60 =
   USE_60_FPS_MASTER_PLAN_SCRUB ? 60 : 30;
 

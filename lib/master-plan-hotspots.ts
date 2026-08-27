@@ -15,20 +15,23 @@ const HOTSPOT_ALLOWED_UNIT_ENDINGS: Record<
   Partial<Record<TowerType, readonly string[]>>
 > = {
   A1: {
-    "Tower A": ["1", "2", "5", "6"],
-    "Tower B": ["1", "2", "5", "6"],
+    "Tower A": ["04", "05"],
+    "Tower B": ["01", "05", "06"],
+    "Tower C": ["01", "02"],
+    "Tower D": ["04"],
   },
   A2: {
-    "Tower A": ["2", "5"],
-    "Tower B": ["5", "6"],
+    "Tower C": ["05"],
+    "Tower D": ["02", "03"],
   },
   A3: {
-    "Tower A": ["6"],
-    "Tower B": ["6"],
+    "Tower A": ["02", "03"],
+    "Tower B": ["02", "03", "04"],
+    "Tower C": ["03", "04"],
   },
   A4: {
-    "Tower A": ["3", "4"],
-    "Tower B": ["3", "4"],
+    "Tower A": ["01"],
+    "Tower D": ["01", "05"],
   },
 };
 
@@ -64,8 +67,13 @@ export function getApartmentUnitEnding(
     return null;
   }
 
-  const digitMatches = flatNumber.match(/\d/g);
-  return digitMatches?.at(-1) ?? null;
+  const digits = flatNumber.replace(/\D/g, "");
+
+  if (!digits) {
+    return null;
+  }
+
+  return digits.slice(-2).padStart(2, "0");
 }
 
 export function isFlatNumberAllowedAtHotspot(
@@ -81,10 +89,7 @@ export function isFlatNumberAllowedAtHotspot(
 
   const allowedEndings = HOTSPOT_ALLOWED_UNIT_ENDINGS[hotspot][tower];
 
-  // The inherited hotspot model only defines positional rules for A and B.
-  // Valid C/D inventory must remain selectable until their model coordinates
-  // are supplied.
-  return allowedEndings ? allowedEndings.includes(unitEnding) : true;
+  return allowedEndings?.includes(unitEnding) ?? false;
 }
 
 export function isInventoryApartmentAllowedAtHotspot(
@@ -105,16 +110,32 @@ export function isInventoryApartmentAllowedAtHotspot(
 export function isApartmentIdAllowedAtHotspot(
   apartmentId: string | null,
   hotspot: MasterPlanHotspotKey,
-  fallbackTower: TowerType | null,
 ) {
   if (!apartmentId) {
     return false;
   }
 
-  const [, towerCode = "", , unitCode = ""] = apartmentId.split("_");
-  const tower = (["A", "B", "C", "D"].includes(towerCode)
-    ? `Tower ${towerCode}`
-    : fallbackTower ?? "Tower A") as TowerType;
+  const [
+    scope = "",
+    rawTowerCode = "",
+    floorCode = "",
+    unitCode = "",
+    ...extraParts
+  ] = apartmentId.split("_");
+  const towerCode = rawTowerCode.toUpperCase();
+
+  if (
+    (scope !== "Block" && scope !== "Tower") ||
+    !["A", "B", "C", "D"].includes(towerCode) ||
+    !/^\d+$/.test(floorCode) ||
+    Number(floorCode) < 0 ||
+    !unitCode ||
+    extraParts.length > 0
+  ) {
+    return false;
+  }
+
+  const tower = `Tower ${towerCode}` as TowerType;
 
   return isFlatNumberAllowedAtHotspot(hotspot, tower, unitCode);
 }

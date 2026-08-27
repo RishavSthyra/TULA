@@ -55,11 +55,24 @@ export default async function MasterPlanPage() {
   ]);
   const signedMasterPlanCriticalAssets =
     criticalAssetKeys.length > 0 ? signR2AssetKeys(criticalAssetKeys) : {};
+  const masterPlanFallbackUrl =
+    signedMasterPlanCriticalAssets[masterPlan.fallbackImageKey] ??
+    masterPlan.fallbackImageKey;
+  const masterPlanVideoUrl =
+    signedMasterPlanCriticalAssets[masterPlan.scrubVideoKey] ??
+    masterPlan.scrubVideoKey;
 
   return (
     <div className="relative app-shell bg-black">
       <link rel="preconnect" href={workerDomain} crossOrigin="anonymous" />
       <link rel="dns-prefetch" href={workerDomain} />
+      <link
+        rel="preload"
+        as="image"
+        href={masterPlanFallbackUrl}
+        fetchPriority="high"
+      />
+      <link rel="preload" as="video" href={masterPlanVideoUrl} />
       <div className="">
         <MasterPlanLayout
           initialApartments={initialApartments}

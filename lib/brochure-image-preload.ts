@@ -30,8 +30,15 @@ type BrochureImageWarmupOptions = {
   idleTimeoutMs?: number;
 };
 
+type BrochureImagePreloadOptions = {
+  priorityUrls?: string[];
+  concurrency?: number;
+  onProgress?: (completed: number, total: number) => void;
+};
+
 const warmedBrochureImageUrls = new Set<string>();
 const queuedBrochureImageUrls = new Set<string>();
+const pendingBrochureImageUrls = new Map<string, Promise<void>>();
 
 function dedupeUrls(urls: string[]) {
   return [...new Set(urls.filter(Boolean))];
@@ -45,7 +52,14 @@ function preloadBrochureImage(
     return Promise.resolve();
   }
 
-  return new Promise<void>((resolve) => {
+  const pendingPreload = pendingBrochureImageUrls.get(url);
+
+  if (pendingPreload) {
+    return pendingPreload;
+  }
+
+  queuedBrochureImageUrls.add(url);
+  const preloadPromise = new Promise<void>((resolve) => {
     const preloadLink = document.createElement("link") as BrowserLink;
     preloadLink.rel = "preload";
     preloadLink.as = "image";
@@ -93,7 +107,56 @@ function preloadBrochureImage(
     }
   }).finally(() => {
     queuedBrochureImageUrls.delete(url);
+    pendingBrochureImageUrls.delete(url);
   });
+
+  pendingBrochureImageUrls.set(url, preloadPromise);
+  return preloadPromise;
+}
+
+export async function preloadBrochureImageSet(
+  urls: string[],
+  {
+    priorityUrls = [],
+    concurrency = 6,
+    onProgress,
+  }: BrochureImagePreloadOptions = {},
+) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const baseQueue = dedupeUrls(urls);
+  const priorityQueue = dedupeUrls(priorityUrls).filter((url) =>
+    baseQueue.includes(url),
+  );
+  const queue = [
+    ...priorityQueue,
+    ...baseQueue.filter((url) => !priorityQueue.includes(url)),
+  ];
+  const priorityUrlSet = new Set(priorityQueue);
+  const workerCount = Math.max(1, Math.min(concurrency, queue.length));
+  let nextQueueIndex = 0;
+  let completed = 0;
+
+  onProgress?.(completed, queue.length);
+
+  const runWorker = async () => {
+    while (nextQueueIndex < queue.length) {
+      const url = queue[nextQueueIndex];
+      nextQueueIndex += 1;
+
+      await preloadBrochureImage(
+        url,
+        priorityUrlSet.has(url) ? "high" : "low",
+      );
+
+      completed += 1;
+      onProgress?.(completed, queue.length);
+    }
+  };
+
+  await Promise.all(Array.from({ length: workerCount }, runWorker));
 }
 
 export function scheduleBrochureImageWarmup(

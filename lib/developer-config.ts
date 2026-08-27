@@ -143,11 +143,15 @@ export const DEFAULT_DEVELOPER_RUNTIME_CONFIG: DeveloperRuntimeConfig = {
   version: 0,
   home: {
     entryVideoKey: "videos/Tf Fixed Final_2.mp4",
-    heroVideoKey: "videos/01_2.mp4",
-    heroLoopVideoKey: "videos/02.mp4",
-    heroMobileFallbackKey: "images/01_lastframe.avif",
-    heroStageFallbackKey: "images/first_frame_again.png",
-    heroPosterKey: "images/hero_first_frame.avif",
+    heroVideoKey: "https://cdn.sthyra.com/TULA/Videos/Home%20Page2.mp4",
+    heroLoopVideoKey:
+      "https://cdn.sthyra.com/TULA/Videos/Reverse%20Home%20Page.mp4",
+    heroMobileFallbackKey:
+      "https://cdn.sthyra.com/TULA/Videos/Home%20Page2_first_frame.avif",
+    heroStageFallbackKey:
+      "https://cdn.sthyra.com/TULA/Videos/Home%20Page2_first_frame.avif",
+    heroPosterKey:
+      "https://cdn.sthyra.com/TULA/Videos/Home%20Page2_first_frame.avif",
     heroLogoKey: "images/Logo_Trifect_Veranza A_new.png",
     masterPlanWarmupVideoKey: "videos/360_scrub_optimized_g3.mp4",
   },

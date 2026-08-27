@@ -5,13 +5,13 @@
     "z": 1.284
   },
   "video": {
-    "assetKey": "https://cdn.sthyra.com/TULA/Videos/360_4K_30FPS_GOP3_COMPRESSED.mp4",
-    "fps": 30,
+    "assetKey": "https://cdn.sthyra.com/TULA/Videos/360final2LAST2_GOP3_HQ.mp4",
+    "fps": 60,
     "height": 2160,
     "totalFrames": 360,
     "width": 3840
   },
-  "fallbackImageKey": "local:images/first_frame_again.png",
+  "fallbackImageKey": "https://cdn.sthyra.com/TULA/Videos/360final2LAST2_GOP3_HQ_first_frame.avif",
   "modelAssetKey": "local:models/without balcony.glb",
   "hotspot": {
     "frame": 1,

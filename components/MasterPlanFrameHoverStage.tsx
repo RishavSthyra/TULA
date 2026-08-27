@@ -27,7 +27,6 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 
 import {
   AdaptiveDpr,
-  Html,
   PerspectiveCamera,
   useGLTF,
 } from "@react-three/drei";
@@ -2060,16 +2059,6 @@ function getPreparedTowerScene(
   return preparedTower;
 }
 
-function LoadingState() {
-  return (
-    <Html center>
-      <div className="rounded-full border border-white/30 bg-slate-950/88 px-4 py-2 text-xs font-medium uppercase tracking-[0.28em] text-white shadow-[0_12px_48px_rgba(15,23,42,0.28)]">
-        Loading hover map
-      </div>
-    </Html>
-  );
-}
-
 const HighlightEdgeLines = memo(function HighlightEdgeLines({
   color,
   geometry,
@@ -2834,11 +2823,6 @@ const TowerScene = memo(function TowerScene({
     const next = new Map<MasterPlanHotspotKey, Set<string>>();
 
     MASTER_PLAN_HOTSPOT_KEYS.forEach((hotspotKey) => {
-      if (isThreeDsMaxTrial) {
-        next.set(hotspotKey, new Set(activeApartments.keys()));
-        return;
-      }
-
       const apartmentIds = new Set<string>();
 
       activeApartments.forEach((_, apartmentId) => {
@@ -2846,7 +2830,6 @@ const TowerScene = memo(function TowerScene({
           !isApartmentIdAllowedAtHotspot(
             apartmentId,
             hotspotKey,
-            interactiveTowerScope,
           )
         ) {
           return;
@@ -2867,7 +2850,7 @@ const TowerScene = memo(function TowerScene({
     });
 
     return next;
-  }, [activeApartments, apartmentIndex, interactiveTowerScope, isThreeDsMaxTrial]);
+  }, [activeApartments, apartmentIndex, interactiveTowerScope]);
   const inventoryBackedApartmentIds = useMemo(
     () => inventoryBackedApartmentIdsByHotspot.get(activeHotspot) ?? EMPTY_APARTMENT_IDS,
     [activeHotspot, inventoryBackedApartmentIdsByHotspot],
@@ -2918,13 +2901,10 @@ const TowerScene = memo(function TowerScene({
       ),
     [hoverPickableMeshes, inventoryBackedApartmentIdsByHotspot],
   );
-  const hotspotScopedPickableMeshes = useMemo(() => {
-    if (isThreeDsMaxTrial) {
-      return hoverPickableMeshes;
-    }
-
-    return hotspotPickMap.get(activeHotspot) ?? EMPTY_MESHES;
-  }, [activeHotspot, hoverPickableMeshes, hotspotPickMap, isThreeDsMaxTrial]);
+  const hotspotScopedPickableMeshes = useMemo(
+    () => hotspotPickMap.get(activeHotspot) ?? EMPTY_MESHES,
+    [activeHotspot, hotspotPickMap],
+  );
   const filteredApartmentIds = useMemo(() => {
     if (
       !showApartmentMeshes ||
@@ -3068,15 +3048,13 @@ const TowerScene = memo(function TowerScene({
   const hotspotHoveredApartmentId = useMemo(
     () =>
       hoveredApartmentId &&
-      (isThreeDsMaxTrial ||
-        isApartmentIdAllowedAtHotspot(
-          hoveredApartmentId,
-          activeHotspot,
-          interactiveTowerScope,
-        ))
+      isApartmentIdAllowedAtHotspot(
+        hoveredApartmentId,
+        activeHotspot,
+      )
         ? hoveredApartmentId
         : null,
-    [activeHotspot, hoveredApartmentId, interactiveTowerScope, isThreeDsMaxTrial],
+    [activeHotspot, hoveredApartmentId],
   );
   const activeHoveredApartmentId =
     allowHover ? hotspotHoveredApartmentId : null;
@@ -3535,7 +3513,9 @@ export default function MasterPlanFrameHoverStage({
     : null;
   const signedMasterPlanStageFallbackImage = isLocalAssetKey(fallbackImageKey)
     ? toLocalPublicAssetPath(fallbackImageKey)
-    : signedAssetUrls[fallbackImageKey] ?? null;
+    : isRemoteAssetUrl(fallbackImageKey)
+      ? fallbackImageKey
+      : signedAssetUrls[fallbackImageKey] ?? null;
   const towerAModelPath = isThreeDsMaxTrial
     ? isLocalAssetKey(towerAModelKey)
       ? `${toLocalPublicAssetPath(towerAModelKey)}?${THREE_DS_MAX_TRIAL_MODEL_CACHE_BUSTER}`
@@ -4898,13 +4878,11 @@ export default function MasterPlanFrameHoverStage({
   );
   const hotspotHoveredApartmentId =
     hoveredApartmentId &&
-    (isThreeDsMaxTrial ||
-      (Boolean(hoveredInventoryCandidate) &&
-        isApartmentIdAllowedAtHotspot(
-          hoveredApartmentId,
-          activeHotspot,
-          interactiveTowerScope,
-        )))
+    Boolean(hoveredInventoryCandidate) &&
+    isApartmentIdAllowedAtHotspot(
+      hoveredApartmentId,
+      activeHotspot,
+    )
       ? hoveredApartmentId
       : null;
   const activeHoveredApartmentId =
@@ -5572,7 +5550,7 @@ export default function MasterPlanFrameHoverStage({
                     stencil: false,
                   }}
                 >
-                  <Suspense fallback={<LoadingState />}>
+                  <Suspense fallback={null}>
                     {!shouldUseContinuousCanvasFrameloop ? <AdaptiveDpr /> : null}
                     <TowerScene
                       apartments={apartments}

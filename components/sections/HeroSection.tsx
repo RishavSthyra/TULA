@@ -3,16 +3,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { motion, type Variants } from "framer-motion";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { BsArrowRight } from "react-icons/bs";
-import {
-  CalendarDays,
-  Leaf,
-  SunMedium,
-} from "lucide-react";
+import { Leaf } from "lucide-react";
 import { Cormorant_Garamond } from "next/font/google";
 import DesktopSiteRail from "@/components/DesktopSiteRail";
-import { TRIFECTA_LEAD_OPEN_EVENT } from "@/lib/trifecta-remote-control";
 
 const heroSerif = Cormorant_Garamond({
   subsets: ["latin"],
@@ -23,14 +17,7 @@ const heroSerif = Cormorant_Garamond({
 
 const EMPTY_IMAGE_DATA_URL =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
-const HERO_LOOP_RESTART_BEFORE_END_SECONDS = 0.5;
-const HERO_LOOP_RESTART_AT_SECONDS = 0.04;
 const HERO_PLAY_RETRY_MS = 450;
-const STATIC_HERO_IMAGE_HOLD_MS = 2000;
-const PROJECT_LATITUDE = 13.153818578384746;
-const PROJECT_LONGITUDE = 77.63036955360322;
-const PROJECT_WEATHER_API_URL = `https://api.open-meteo.com/v1/forecast?latitude=${PROJECT_LATITUDE}&longitude=${PROJECT_LONGITUDE}&current=temperature_2m,relative_humidity_2m,wind_speed_10m`;
-const PROJECT_AIR_QUALITY_API_URL = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${PROJECT_LATITUDE}&longitude=${PROJECT_LONGITUDE}&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,us_aqi`;
 
 type IdleCapableWindow = Window &
   typeof globalThis & {
@@ -42,25 +29,6 @@ type IdleCapableWindow = Window &
   };
 
 type TimeoutHandle = ReturnType<typeof globalThis.setTimeout>;
-
-type OpenMeteoWeatherResponse = {
-  current?: {
-    temperature_2m?: number;
-  };
-};
-
-type OpenMeteoAirQualityResponse = {
-  current?: {
-    us_aqi?: number;
-  };
-};
-
-function formatViewerLocalTime(date: Date) {
-  return new Intl.DateTimeFormat(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(date);
-}
 
 function HeroMagneticButton({
   onClick,
@@ -76,9 +44,8 @@ function HeroMagneticButton({
       >
         <span className="hero-liquid-text">
           Explore The Project
-          <BsArrowRight className="text-[1.05rem]" aria-hidden />
+          <BsArrowRight className="text-[1.05rem] text-[#91bd78]" aria-hidden />
         </span>
-        <span aria-hidden className="hero-liquid-wave" />
       </button>
     </div>
   );
@@ -91,8 +58,6 @@ type HeroSectionProps = {
   heroVideoSrc?: string | null;
   heroLoopVideoSrc?: string | null;
   staticHeroImageSrc?: string | null;
-  temporaryStaticHeroImageSrc?: string | null;
-  useStaticHeroIntro?: boolean;
   onHeroReadyChange?: (ready: boolean) => void;
   onHeroVideoProgressChange?: (progress: number) => void;
   playIntroAnimation?: boolean;
@@ -125,15 +90,26 @@ function getHeroVideoLoadProgress(video: HTMLVideoElement) {
   return 0.08;
 }
 
+function afterNextVideoFrame(
+  video: HTMLVideoElement,
+  callback: () => void,
+) {
+  if (typeof video.requestVideoFrameCallback === "function") {
+    video.requestVideoFrameCallback(() => callback());
+    return;
+  }
+
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(callback);
+  });
+}
+
 export default function HeroSection({
-  heroLogoSrc,
   heroPosterSrc,
   masterPlanScrubVideoSrc,
   heroVideoSrc,
   heroLoopVideoSrc,
   staticHeroImageSrc,
-  temporaryStaticHeroImageSrc,
-  useStaticHeroIntro = false,
   onHeroReadyChange,
   onHeroVideoProgressChange,
   playIntroAnimation = false,
@@ -144,25 +120,17 @@ export default function HeroSection({
   const idleWarmVideoRef = useRef<HTMLVideoElement | null>(null);
   const sectionRef = useRef<HTMLElement | null>(null);
   const scrollLockRef = useRef(false);
-  const isLoopSeamSeekInProgressRef = useRef(false);
 
   const [videoReady, setVideoReady] = useState(false);
   const [isHeroVideoPlaying, setIsHeroVideoPlaying] = useState(false);
   const [isHeroLoopVideoVisible, setIsHeroLoopVideoVisible] = useState(false);
-  const [viewerLocalTime, setViewerLocalTime] = useState("--:--");
-  const [projectTemperature, setProjectTemperature] = useState("--°C");
-  const [projectAqi, setProjectAqi] = useState("AQI --");
   const isEntryVideoVisible = false;
 
   const line1 = "A Quiter,";
   const line2Prefix = "Kind of";
   const line2Accent = "Luxury";
-  const hasTemporaryStaticHeroImage = Boolean(temporaryStaticHeroImageSrc);
   const heroPosterImage =
-    temporaryStaticHeroImageSrc ??
-    (useStaticHeroIntro && staticHeroImageSrc
-      ? staticHeroImageSrc
-      : heroPosterSrc ?? staticHeroImageSrc ?? EMPTY_IMAGE_DATA_URL);
+    heroPosterSrc ?? staticHeroImageSrc ?? EMPTY_IMAGE_DATA_URL;
 
   const contentWrap: Variants = {
     hidden: {
@@ -217,13 +185,13 @@ export default function HeroSection({
     video.muted = true;
     video.defaultMuted = true;
     video.playsInline = true;
-    video.autoplay = true;
+    video.autoplay = false;
     video.controls = false;
     video.disablePictureInPicture = true;
     video.disableRemotePlayback = true;
     video.removeAttribute("controls");
     video.setAttribute("muted", "");
-    video.setAttribute("autoplay", "");
+    video.removeAttribute("autoplay");
     video.setAttribute("playsinline", "");
     video.setAttribute("webkit-playsinline", "");
     video.setAttribute("x5-playsinline", "");
@@ -256,37 +224,20 @@ export default function HeroSection({
     }
 
     prepareHeroLoopVideo(loopVideo);
-    loopVideo.load();
-
-    let didRevealLoopVideo = false;
-
-    const revealLoopVideo = () => {
-      if (didRevealLoopVideo) {
-        return;
-      }
-
-      didRevealLoopVideo = true;
-      loopVideo.removeEventListener("loadeddata", revealLoopVideo);
-      loopVideo.removeEventListener("canplay", revealLoopVideo);
-      setIsHeroLoopVideoVisible(true);
-    };
-
-    if (loopVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-      revealLoopVideo();
-    } else {
-      loopVideo.addEventListener("loadeddata", revealLoopVideo, { once: true });
-      loopVideo.addEventListener("canplay", revealLoopVideo, { once: true });
-    }
 
     try {
       loopVideo.currentTime = 0;
       await loopVideo.play();
-      if (loopVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-        revealLoopVideo();
-      }
+      afterNextVideoFrame(loopVideo, () => {
+        setIsHeroLoopVideoVisible(true);
+
+        window.requestAnimationFrame(() => {
+          heroVideoRef.current?.pause();
+          setIsHeroVideoPlaying(false);
+        });
+      });
     } catch {
-      loopVideo.removeEventListener("loadeddata", revealLoopVideo);
-      loopVideo.removeEventListener("canplay", revealLoopVideo);
+      // Keep the forward video's last painted frame visible if reverse fails.
     }
   }, [
     heroLoopVideoSrc,
@@ -294,45 +245,30 @@ export default function HeroSection({
     prepareHeroLoopVideo,
   ]);
 
-  const handleHeroLoopPlaybackBoundary = useCallback(() => {
-    const loopVideo = heroLoopVideoRef.current;
+  const startHeroVideo = useCallback(async () => {
+    const heroVideo = heroVideoRef.current;
 
-    if (
-      !loopVideo ||
-      !isHeroLoopVideoVisible ||
-      isEntryVideoVisible ||
-      isLoopSeamSeekInProgressRef.current
-    ) {
+    if (!heroVideo || !heroVideoSrc || isEntryVideoVisible) {
       return;
     }
 
-    const duration = loopVideo.duration;
-    const currentTime = loopVideo.currentTime;
-    const secondsUntilEnd = duration - currentTime;
-
-    if (
-      !Number.isFinite(duration) ||
-      duration <= 0 ||
-      secondsUntilEnd > HERO_LOOP_RESTART_BEFORE_END_SECONDS
-    ) {
-      return;
-    }
-
-    isLoopSeamSeekInProgressRef.current = true;
+    prepareVideoForInlinePlayback(heroVideo);
 
     try {
-      loopVideo.currentTime = HERO_LOOP_RESTART_AT_SECONDS;
-      // Seek backward → video pauses. Always call play() to resume.
-      // Restart before the encoded end so the browser never paints the end boundary.
-      void loopVideo.play().catch(() => undefined);
+      heroVideo.currentTime = 0;
+      await heroVideo.play();
+      afterNextVideoFrame(heroVideo, () => {
+        setIsHeroVideoPlaying(true);
+
+        window.requestAnimationFrame(() => {
+          heroLoopVideoRef.current?.pause();
+          setIsHeroLoopVideoVisible(false);
+        });
+      });
     } catch {
-      // Keep the last rendered frame visible if the browser rejects the seek.
-    } finally {
-      window.setTimeout(() => {
-        isLoopSeamSeekInProgressRef.current = false;
-      }, 180);
+      // Keep the reverse video's last painted frame visible if forward fails.
     }
-  }, [isEntryVideoVisible, isHeroLoopVideoVisible]);
+  }, [heroVideoSrc, isEntryVideoVisible, prepareVideoForInlinePlayback]);
 
   const goToProjectOverview = useCallback(() => {
     if (scrollLockRef.current) return;
@@ -341,92 +277,8 @@ export default function HeroSection({
     router.push("/project-overview");
   }, [router]);
 
-  const openBookVisit = useCallback(() => {
-    window.dispatchEvent(new CustomEvent(TRIFECTA_LEAD_OPEN_EVENT));
-  }, []);
-
-  useEffect(() => {
-    const syncViewerTime = () => {
-      setViewerLocalTime(formatViewerLocalTime(new Date()));
-    };
-
-    syncViewerTime();
-    const intervalId = window.setInterval(syncViewerTime, 30_000);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, []);
-
-  useEffect(() => {
-    let isCancelled = false;
-
-    const fetchProjectConditions = async () => {
-      try {
-        const [weatherResponse, airQualityResponse] = await Promise.all([
-          fetch(PROJECT_WEATHER_API_URL),
-          fetch(PROJECT_AIR_QUALITY_API_URL),
-        ]);
-
-        if (!weatherResponse.ok || !airQualityResponse.ok) {
-          throw new Error("Unable to load project conditions.");
-        }
-
-        const weatherData =
-          (await weatherResponse.json()) as OpenMeteoWeatherResponse;
-        const airQualityData =
-          (await airQualityResponse.json()) as OpenMeteoAirQualityResponse;
-
-        if (isCancelled) {
-          return;
-        }
-
-        const temperatureValue = weatherData.current?.temperature_2m;
-        const aqiValue = airQualityData.current?.us_aqi;
-
-        setProjectTemperature(
-          typeof temperatureValue === "number"
-            ? `${Math.round(temperatureValue)}°C`
-            : "--°C",
-        );
-        setProjectAqi(
-          typeof aqiValue === "number" ? `AQI ${Math.round(aqiValue)}` : "AQI --",
-        );
-      } catch (error) {
-        console.error("Failed to fetch project conditions:", error);
-
-        if (!isCancelled) {
-          setProjectTemperature("--°C");
-          setProjectAqi("AQI --");
-        }
-      }
-    };
-
-    fetchProjectConditions();
-    const intervalId = window.setInterval(fetchProjectConditions, 15 * 60_000);
-
-    return () => {
-      isCancelled = true;
-      window.clearInterval(intervalId);
-    };
-  }, []);
-
   useEffect(() => {
     const heroVideo = heroVideoRef.current;
-    if (hasTemporaryStaticHeroImage) {
-      setVideoReady(true);
-      setIsHeroVideoPlaying(false);
-      onHeroVideoProgressChange?.(1);
-      return;
-    }
-
-    if (useStaticHeroIntro) {
-      setVideoReady(true);
-      setIsHeroVideoPlaying(false);
-      onHeroVideoProgressChange?.(1);
-      return;
-    }
-
     if (!heroVideo || !heroVideoSrc) {
       onHeroVideoProgressChange?.(0.08);
       return;
@@ -447,16 +299,10 @@ export default function HeroSection({
       setIsHeroVideoPlaying(true);
     };
 
-    const markHeroVideoNotPlaying = () => {
-      setIsHeroVideoPlaying(false);
-    };
-
     const reportProgress = () => {
       onHeroVideoProgressChange?.(getHeroVideoLoadProgress(heroVideo));
     };
 
-    setVideoReady(false);
-    setIsHeroVideoPlaying(false);
     prepareVideoForInlinePlayback(heroVideo);
     heroVideo.preload = "auto";
 
@@ -475,14 +321,12 @@ export default function HeroSection({
     const handleCanPlay = () => {
       reportProgress();
       markVideoReady();
-      void heroVideo.play().catch(() => undefined);
     };
 
     const handleLoadedData = () => {
       reportProgress();
       if (heroVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
         markVideoReady();
-        void heroVideo.play().catch(() => undefined);
       }
     };
 
@@ -518,15 +362,12 @@ export default function HeroSection({
     heroVideo.addEventListener("playing", handleStateCheck);
     heroVideo.addEventListener("playing", markHeroVideoPlaying);
     heroVideo.addEventListener("play", markHeroVideoPlaying);
-    heroVideo.addEventListener("pause", markHeroVideoNotPlaying);
-    heroVideo.addEventListener("ended", markHeroVideoNotPlaying);
     heroVideo.addEventListener("stalled", handleStateCheck);
     heroVideo.addEventListener("suspend", handleStateCheck);
     heroVideo.addEventListener("waiting", handleStateCheck);
     heroVideo.addEventListener("error", handleFallbackReady);
 
     heroVideo.load();
-    void heroVideo.play().catch(() => undefined);
 
     return () => {
       if (readyFrameId !== null) {
@@ -545,8 +386,6 @@ export default function HeroSection({
       heroVideo.removeEventListener("playing", handleStateCheck);
       heroVideo.removeEventListener("playing", markHeroVideoPlaying);
       heroVideo.removeEventListener("play", markHeroVideoPlaying);
-      heroVideo.removeEventListener("pause", markHeroVideoNotPlaying);
-      heroVideo.removeEventListener("ended", markHeroVideoNotPlaying);
       heroVideo.removeEventListener("stalled", handleStateCheck);
       heroVideo.removeEventListener("suspend", handleStateCheck);
       heroVideo.removeEventListener("waiting", handleStateCheck);
@@ -554,10 +393,8 @@ export default function HeroSection({
     };
   }, [
     heroVideoSrc,
-    hasTemporaryStaticHeroImage,
     onHeroVideoProgressChange,
     prepareVideoForInlinePlayback,
-    useStaticHeroIntro,
   ]);
 
   useEffect(() => {
@@ -568,8 +405,6 @@ export default function HeroSection({
     const heroVideo = heroVideoRef.current;
 
     if (
-      useStaticHeroIntro ||
-      hasTemporaryStaticHeroImage ||
       !heroVideo ||
       !heroVideoSrc ||
       !playIntroAnimation ||
@@ -625,40 +460,11 @@ export default function HeroSection({
     };
   }, [
     heroVideoSrc,
-    hasTemporaryStaticHeroImage,
     isEntryVideoVisible,
     isHeroLoopVideoVisible,
     playIntroAnimation,
     prepareVideoForInlinePlayback,
-    useStaticHeroIntro,
     videoReady,
-  ]);
-
-  useEffect(() => {
-    if (
-      !useStaticHeroIntro ||
-      hasTemporaryStaticHeroImage ||
-      !playIntroAnimation ||
-      isEntryVideoVisible ||
-      isHeroLoopVideoVisible
-    ) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      void startHeroLoopVideo();
-    }, STATIC_HERO_IMAGE_HOLD_MS);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [
-    isEntryVideoVisible,
-    isHeroLoopVideoVisible,
-    hasTemporaryStaticHeroImage,
-    playIntroAnimation,
-    startHeroLoopVideo,
-    useStaticHeroIntro,
   ]);
 
   useEffect(() => {
@@ -671,31 +477,6 @@ export default function HeroSection({
     prepareHeroLoopVideo(loopVideo);
     loopVideo.load();
   }, [heroLoopVideoSrc, prepareHeroLoopVideo]);
-
-  useEffect(() => {
-    if (!isHeroLoopVideoVisible || isEntryVideoVisible) {
-      return;
-    }
-
-    let frameId: number | null = null;
-
-    const checkLoopBoundary = () => {
-      handleHeroLoopPlaybackBoundary();
-      frameId = window.requestAnimationFrame(checkLoopBoundary);
-    };
-
-    frameId = window.requestAnimationFrame(checkLoopBoundary);
-
-    return () => {
-      if (frameId !== null) {
-        window.cancelAnimationFrame(frameId);
-      }
-    };
-  }, [
-    handleHeroLoopPlaybackBoundary,
-    isEntryVideoVisible,
-    isHeroLoopVideoVisible,
-  ]);
 
   useEffect(() => {
     router.prefetch("/master-plan");
@@ -761,60 +542,39 @@ export default function HeroSection({
       <div
         className={`absolute inset-0 z-0 bg-cover bg-center transition-opacity duration-700 ${
           isHeroVideoPlaying || isEntryVideoVisible || isHeroLoopVideoVisible
-            ? hasTemporaryStaticHeroImage
-              ? "opacity-100"
-              : "opacity-0"
+            ? "opacity-0"
             : "opacity-100"
         }`}
         style={{ backgroundImage: `url('${heroPosterImage}')` }}
       />
 
-      {temporaryStaticHeroImageSrc ? (
-        <Image
-          src={temporaryStaticHeroImageSrc}
-          alt=""
-          aria-hidden="true"
-          fill
-          priority
-          unoptimized
-          sizes="100vw"
-          className="pointer-events-none absolute inset-0 z-[1] h-full w-full object-cover"
-        />
-      ) : null}
-
-      {!useStaticHeroIntro ? (
-        <video
-          ref={heroVideoRef}
-          className={`hero-section-video pointer-events-none absolute inset-0 z-[2] h-full w-full object-cover transition-opacity duration-700 ${
-            isHeroVideoPlaying && !isEntryVideoVisible && !isHeroLoopVideoVisible
-              && !hasTemporaryStaticHeroImage
-              ? "opacity-100"
-              : "opacity-0"
-          }`}
-          src={heroVideoSrc ?? undefined}
-          autoPlay
-          muted
-          playsInline
-          preload="auto"
-          controls={false}
-          disablePictureInPicture
-          disableRemotePlayback
-          controlsList="nodownload noplaybackrate nofullscreen noremoteplayback"
-          onEnded={() => {
-            void startHeroLoopVideo();
-          }}
-        />
-      ) : null}
-
       <video
-        ref={heroLoopVideoRef}
-        autoPlay
+        ref={heroVideoRef}
+        className={`hero-section-video pointer-events-none absolute inset-0 z-[2] h-full w-full object-cover ${
+          isHeroVideoPlaying && !isEntryVideoVisible && !isHeroLoopVideoVisible
+            ? "opacity-100"
+            : "opacity-0"
+        }`}
+        src={heroVideoSrc ?? undefined}
         muted
         playsInline
         preload="auto"
-        className={`hero-section-video pointer-events-none absolute inset-0 z-[3] h-full w-full object-cover transition-opacity duration-500 ${
+        controls={false}
+        disablePictureInPicture
+        disableRemotePlayback
+        controlsList="nodownload noplaybackrate nofullscreen noremoteplayback"
+        onEnded={() => {
+          void startHeroLoopVideo();
+        }}
+      />
+
+      <video
+        ref={heroLoopVideoRef}
+        muted
+        playsInline
+        preload="auto"
+        className={`hero-section-video pointer-events-none absolute inset-0 z-[3] h-full w-full object-cover ${
           isHeroLoopVideoVisible && !isEntryVideoVisible
-            && !hasTemporaryStaticHeroImage
             ? "opacity-100"
             : "opacity-0"
         }`}
@@ -823,11 +583,8 @@ export default function HeroSection({
         disablePictureInPicture
         disableRemotePlayback
         controlsList="nodownload noplaybackrate nofullscreen noremoteplayback"
-        onTimeUpdate={handleHeroLoopPlaybackBoundary}
-        onCanPlay={() => {
-          const video = heroLoopVideoRef.current;
-          if (video && !video.paused) return;
-          void video?.play().catch(() => undefined);
+        onEnded={() => {
+          void startHeroVideo();
         }}
       />
 
@@ -875,77 +632,18 @@ export default function HeroSection({
           gap: 0.75rem;
           overflow: hidden;
           border-radius: 999vw;
-          border: 1px solid rgba(196, 178, 129, 0.44);
-          background:
-            radial-gradient(
-              120% 180% at 100% 50%,
-              rgba(241, 232, 201, 0.2) 0%,
-              rgba(241, 232, 201, 0.05) 16%,
-              rgba(241, 232, 201, 0) 36%
-            ),
-            linear-gradient(
-              180deg,
-              rgba(60, 93, 64, 0.98) 0%,
-              rgba(39, 67, 45, 0.995) 56%,
-              rgba(24, 45, 30, 0.998) 100%
-            );
-          box-shadow:
-            inset 0 1px 0 rgba(250, 245, 230, 0.18),
-            inset 0 -1px 0 rgba(8, 18, 11, 0.36),
-            0 16px 34px rgba(6, 14, 8, 0.26),
-            0 0 0 1px rgba(247, 231, 190, 0.05);
-          transition:
-            border-color 260ms ease,
-            box-shadow 260ms ease,
-            transform 260ms ease;
-        }
-
-        .hero-liquid-button::before {
-          content: "";
-          position: absolute;
-          inset: 1px;
-          border-radius: inherit;
-          background: linear-gradient(
-            180deg,
-            rgba(255, 255, 255, 0.12) 0%,
-            rgba(255, 255, 255, 0.03) 24%,
-            rgba(255, 255, 255, 0) 44%
-          );
-          pointer-events: none;
-          z-index: 0;
+          border: 1px solid rgba(116, 174, 94, 0.64);
+          background: rgba(5, 8, 6, 0.48);
+          box-shadow: none;
+          -webkit-backdrop-filter: blur(20px) saturate(1.16);
+          backdrop-filter: blur(20px) saturate(1.16);
+          transition: border-color 260ms ease;
         }
 
         .hero-liquid-button:hover {
-          border-color: rgba(210, 193, 145, 0.58);
-          box-shadow:
-            inset 0 1px 0 rgba(250, 245, 230, 0.22),
-            inset 0 -1px 0 rgba(8, 18, 11, 0.4),
-            0 20px 38px rgba(6, 14, 8, 0.3),
-            0 0 0 1px rgba(247, 231, 190, 0.08);
-          transform: translateY(-1px);
-        }
-
-        .hero-liquid-wave {
-          position: absolute;
-          left: 0;
-          top: 100%;
-          width: 100%;
-          height: 100%;
-          background:
-            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 120' preserveAspectRatio='none'%3E%3Cdefs%3E%3Cfilter id='g'%3E%3CfeGaussianBlur stdDeviation='3.2'/%3E%3C/filter%3E%3C/defs%3E%3Cpath d='M0 60C54 66 100 72 150 62C205 50 250 40 320 52V120H0Z' fill='%23ffffff' fill-opacity='0.72' filter='url(%23g)'/%3E%3Cpath d='M0 68C54 74 100 78 150 68C205 56 250 46 320 58V120H0Z' fill='%23eef7ef'/%3E%3C/svg%3E")
-              center top / 100% 100% no-repeat;
-          opacity: 0.98;
-          pointer-events: none;
-          transition: top 520ms cubic-bezier(0.22, 1, 0.36, 1);
-          animation: hero-wave 1.3s ease-in-out infinite alternate;
-          filter:
-            drop-shadow(0 0 14px rgba(255, 255, 255, 0.42))
-            drop-shadow(0 0 28px rgba(255, 255, 255, 0.22));
-          z-index: 1;
-        }
-
-        .hero-liquid-button:hover .hero-liquid-wave {
-          top: 8%;
+          border-color: rgba(143, 205, 117, 0.9);
+          background: rgba(5, 8, 6, 0.48);
+          box-shadow: none;
         }
 
         .hero-liquid-text {
@@ -968,17 +666,8 @@ export default function HeroSection({
         }
 
         .hero-liquid-button:hover .hero-liquid-text {
-          color: rgba(28, 56, 34, 0.96);
-          text-shadow: 0 1px 0 rgba(255, 255, 255, 0.18);
-        }
-
-        @keyframes hero-wave {
-          from {
-            transform: translateY(0);
-          }
-          to {
-            transform: translateY(-3px);
-          }
+          color: rgba(247, 250, 245, 1);
+          text-shadow: 0 1px 0 rgba(0, 0, 0, 0.34);
         }
 
         .hero-bottom-dock {
@@ -1105,65 +794,19 @@ export default function HeroSection({
         }
       `}</style>
 
-      <div className="pointer-events-none absolute inset-0 z-[6] bg-[radial-gradient(ellipse_at_18%_14%,rgba(255,248,230,0.26),transparent_28%),linear-gradient(180deg,rgba(6,17,8,0.08)_0%,rgba(8,18,10,0.12)_38%,rgba(7,15,9,0.38)_100%)]" />
+      <div
+        className="pointer-events-none absolute inset-0 z-[6]"
+        style={{
+          background: [
+            "linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.2) 15%, rgba(0,0,0,0) 36%)",
+            "radial-gradient(ellipse at 100% 100%, rgba(0,0,0,0.68) 0%, rgba(0,0,0,0.42) 30%, rgba(0,0,0,0.14) 53%, rgba(0,0,0,0) 72%)",
+            "linear-gradient(270deg, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0.2) 28%, rgba(0,0,0,0) 62%)",
+            "linear-gradient(0deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 36%)",
+          ].join(", "),
+        }}
+      />
 
       <DesktopSiteRail className="absolute left-5 top-1/2 z-20 -translate-y-1/2 2xl:left-7" />
-
-      <div className="absolute inset-x-4 top-5 z-20 flex flex-col items-center gap-2.5 sm:hidden">
-        <div className="flex w-full max-w-[20rem] items-center justify-center rounded-full border border-[#dfcfaa]/70 bg-[linear-gradient(180deg,rgba(251,249,241,0.96),rgba(241,237,226,0.92))] px-3 py-1.5 text-[#4d5f4d] shadow-[0_12px_28px_rgba(30,46,30,0.12),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-md">
-          <div className="flex items-center gap-2">
-            <SunMedium className="h-[0.85rem] w-[0.85rem] text-[#b29349]" strokeWidth={1.8} />
-            <span className="text-[0.76rem] font-medium">{viewerLocalTime}</span>
-          </div>
-          <span className="mx-3 h-6 w-px bg-[#dbcba7]" />
-          <div className="text-[0.76rem] font-semibold">{projectTemperature}</div>
-          <span className="mx-3 h-6 w-px bg-[#dbcba7]" />
-          <div className="min-w-0 text-[0.76rem] font-semibold text-[#415541]">
-            {projectAqi}
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={openBookVisit}
-          className="group relative inline-flex w-full max-w-[15.5rem] items-center justify-center gap-2 overflow-hidden rounded-full px-[1px] py-[1px] shadow-[0_16px_34px_rgba(23,43,24,0.18)]"
-        >
-          <span className="absolute inset-0 rounded-full bg-[linear-gradient(135deg,#f1e0ac_0%,#b68f43_44%,#f0ddb2_100%)]" />
-          <span className="relative inline-flex w-full items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#3f5d38_0%,#24422b_52%,#183224_100%)] px-4 py-2.5 text-[0.82rem] font-semibold text-[#f7f1de]">
-            <CalendarDays className="h-4 w-4 text-[#e3c57c]" strokeWidth={1.9} />
-            Book a Visit
-          </span>
-        </button>
-      </div>
-
-      <div className="absolute left-1/2 top-8 z-20 hidden -translate-x-1/2 sm:block">
-        <div className="flex items-center rounded-full border border-[#dfcfaa]/70 bg-[linear-gradient(180deg,rgba(251,249,241,0.96),rgba(241,237,226,0.92))] px-4 py-2 text-[#4d5f4d] shadow-[0_12px_28px_rgba(30,46,30,0.12),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-md">
-          <div className="flex items-center gap-2.5">
-            <SunMedium className="h-4 w-4 text-[#b29349]" strokeWidth={1.8} />
-            <span className="text-[0.88rem] font-medium">{viewerLocalTime}</span>
-          </div>
-          <span className="mx-4 h-7 w-px bg-[#dbcba7]" />
-          <div className="text-[0.88rem] font-semibold">{projectTemperature}</div>
-          <span className="mx-4 h-7 w-px bg-[#dbcba7]" />
-          <div className="text-[0.88rem] font-semibold text-[#415541]">
-            {projectAqi}
-          </div>
-        </div>
-      </div>
-
-      <div className="absolute right-8 top-8 z-20 hidden sm:block lg:right-12 xl:right-12 2xl:right-16">
-        <button
-          type="button"
-          onClick={openBookVisit}
-          className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full px-[1px] py-[1px] shadow-[0_16px_34px_rgba(23,43,24,0.18)]"
-        >
-          <span className="absolute inset-0 rounded-full bg-[linear-gradient(135deg,#f1e0ac_0%,#b68f43_44%,#f0ddb2_100%)]" />
-          <span className="relative inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#3f5d38_0%,#24422b_52%,#183224_100%)] px-5 py-2.5 text-[0.92rem] font-semibold text-[#f7f1de]">
-            <CalendarDays className="h-4 w-4 text-[#e3c57c]" strokeWidth={1.9} />
-            Book a Visit
-          </span>
-        </button>
-      </div>
 
       <div className="absolute inset-0 z-10 flex items-end justify-end px-6 pb-[calc(env(safe-area-inset-bottom)+2.25rem)] pt-28 sm:px-10 sm:pb-12 sm:pt-32 lg:px-16 xl:px-20 2xl:px-24">
         <motion.div
@@ -1176,7 +819,7 @@ export default function HeroSection({
         >
           <motion.div variants={contentItem}>
             <h1
-              className={`${heroSerif.className} text-[clamp(2.35rem,4.25vw,4.9rem)] font-normal uppercase leading-[0.98] tracking-[0.05em] text-[#f4f1e8] drop-shadow-[0_18px_46px_rgba(0,0,0,0.46)]`}
+              className={`${heroSerif.className} text-[clamp(2.35rem,4.25vw,4.9rem)] font-normal uppercase leading-[0.98] tracking-[0.05em] text-[#f4f1e8] opacity-85 drop-shadow-[0_18px_46px_rgba(0,0,0,0.46)]`}
             >
               <span className="block whitespace-nowrap">{line1}</span>
               <span className="mt-2 block whitespace-nowrap">
@@ -1190,7 +833,7 @@ export default function HeroSection({
 
           <motion.div
             variants={contentItem}
-            className="mt-4 ml-auto flex w-full max-w-[min(100%,32rem)] items-center text-[#d9c28a]/82"
+            className="mt-4 ml-auto flex w-full max-w-[min(100%,32rem)] items-center text-[#d9c28a]/70"
           >
             <span className="h-px flex-1 bg-gradient-to-r from-transparent via-[#d9c28a]/32 to-[#d9c28a]/58" />
             <span className="mx-3 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#dff2b8]/20 bg-white/[0.06] backdrop-blur-md">
@@ -1201,7 +844,7 @@ export default function HeroSection({
 
           <motion.p
             variants={contentItem}
-            className="mt-4 ml-auto max-w-[26rem] text-[0.95rem] leading-7 tracking-[0.035em] text-[#eef2e7]/78 sm:text-base"
+            className="mt-4 ml-auto max-w-[26rem] text-[0.95rem] leading-7 tracking-[0.035em] text-[#eef2e7]/70 sm:text-base"
           >
             A quiet address shaped by open sky, layered green, and everyday calm.
           </motion.p>
