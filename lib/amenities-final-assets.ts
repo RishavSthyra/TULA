@@ -1,6 +1,6 @@
-export const LOCAL_AMENITIES_FINAL_BASE_URL = "/AmenitiesFinalOptimized";
+export const LOCAL_AMENITIES_FINAL_BASE_URL = "/AmenitiesGoodExpoOptimized";
 export const CDN_AMENITIES_FINAL_BASE_URL =
-  "https://cdn.sthyra.com/TULA/Videos/AmenitiesFinalOptimized";
+  "https://cdn.sthyra.com/TULA/Videos/AmenitiesGoodExpoOptimized";
 
 function getConfiguredAmenitiesFinalBaseUrl() {
   return (

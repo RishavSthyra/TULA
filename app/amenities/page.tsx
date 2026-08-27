@@ -57,6 +57,22 @@ export default async function AmenitiesPage() {
         : item.videoSrc,
     })),
   };
+  const firstPreview = signedData.items[0]?.thumbnailSrc;
 
-  return <AmenitiesPageClient data={signedData} />;
+  return (
+    <>
+      <link rel="preconnect" href="https://cdn.sthyra.com" crossOrigin="anonymous" />
+      <link rel="dns-prefetch" href="https://cdn.sthyra.com" />
+      {firstPreview ? (
+        <link
+          rel="preload"
+          as="image"
+          href={firstPreview}
+          type="image/avif"
+          fetchPriority="high"
+        />
+      ) : null}
+      <AmenitiesPageClient data={signedData} />
+    </>
+  );
 }

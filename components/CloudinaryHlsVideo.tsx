@@ -17,6 +17,7 @@ type CloudinaryHlsVideoProps = Omit<
   src: string;
   fallbackSrc?: string;
   smoothStart?: boolean;
+  preferHighestQuality?: boolean;
 };
 
 function setRef(ref: Ref<HTMLVideoElement> | undefined, node: HTMLVideoElement | null) {
@@ -74,9 +75,54 @@ function getSmoothStartLevel(hls: Hls) {
   return bestLevel >= 0 ? bestLevel : 0;
 }
 
+function getHighestQualityLevel(hls: Hls) {
+  let highestLevel = 0;
+  let highestPixels = -1;
+
+  hls.levels.forEach((level, index) => {
+    const pixels = level.width * level.height;
+
+    if (pixels > highestPixels) {
+      highestLevel = index;
+      highestPixels = pixels;
+    }
+  });
+
+  return highestLevel;
+}
+
+function getNextLowerQualityLevel(hls: Hls, currentLevel: number) {
+  const current = hls.levels[currentLevel];
+
+  if (!current) {
+    return null;
+  }
+
+  const currentPixels = current.width * current.height;
+  let nextLevel: number | null = null;
+  let nextPixels = -1;
+
+  hls.levels.forEach((level, index) => {
+    const pixels = level.width * level.height;
+
+    if (pixels < currentPixels && pixels > nextPixels) {
+      nextLevel = index;
+      nextPixels = pixels;
+    }
+  });
+
+  return nextLevel;
+}
+
 const CloudinaryHlsVideo = forwardRef<HTMLVideoElement, CloudinaryHlsVideoProps>(
   function CloudinaryHlsVideo(
-    { src, fallbackSrc, smoothStart = false, ...videoProps },
+    {
+      src,
+      fallbackSrc,
+      smoothStart = false,
+      preferHighestQuality = false,
+      ...videoProps
+    },
     forwardedRef,
   ) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -105,8 +151,10 @@ const CloudinaryHlsVideo = forwardRef<HTMLVideoElement, CloudinaryHlsVideoProps>
 
       const hlsSrc = toHlsUrl(src);
       const directSrc = fallbackSrc ?? src;
+      const hasControlledStart = smoothStart || preferHighestQuality;
       let networkRecoveryAttempts = 0;
       let mediaRecoveryAttempts = 0;
+      let lockedQualityLevel: number | null = null;
       const releaseHls = () => {
         hlsRef.current?.destroy();
         hlsRef.current = null;
@@ -142,18 +190,28 @@ const CloudinaryHlsVideo = forwardRef<HTMLVideoElement, CloudinaryHlsVideoProps>
         hlsRef.current ??
         new Hls({
           enableWorker: true,
-          capLevelToPlayerSize: true,
+          // The amenities stage can be very wide but relatively short. Capping
+          // by the element height incorrectly selects 1080p on those displays.
+          capLevelToPlayerSize: !preferHighestQuality,
           maxDevicePixelRatio: 2,
-          autoStartLoad: !smoothStart,
-          testBandwidth: !smoothStart,
+          autoStartLoad: !hasControlledStart,
+          testBandwidth: !hasControlledStart,
           lowLatencyMode: false,
-          maxBufferLength: smoothStart ? 45 : 30,
-          maxMaxBufferLength: smoothStart ? 90 : 60,
+          maxBufferLength: hasControlledStart ? 45 : 30,
+          maxMaxBufferLength: hasControlledStart ? 90 : 60,
           backBufferLength: 30,
-          abrEwmaDefaultEstimate: smoothStart ? 6_500_000 : 2_000_000,
-          abrEwmaDefaultEstimateMax: smoothStart ? 20_000_000 : 8_000_000,
-          abrBandWidthFactor: smoothStart ? 0.82 : 0.95,
-          abrBandWidthUpFactor: smoothStart ? 0.62 : 0.7,
+          abrEwmaDefaultEstimate: preferHighestQuality
+            ? 24_000_000
+            : smoothStart
+              ? 6_500_000
+              : 2_000_000,
+          abrEwmaDefaultEstimateMax: preferHighestQuality
+            ? 32_000_000
+            : smoothStart
+              ? 20_000_000
+              : 8_000_000,
+          abrBandWidthFactor: hasControlledStart ? 0.82 : 0.95,
+          abrBandWidthUpFactor: hasControlledStart ? 0.62 : 0.7,
           fetchSetup: (context, initParams) =>
             new Request(context.url, {
               ...initParams,
@@ -163,21 +221,57 @@ const CloudinaryHlsVideo = forwardRef<HTMLVideoElement, CloudinaryHlsVideoProps>
 
       hlsRef.current = hls;
 
+      const fallBackOneQualityLevel = () => {
+        if (!preferHighestQuality || lockedQualityLevel === null) {
+          return false;
+        }
+
+        const nextLevel = getNextLowerQualityLevel(hls, lockedQualityLevel);
+
+        if (nextLevel === null) {
+          return false;
+        }
+
+        lockedQualityLevel = nextLevel;
+        hls.loadLevel = nextLevel;
+        hls.startLoad();
+        return true;
+      };
+
       const handleManifestParsed = () => {
-        if (!smoothStart) {
+        if (!hasControlledStart) {
           return;
         }
 
-        hls.startLevel = getSmoothStartLevel(hls);
+        const preferredLevel = preferHighestQuality
+          ? getHighestQualityLevel(hls)
+          : getSmoothStartLevel(hls);
+
+        hls.startLevel = preferredLevel;
+
+        if (preferHighestQuality) {
+          // Keep 4K selected instead of letting ABR immediately drop to 1440p.
+          // A real load failure or playback stall steps down one rendition.
+          lockedQualityLevel = preferredLevel;
+          hls.loadLevel = preferredLevel;
+        }
+
         hls.startLoad(-1);
       };
 
       const handleHlsError = (_event: string, data: ErrorData) => {
+        if (
+          data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR &&
+          fallBackOneQualityLevel()
+        ) {
+          return;
+        }
+
         if (!data.fatal) return;
 
         if (
           data.type === Hls.ErrorTypes.NETWORK_ERROR &&
-          networkRecoveryAttempts < 2
+          (fallBackOneQualityLevel() || networkRecoveryAttempts < 2)
         ) {
           networkRecoveryAttempts += 1;
           hls.startLoad();
@@ -224,7 +318,7 @@ const CloudinaryHlsVideo = forwardRef<HTMLVideoElement, CloudinaryHlsVideoProps>
         hls.off(Hls.Events.ERROR, handleHlsError);
         hls.off(Hls.Events.FRAG_BUFFERED, handleFragmentBuffered);
       };
-    }, [fallbackSrc, smoothStart, src]);
+    }, [fallbackSrc, preferHighestQuality, smoothStart, src]);
 
     return (
       <video

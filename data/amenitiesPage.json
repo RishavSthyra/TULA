@@ -1,32 +1,20 @@
 {
   "eyebrow": "Amenities",
-  "title": "Whispers of Trees Amenities",
+  "title": "Amenities",
   "description": "Explore the landscaped, wellness, recreation, and community spaces at Whispers of Trees.",
-  "summary": "Adaptive 4K amenity films with local previews and responsive streaming.",
+  "summary": "Adaptive 4K amenity films with high-resolution previews and responsive streaming.",
   "items": [
     {
-      "id": "amphitheater",
-      "title": "Amphitheater",
-      "category": "Community",
-      "shortDescription": "An open-air gathering space for performances, events, and shared evenings.",
-      "details": "A landscaped amphitheater designed for community events, cultural moments, and relaxed outdoor seating.",
-      "videoSrc": "/AmenitiesFinalOptimized/amphili-theater/master.m3u8",
-      "thumbnailSrc": "/AmenitiesFinalOptimized/amphili-theater/preview.avif",
-      "tags": ["Events", "Open Air", "Community"],
-      "statLabel": "Mood",
-      "statValue": "Lively"
-    },
-    {
-      "id": "budha-garden",
-      "title": "Buddha Garden",
-      "category": "Quiet Zone",
-      "shortDescription": "A calm garden setting for reflection, meditation, and slower moments.",
-      "details": "A peaceful landscape centred around the Buddha sculpture, natural textures, and layered greenery.",
-      "videoSrc": "/AmenitiesFinalOptimized/buddha/master.m3u8",
-      "thumbnailSrc": "/AmenitiesFinalOptimized/buddha/preview.avif",
-      "tags": ["Garden", "Quiet", "Meditation"],
-      "statLabel": "Pace",
-      "statValue": "Calm"
+      "id": "garden-walk",
+      "title": "Garden Walk",
+      "category": "Nature",
+      "shortDescription": "A richly planted walking route for fresh air and quiet everyday movement.",
+      "details": "A garden-led path framed by flowering trees, textured planting, and shaded pauses.",
+      "videoSrc": "/AmenitiesGoodExpoOptimized/garden/master.m3u8",
+      "thumbnailSrc": "/AmenitiesGoodExpoOptimized/garden/preview.avif",
+      "tags": ["Garden", "Walk", "Nature"],
+      "statLabel": "Feel",
+      "statValue": "Immersive"
     },
     {
       "id": "fountain",
@@ -34,23 +22,11 @@
       "category": "Landscape",
       "shortDescription": "A sculptural water feature surrounded by immersive planting and shaded paths.",
       "details": "A landscape focal point that brings water, stone, and garden textures together.",
-      "videoSrc": "/AmenitiesFinalOptimized/fountain/master.m3u8",
-      "thumbnailSrc": "/AmenitiesFinalOptimized/fountain/preview.avif",
+      "videoSrc": "/AmenitiesGoodExpoOptimized/fountain/master.m3u8",
+      "thumbnailSrc": "/AmenitiesGoodExpoOptimized/fountain/preview.avif",
       "tags": ["Water", "Landscape", "Nature"],
       "statLabel": "Tone",
       "statValue": "Refreshing"
-    },
-    {
-      "id": "garden-walk",
-      "title": "Garden Walk",
-      "category": "Nature",
-      "shortDescription": "A richly planted walking route for fresh air and quiet everyday movement.",
-      "details": "A garden-led path framed by flowering trees, textured planting, and shaded pauses.",
-      "videoSrc": "/AmenitiesFinalOptimized/garden-walk/master.m3u8",
-      "thumbnailSrc": "/AmenitiesFinalOptimized/garden-walk/preview.avif",
-      "tags": ["Garden", "Walk", "Nature"],
-      "statLabel": "Feel",
-      "statValue": "Immersive"
     },
     {
       "id": "gazebo",
@@ -58,8 +34,8 @@
       "category": "Leisure",
       "shortDescription": "A sheltered garden lounge for conversations, rest, and relaxed evenings.",
       "details": "A sculptural pavilion with comfortable seating set within the landscaped garden.",
-      "videoSrc": "/AmenitiesFinalOptimized/gazebo/master.m3u8",
-      "thumbnailSrc": "/AmenitiesFinalOptimized/gazebo/preview.avif",
+      "videoSrc": "/AmenitiesGoodExpoOptimized/gazebo/master.m3u8",
+      "thumbnailSrc": "/AmenitiesGoodExpoOptimized/gazebo/preview.avif",
       "tags": ["Seating", "Garden", "Leisure"],
       "statLabel": "Feel",
       "statValue": "Relaxed"
@@ -70,8 +46,8 @@
       "category": "Fitness",
       "shortDescription": "A premium indoor fitness space for strength, conditioning, and daily movement.",
       "details": "A fully equipped gym designed for focused training in a refined indoor environment.",
-      "videoSrc": "/AmenitiesFinalOptimized/gym/master.m3u8",
-      "thumbnailSrc": "/AmenitiesFinalOptimized/gym/preview.avif",
+      "videoSrc": "/AmenitiesGoodExpoOptimized/gym/master.m3u8",
+      "thumbnailSrc": "/AmenitiesGoodExpoOptimized/gym/preview.avif",
       "tags": ["Fitness", "Indoor", "Wellness"],
       "statLabel": "Energy",
       "statValue": "Active"
@@ -82,8 +58,8 @@
       "category": "Family",
       "shortDescription": "A colourful and welcoming play zone designed for younger residents.",
       "details": "A landscaped children’s area supporting active play, easy supervision, and everyday fun.",
-      "videoSrc": "/AmenitiesFinalOptimized/kids-play-area/master.m3u8",
-      "thumbnailSrc": "/AmenitiesFinalOptimized/kids-play-area/preview.avif",
+      "videoSrc": "/AmenitiesGoodExpoOptimized/play/master.m3u8",
+      "thumbnailSrc": "/AmenitiesGoodExpoOptimized/play/preview.avif",
       "tags": ["Kids", "Active", "Family"],
       "statLabel": "Use",
       "statValue": "Daily"
@@ -94,8 +70,8 @@
       "category": "Pet Friendly",
       "shortDescription": "A dedicated outdoor play space for pets to move, explore, and socialise.",
       "details": "A secure pet-friendly landscape with agility features and room for active play.",
-      "videoSrc": "/AmenitiesFinalOptimized/pet/master.m3u8",
-      "thumbnailSrc": "/AmenitiesFinalOptimized/pet/preview.avif",
+      "videoSrc": "/AmenitiesGoodExpoOptimized/pet-park/master.m3u8",
+      "thumbnailSrc": "/AmenitiesGoodExpoOptimized/pet-park/preview.avif",
       "tags": ["Pets", "Outdoor", "Play"],
       "statLabel": "Mode",
       "statValue": "Play"
@@ -106,11 +82,35 @@
       "category": "Entertainment",
       "shortDescription": "An intimate private cinema for films, screenings, and shared entertainment.",
       "details": "A comfortable indoor theater with tiered lounge seating and a premium viewing atmosphere.",
-      "videoSrc": "/AmenitiesFinalOptimized/theater/master.m3u8",
-      "thumbnailSrc": "/AmenitiesFinalOptimized/theater/preview.avif",
+      "videoSrc": "/AmenitiesGoodExpoOptimized/theater/master.m3u8",
+      "thumbnailSrc": "/AmenitiesGoodExpoOptimized/theater/preview.avif",
       "tags": ["Cinema", "Indoor", "Entertainment"],
       "statLabel": "Mood",
       "statValue": "Cinematic"
+    },
+    {
+      "id": "zen-garden",
+      "title": "Zen Garden",
+      "category": "Quiet Zone",
+      "shortDescription": "A calm garden setting for reflection, meditation, and slower moments.",
+      "details": "A peaceful landscape shaped by natural textures, layered greenery, and quiet seating.",
+      "videoSrc": "/AmenitiesGoodExpoOptimized/zen-garden/master.m3u8",
+      "thumbnailSrc": "/AmenitiesGoodExpoOptimized/zen-garden/preview.avif",
+      "tags": ["Garden", "Quiet", "Meditation"],
+      "statLabel": "Pace",
+      "statValue": "Calm"
+    },
+    {
+      "id": "amphitheater",
+      "title": "Amphitheater",
+      "category": "Community",
+      "shortDescription": "An open-air gathering space for performances, events, and shared evenings.",
+      "details": "A landscaped amphitheater designed for community events, cultural moments, and relaxed outdoor seating.",
+      "videoSrc": "/AmenitiesGoodExpoOptimized/amphi-theater/master.m3u8",
+      "thumbnailSrc": "/AmenitiesGoodExpoOptimized/amphi-theater/preview.avif",
+      "tags": ["Events", "Open Air", "Community"],
+      "statLabel": "Mood",
+      "statValue": "Lively"
     }
   ]
 }

@@ -148,7 +148,7 @@ function AmenityThumbnail({
     return (
       <span
         aria-hidden="true"
-        className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_65%_26%,rgba(219,191,112,0.23),transparent_38%),linear-gradient(135deg,#263229,#0a110d)] text-2xl text-[#e5d39b]"
+        className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_65%_26%,rgba(120,201,149,0.16),transparent_38%),linear-gradient(135deg,#111713,#030504)] text-2xl text-white/85"
       >
         {amenity.title.slice(0, 1).toUpperCase()}
       </span>
@@ -238,10 +238,10 @@ function FilmstripThumbnail({
               ? `Currently showing ${item.amenity.title}`
               : `Open ${item.amenity.title}`
           }
-          className={`group relative block shrink-0 overflow-hidden rounded-[7px] bg-[#101712] text-left transition-[width,height,border-color,box-shadow] duration-[580ms] ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e4c56e] ${sizeClass} ${
+          className={`group relative block shrink-0 overflow-hidden rounded-[7px] bg-black/80 text-left transition-[width,height,border-color,box-shadow] duration-[580ms] ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#78c995] ${sizeClass} ${
             isActive
-              ? "z-10 border border-[#e8ca72]/95 shadow-[0_0_0_1px_rgba(239,213,132,0.18),0_16px_34px_rgba(0,0,0,0.46),0_0_24px_rgba(220,188,95,0.13)]"
-              : "border border-white/10 shadow-[0_12px_26px_rgba(0,0,0,0.32)]"
+              ? "z-10 border border-[#78c995]/90 shadow-[0_0_0_1px_rgba(120,201,149,0.12),0_16px_34px_rgba(0,0,0,0.52),0_0_22px_rgba(120,201,149,0.14)]"
+              : "border border-white/14 shadow-[0_12px_26px_rgba(0,0,0,0.38)]"
           }`}
         >
           <AmenityThumbnail amenity={item.amenity} priority={isActive} />
@@ -290,7 +290,7 @@ const VideoPlayerControls = memo(function VideoPlayerControls({
       const progressPercent = progress * 100;
       seekInputRef.current.max = String(Math.max(safeTotal, 0.01));
       seekInputRef.current.value = String(safeTime);
-      seekInputRef.current.style.background = `linear-gradient(to right, #d7b767 0%, #d7b767 ${progressPercent}%, rgba(255,255,255,0.16) ${progressPercent}%, rgba(255,255,255,0.16) 100%) center / 100% 2px no-repeat`;
+      seekInputRef.current.style.background = `linear-gradient(to right, #050706 0%, #050706 ${progressPercent}%, rgba(0,0,0,0.34) ${progressPercent}%, rgba(0,0,0,0.34) 100%) center / 100% 2px no-repeat`;
     }
   }, []);
 
@@ -437,7 +437,7 @@ const VideoPlayerControls = memo(function VideoPlayerControls({
         onClick={onTogglePlayback}
         disabled={!hasVideo}
         aria-label={isPlaying ? "Pause video" : "Play video"}
-        className="grid h-[48px] w-[48px] place-items-center rounded-full border border-[#e7d397]/[0.52] bg-[#0d130e]/[0.25] text-[#ead59a] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl transition hover:border-[#f5e09e]/[0.85] hover:bg-[#182118]/[0.50] disabled:cursor-default disabled:opacity-[0.45] sm:h-[56px] sm:w-[56px]"
+        className="grid h-[48px] w-[48px] place-items-center rounded-full border border-white/15 bg-black/60 text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_34px_rgba(0,0,0,0.3)] backdrop-blur-xl transition hover:border-[#78c995]/75 hover:bg-black/75 hover:text-[#8bd3a7] disabled:cursor-default disabled:opacity-[0.45] sm:h-[56px] sm:w-[56px]"
       >
         {isPlaying ? (
           <Pause className="h-5 w-5 fill-current stroke-[1.5]" aria-hidden="true" />
@@ -446,20 +446,20 @@ const VideoPlayerControls = memo(function VideoPlayerControls({
         )}
       </button>
 
-      <div className="hidden items-center gap-2 whitespace-nowrap text-[14px] tabular-nums text-[#f7efd8]/[0.92] sm:flex">
+      <div className="hidden items-center gap-2 whitespace-nowrap text-[14px] tabular-nums text-white/90 sm:flex">
         <span>{formatTime(currentTime)}</span>
-        <span className="text-[#f7efd8]/[0.30]">/</span>
-        <span className="text-[#f7efd8]/[0.42]">{formatTime(duration)}</span>
+        <span className="text-white/30">/</span>
+        <span className="text-white/45">{formatTime(duration)}</span>
       </div>
 
       <div className="relative h-6 min-w-0">
         <span
           aria-hidden="true"
-          className="absolute left-0 top-1/2 z-[1] h-[2px] w-full -translate-y-1/2 overflow-hidden rounded-full bg-white/[0.16]"
+          className="absolute left-0 top-1/2 z-[1] h-[2px] w-full -translate-y-1/2 overflow-hidden rounded-full bg-black/35"
         >
           <span
             ref={progressFillRef}
-            className="absolute inset-0 origin-left scale-x-0 bg-[#d7b767] will-change-transform"
+            className="absolute inset-0 origin-left scale-x-0 bg-[#050706] will-change-transform"
           />
         </span>
         <input
@@ -472,7 +472,7 @@ const VideoPlayerControls = memo(function VideoPlayerControls({
           onChange={handleSeek}
           disabled={!hasVideo}
           aria-label="Video progress"
-          className="absolute inset-0 z-[2] h-full w-full cursor-pointer appearance-none bg-transparent disabled:cursor-default disabled:opacity-[0.45] [&::-moz-range-thumb]:h-[10px] [&::-moz-range-thumb]:w-[10px] [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-[#d9b968] [&::-moz-range-thumb]:shadow-[0_0_0_4px_rgba(215,183,103,0.08),0_0_14px_rgba(215,183,103,0.34)] [&::-moz-range-track]:h-[2px] [&::-moz-range-track]:bg-transparent [&::-webkit-slider-runnable-track]:h-[2px] [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:mt-[-4px] [&::-webkit-slider-thumb]:h-[10px] [&::-webkit-slider-thumb]:w-[10px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#d9b968] [&::-webkit-slider-thumb]:shadow-[0_0_0_4px_rgba(215,183,103,0.08),0_0_14px_rgba(215,183,103,0.34)]"
+          className="absolute inset-0 z-[2] h-full w-full cursor-pointer appearance-none bg-transparent disabled:cursor-default disabled:opacity-[0.45] [&::-moz-range-thumb]:h-[10px] [&::-moz-range-thumb]:w-[10px] [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-white/45 [&::-moz-range-thumb]:bg-[#050706] [&::-moz-range-thumb]:shadow-[0_0_0_4px_rgba(0,0,0,0.12),0_0_12px_rgba(0,0,0,0.34)] [&::-moz-range-track]:h-[2px] [&::-moz-range-track]:bg-transparent [&::-webkit-slider-runnable-track]:h-[2px] [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:mt-[-4px] [&::-webkit-slider-thumb]:h-[10px] [&::-webkit-slider-thumb]:w-[10px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white/45 [&::-webkit-slider-thumb]:bg-[#050706] [&::-webkit-slider-thumb]:shadow-[0_0_0_4px_rgba(0,0,0,0.12),0_0_12px_rgba(0,0,0,0.34)]"
         />
       </div>
 
@@ -481,7 +481,7 @@ const VideoPlayerControls = memo(function VideoPlayerControls({
         onClick={onToggleMuted}
         disabled={!hasVideo}
         aria-label={isMuted ? "Unmute video" : "Mute video"}
-        className="grid h-[48px] w-[48px] place-items-center rounded-full border border-[#e7d397]/[0.52] bg-[#0d130e]/[0.25] text-[#ead59a] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl transition hover:border-[#f5e09e]/[0.85] hover:bg-[#182118]/[0.50] disabled:cursor-default disabled:opacity-[0.45] sm:h-[56px] sm:w-[56px]"
+        className="grid h-[48px] w-[48px] place-items-center rounded-full border border-white/15 bg-black/60 text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_34px_rgba(0,0,0,0.3)] backdrop-blur-xl transition hover:border-[#78c995]/75 hover:bg-black/75 hover:text-[#8bd3a7] disabled:cursor-default disabled:opacity-[0.45] sm:h-[56px] sm:w-[56px]"
       >
         {isMuted ? (
           <VolumeX className="h-5 w-5 stroke-[1.6]" aria-hidden="true" />
@@ -721,6 +721,29 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
   }, [activeId]);
 
   useEffect(() => {
+    const previewImages = data.items.flatMap((item, index) => {
+      if (!hasMediaSource(item.thumbnailSrc)) {
+        return [];
+      }
+
+      const image = new window.Image();
+      image.decoding = "async";
+      image.fetchPriority = index === 0 ? "high" : index < 3 ? "auto" : "low";
+      image.src = item.thumbnailSrc;
+      void image.decode().catch(() => undefined);
+
+      return [image];
+    });
+
+    return () => {
+      previewImages.forEach((image) => {
+        image.onload = null;
+        image.onerror = null;
+      });
+    };
+  }, [data.items]);
+
+  useEffect(() => {
     const previousHtmlOverflow = document.documentElement.style.overflow;
     const previousBodyOverflow = document.body.style.overflow;
     const previousBodyHeight = document.body.style.height;
@@ -851,7 +874,7 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
 
   if (!activeAmenity || !displayedAmenity) {
     return (
-      <main className="grid min-h-[100dvh] place-items-center bg-[#050907] text-[#f7efd8]">
+      <main className="grid min-h-[100dvh] place-items-center bg-[#050706] text-white">
         <p>No amenities found.</p>
       </main>
     );
@@ -865,7 +888,7 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
     <main
       ref={stageRef}
       onPointerDown={revealCompactUi}
-      className={`${interfaceSans.className} relative isolate h-[100dvh] min-h-[100dvh] w-full overflow-hidden bg-[#050907] text-[#f7efd8]`}
+      className={`${interfaceSans.className} relative isolate h-[100dvh] min-h-[100dvh] w-full overflow-hidden bg-[#050706] text-white`}
     >
       {/* Full-screen amenity media */}
       <div className="absolute inset-0" aria-hidden="true">
@@ -885,7 +908,7 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
             loop
             playsInline
             preload="auto"
-            smoothStart
+            preferHighestQuality
             onPlay={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
           />
@@ -901,8 +924,8 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
             className="object-cover object-center"
           />
         ) : (
-          <div className="grid h-full w-full place-items-center bg-[radial-gradient(circle_at_72%_26%,rgba(178,153,83,0.18),transparent_31%),linear-gradient(135deg,#142118,#050907_58%)]">
-            <span className={`${displaySerif.className} text-5xl text-[#f3e7c4]/80 sm:text-8xl`}>
+          <div className="grid h-full w-full place-items-center bg-[radial-gradient(circle_at_72%_26%,rgba(120,201,149,0.12),transparent_31%),linear-gradient(135deg,#101511,#030504_58%)]">
+            <span className={`${displaySerif.className} text-5xl text-white/80 sm:text-8xl`}>
               {displayedAmenity.title}
             </span>
           </div>
@@ -911,7 +934,7 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
 
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[38%] bg-[linear-gradient(180deg,transparent_0%,rgba(2,5,3,0.06)_30%,rgba(2,5,3,0.42)_72%,rgba(2,5,3,0.68)_100%)]"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[34%] bg-[linear-gradient(180deg,transparent_0%,rgba(2,4,3,0.05)_30%,rgba(2,4,3,0.38)_68%,rgba(2,4,3,0.68)_100%)]"
       />
 
       {/* Header */}
@@ -931,14 +954,14 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
             loading="eager"
             decoding="async"
             draggable={false}
-            className="h-[2.75rem] w-auto max-w-[8.5rem] select-none object-contain drop-shadow-[0_5px_18px_rgba(0,0,0,0.4)] sm:h-[3.75rem] sm:max-w-[11rem]"
+            className="h-[2.75rem] w-auto max-w-[8.5rem] select-none object-contain brightness-0 invert opacity-95 drop-shadow-[0_5px_18px_rgba(0,0,0,0.4)] sm:h-[3.75rem] sm:max-w-[11rem]"
           />
         </button>
 
-        <span className="mx-4 h-[40px] w-px bg-[linear-gradient(180deg,transparent,rgba(234,217,166,0.46),transparent)] sm:ml-[26px] sm:mr-[38px] sm:h-[51px]" />
+        <span className="mx-4 h-[40px] w-px bg-[linear-gradient(180deg,transparent,rgba(255,255,255,0.28),transparent)] sm:ml-[26px] sm:mr-[38px] sm:h-[51px]" />
 
         <span
-          className={`${displaySerif.className} hidden text-[28px] italic tracking-[0.015em] text-[#d9bd73] drop-shadow-[0_4px_18px_rgba(0,0,0,0.38)] sm:block lg:text-[32px]`}
+          className={`${displaySerif.className} hidden text-[28px] tracking-[0.015em] text-white/92 drop-shadow-[0_4px_18px_rgba(0,0,0,0.5)] sm:block lg:text-[32px]`}
         >
           {data.title || "Amenities"}
         </span>
@@ -948,7 +971,7 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
             type="button"
             onClick={() => router.push("/master-plan")}
             aria-label="View masterplan"
-            className="inline-flex h-[44px] items-center gap-2 rounded-full border border-[#e7d397]/50 bg-[#0d130e]/[0.25] px-4 text-[13px] font-medium text-[#ead59a] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_34px_rgba(0,0,0,0.21)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-[#f5e09e]/80 hover:bg-[#182118]/[0.50] sm:h-[48px] sm:gap-2.5 sm:px-[21px] sm:text-[14px]"
+            className="inline-flex h-[44px] items-center gap-2 rounded-full border border-white/15 bg-black/60 px-4 text-[13px] font-medium text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_34px_rgba(0,0,0,0.3)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-[#78c995]/75 hover:bg-black/75 hover:text-[#8bd3a7] sm:h-[48px] sm:gap-2.5 sm:px-[21px] sm:text-[14px]"
           >
             <Map className="h-[18px] w-[18px] sm:h-5 sm:w-5" aria-hidden="true" />
             <span className="hidden sm:inline">View Masterplan</span>
@@ -958,7 +981,7 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
             type="button"
             onClick={toggleFullscreen}
             aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-            className="grid h-[44px] w-[44px] place-items-center rounded-full border border-[#e7d397]/50 bg-[#0d130e]/[0.25] text-[#ead59a] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_34px_rgba(0,0,0,0.21)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-[#f5e09e]/80 hover:bg-[#182118]/[0.50] sm:h-[48px] sm:w-[48px]"
+            className="grid h-[44px] w-[44px] place-items-center rounded-full border border-white/15 bg-black/60 text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_34px_rgba(0,0,0,0.3)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-[#78c995]/75 hover:bg-black/75 hover:text-[#8bd3a7] sm:h-[48px] sm:w-[48px]"
           >
             {isFullscreen ? (
               <Minimize2 className="h-[18px] w-[18px]" aria-hidden="true" />
@@ -998,7 +1021,7 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
           type="button"
           onClick={() => goToRelativeAmenity(-1)}
           aria-label="Previous carousel item"
-          className="absolute left-1/2 top-[62px] z-20 -ml-4 grid h-8 w-8 -translate-x-[190px] place-items-center bg-transparent text-[#e6c86e] transition hover:scale-110 hover:text-[#ffe6a0] sm:-translate-x-[515px] xl:-translate-x-[565px]"
+          className="absolute left-1/2 top-[62px] z-20 -ml-4 grid h-8 w-8 -translate-x-[190px] place-items-center bg-transparent text-white/75 transition hover:scale-110 hover:text-[#8bd3a7] sm:-translate-x-[515px] xl:-translate-x-[565px]"
         >
           <ChevronLeft className="h-[22px] w-[22px] stroke-[1.65]" aria-hidden="true" />
         </button>
@@ -1026,19 +1049,19 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
           type="button"
           onClick={() => goToRelativeAmenity(1)}
           aria-label="Next carousel item"
-          className="absolute left-1/2 top-[62px] z-20 -ml-4 grid h-8 w-8 translate-x-[190px] place-items-center bg-transparent text-[#e6c86e] transition hover:scale-110 hover:text-[#ffe6a0] sm:translate-x-[515px] xl:translate-x-[565px]"
+          className="absolute left-1/2 top-[62px] z-20 -ml-4 grid h-8 w-8 translate-x-[190px] place-items-center bg-transparent text-white/75 transition hover:scale-110 hover:text-[#8bd3a7] sm:translate-x-[515px] xl:translate-x-[565px]"
         >
           <ChevronRight className="h-[22px] w-[22px] stroke-[1.65]" aria-hidden="true" />
         </button>
 
         <div className="absolute left-1/2 top-[134px] -translate-x-1/2 text-center drop-shadow-[0_4px_16px_rgba(0,0,0,0.72)] sm:top-[136px]">
-          <p className="text-[10px] font-medium tracking-[0.12em] text-[#e8d18c]/[0.90] sm:text-[11px]">
+          <p className="text-[10px] font-medium tracking-[0.12em] text-white/72 sm:text-[11px]">
             {activePosition}
-            <span className="mx-2 text-[#f5ead2]/[0.35]">/</span>
+            <span className="mx-2 text-white/30">/</span>
             {totalPosition}
           </p>
           <p
-            className="mt-[2px] max-w-[320px] truncate text-[17px] font-medium leading-none text-[#f5ead1] sm:text-[19px]"
+            className="mt-[2px] max-w-[320px] truncate text-[17px] font-medium leading-none text-white/94 sm:text-[19px]"
           >
             {activeAmenity.title}
           </p>
@@ -1055,9 +1078,9 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
                 onClick={() => selectAmenity(item.id)}
                 aria-label={`Open ${item.title}`}
                 aria-current={isActive ? "true" : undefined}
-                className={`h-[3px] rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#f0d27d] ${
+                className={`h-[3px] rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#78c995] ${
                   isActive
-                    ? "w-[16px] bg-[#e6c86d] shadow-[0_0_10px_rgba(230,200,109,0.5)]"
+                    ? "w-[16px] bg-[#78c995] shadow-[0_0_10px_rgba(120,201,149,0.46)]"
                     : "w-[13px] bg-white/[0.16] hover:bg-white/[0.32]"
                 }`}
               />

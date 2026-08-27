@@ -41,13 +41,18 @@ function buildThreeLookTargetMm(trial: TrialData) {
 
 function buildCameraQuaternionFromThreeDsMaxRotation(
   rotationDegrees: TrialCameraStop["rotationDegrees"],
+  preserveLegacyFrameZeroOrientation = false,
 ) {
+  // 3ds Max applies the Z/world yaw around the already-pitched camera. Three's
+  // equivalent Euler composition is ZYX; XYZ incorrectly turns that pitch
+  // into roll as soon as the camera yaw moves away from zero.
+  const rotationOrder = preserveLegacyFrameZeroOrientation ? "XYZ" : "ZYX";
   const maxQuaternion = new Quaternion().setFromEuler(
     new Euler(
       (rotationDegrees.x * Math.PI) / 180,
       (rotationDegrees.y * Math.PI) / 180,
       (rotationDegrees.z * Math.PI) / 180,
-      "XYZ",
+      rotationOrder,
     ),
   );
   const maxToThreeBasis = new Matrix4().set(
@@ -70,7 +75,11 @@ function buildCameraQuaternionFromThreeDsMaxRotation(
     -Math.PI / 2,
   );
 
-  return cameraForwardAxisCorrection.multiply(basisQuaternion).normalize();
+  // Keep the approved frame-zero camera exactly as it was. For the remaining
+  // stops, the camera-axis correction is local and must be post-multiplied.
+  return preserveLegacyFrameZeroOrientation
+    ? cameraForwardAxisCorrection.multiply(basisQuaternion).normalize()
+    : basisQuaternion.multiply(cameraForwardAxisCorrection).normalize();
 }
 
 function buildCameraConfig(
@@ -79,8 +88,10 @@ function buildCameraConfig(
 ): MasterPlanCameraConfig {
   const position = toThreeWorldVectorMm(cameraStop.position);
   const target = buildThreeLookTargetMm(trial);
-  const rotationQuaternion =
-    buildCameraQuaternionFromThreeDsMaxRotation(cameraStop.rotationDegrees);
+  const rotationQuaternion = buildCameraQuaternionFromThreeDsMaxRotation(
+    cameraStop.rotationDegrees,
+    cameraStop.frame === 0,
+  );
   const fallbackQuaternion = new Quaternion().setFromRotationMatrix(
     new Matrix4().lookAt(position, target, new Vector3(0, 1, 0)).invert(),
   );
