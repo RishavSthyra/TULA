@@ -20,7 +20,7 @@ Restrict apartment interaction at masterplan hotspots A1–A4 so only the explic
 ### A2
 
 - Tower C: 05
-- Tower D: 03, 04
+- Tower D: 02, 03
 
 ### A3
 
