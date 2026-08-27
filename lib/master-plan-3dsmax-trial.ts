@@ -6,6 +6,10 @@ import {
 } from "three";
 import trialData from "@/data/master-plan-3dsmax-trial.json";
 import { MASTER_PLAN_SCRUB_VIDEO_FPS } from "@/data/masterPlanFrameCdnUrls";
+import {
+  MASTER_PLAN_HOTSPOT_FRAMES,
+  MASTER_PLAN_HOTSPOT_KEYS,
+} from "@/lib/master-plan-hotspots";
 import type {
   MasterPlanCameraConfig,
   MasterPlanDeveloperConfig,
@@ -13,9 +17,8 @@ import type {
 } from "@/types/developer-config";
 
 type TrialData = typeof trialData;
+type TrialCameraStop = TrialData["cameraStops"][number];
 
-const MASTER_PLAN_HOTSPOT_KEYS = ["A1", "A2", "A3", "A4", "A5", "A6"] as const;
-const MASTER_PLAN_HOTSPOT_FRAMES = [1, 61, 121, 181, 241, 301] as const;
 const GLB_DUMMY_1_ANCHOR_MM = new Vector3(90098, 1284, -57590);
 const GLB_DUMMY_2_ANCHOR_MM = new Vector3(-72062.390625, 1284, -77919.2578125);
 
@@ -36,13 +39,9 @@ function buildThreeLookTargetMm(trial: TrialData) {
   return toThreeWorldVectorMm(trial.camera.target);
 }
 
-function buildCameraQuaternionFromThreeDsMaxRotation(trial: TrialData) {
-  const rotationDegrees = trial.camera.rotationDegrees;
-
-  if (!rotationDegrees) {
-    return null;
-  }
-
+function buildCameraQuaternionFromThreeDsMaxRotation(
+  rotationDegrees: TrialCameraStop["rotationDegrees"],
+) {
   const maxQuaternion = new Quaternion().setFromEuler(
     new Euler(
       (rotationDegrees.x * Math.PI) / 180,
@@ -76,11 +75,12 @@ function buildCameraQuaternionFromThreeDsMaxRotation(trial: TrialData) {
 
 function buildCameraConfig(
   trial: TrialData,
+  cameraStop: TrialCameraStop,
 ): MasterPlanCameraConfig {
-  const position = toThreeWorldVectorMm(trial.camera.position);
+  const position = toThreeWorldVectorMm(cameraStop.position);
   const target = buildThreeLookTargetMm(trial);
   const rotationQuaternion =
-    buildCameraQuaternionFromThreeDsMaxRotation(trial);
+    buildCameraQuaternionFromThreeDsMaxRotation(cameraStop.rotationDegrees);
   const fallbackQuaternion = new Quaternion().setFromRotationMatrix(
     new Matrix4().lookAt(position, target, new Vector3(0, 1, 0)).invert(),
   );
@@ -146,8 +146,18 @@ function buildTrialTowerTransform(trial: TrialData) {
 }
 
 export function getThreeDsMaxMasterPlanConfig(): MasterPlanDeveloperConfig {
-  const camera = buildCameraConfig(trialData);
   const trialTransform = buildTrialTowerTransform(trialData);
+  const cameras = Object.fromEntries(
+    MASTER_PLAN_HOTSPOT_KEYS.map((key, index) => {
+      const cameraStop = trialData.cameraStops[index];
+
+      if (!cameraStop) {
+        throw new Error(`Missing 3ds Max camera stop for ${key}.`);
+      }
+
+      return [key, buildCameraConfig(trialData, cameraStop)];
+    }),
+  ) as Record<(typeof MASTER_PLAN_HOTSPOT_KEYS)[number], MasterPlanCameraConfig>;
   const towerWorldDummies = {
     dummy1: trialData.dummy,
     dummy2: trialData.secondaryDummy,
@@ -165,20 +175,16 @@ export function getThreeDsMaxMasterPlanConfig(): MasterPlanDeveloperConfig {
     aspectRatio: trialData.video.width / trialData.video.height,
     hotspotFrames: [...MASTER_PLAN_HOTSPOT_FRAMES],
     hotspots: MASTER_PLAN_HOTSPOT_KEYS.map((key, index) => ({
-      camera,
-      frame: MASTER_PLAN_HOTSPOT_FRAMES[index],
+      camera: cameras[key],
+      frame: MASTER_PLAN_HOTSPOT_FRAMES[index] ?? MASTER_PLAN_HOTSPOT_FRAMES[0],
       key,
     })),
     towerAModelKey: trialData.modelAssetKey,
     towerBModelKey: trialData.modelAssetKey,
     towerAWorldDummies: towerWorldDummies,
     towerBWorldDummies: towerWorldDummies,
-    towerACameras: Object.fromEntries(
-      MASTER_PLAN_HOTSPOT_KEYS.map((key) => [key, camera]),
-    ),
-    towerBCameras: Object.fromEntries(
-      MASTER_PLAN_HOTSPOT_KEYS.map((key) => [key, camera]),
-    ),
+    towerACameras: cameras,
+    towerBCameras: cameras,
     towerATransform: trialTransform,
     towerBTransform: trialTransform,
     unitViewVideos: {},

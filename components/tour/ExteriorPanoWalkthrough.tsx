@@ -129,6 +129,28 @@ const PREMIUM_OLIVE_GRADIENT = "walkthrough-glass-accent";
 const PREMIUM_PANEL_SURFACE = "walkthrough-glass-panel";
 const PREMIUM_PILL_SURFACE = "walkthrough-glass-chip";
 
+function getExteriorPanoNodeId(frame: number) {
+  return `PANO_Spline_F${String(frame).padStart(4, "0")}`;
+}
+
+function getPublicExteriorAssetBase(cdnBaseUrl: string) {
+  if (/^https?:\/\//i.test(cdnBaseUrl)) {
+    return cdnBaseUrl.replace(/\/+$/, "");
+  }
+
+  return `https://cdn.sthyra.com/${cdnBaseUrl.replace(/^\/+|\/+$/g, "")}`;
+}
+
+function getAmenityMenuImageSrc(
+  image: string,
+  signedAssetUrls: Record<string, string>,
+) {
+  return (
+    signedAssetUrls[image] ??
+    (/^(?:https?:\/\/|\/)/i.test(image) ? image : EMPTY_IMAGE_DATA_URL)
+  );
+}
+
 const DESKTOP_WARMUP_PROFILE = {
   activeFocusLimit: 20,
   activeFocusConcurrency: 6,
@@ -639,18 +661,12 @@ const AmenityCard = forwardRef<
 function CurrentAmenityPanel({
   name,
   description,
-  nodeIds,
-  progressIndex,
   className = "",
 }: {
   name: string;
   description: string;
-  nodeIds: string[];
-  progressIndex: number;
   className?: string;
 }) {
-  const stepCount = Math.max(nodeIds.length, 1);
-
   return (
     <div
       className={`${uiFont.className} pointer-events-auto relative isolate px-3 py-4 text-white ${className}`}
@@ -677,13 +693,6 @@ function CurrentAmenityPanel({
       >
         {description}
       </p>
-      <div className="mt-6 flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.28em] text-white/72 sm:text-[10px]">
-        <span>
-          Step {String(progressIndex + 1).padStart(2, "0")} of{" "}
-          {String(stepCount).padStart(2, "0")}
-        </span>
-        <span className="h-1.5 w-1.5 rounded-full bg-[#78c995] shadow-[0_0_8px_rgba(120,201,149,0.48)]" />
-      </div>
     </div>
   );
 }
@@ -699,8 +708,6 @@ function ExteriorMinimapGraphic({
   handleMinimapPointerDown,
   handleMinimapPointerMove,
   handleMinimapPointerUp,
-  minimapTrailPoints,
-  minimapTrailPolyline,
   minimapDots,
   activeAmenityId,
   activeMinimapPoint,
@@ -718,12 +725,6 @@ function ExteriorMinimapGraphic({
   handleMinimapPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
   handleMinimapPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => void;
   handleMinimapPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => void;
-  minimapTrailPoints: Array<{
-    nodeId: string;
-    leftPercent: number;
-    topPercent: number;
-  }>;
-  minimapTrailPolyline: string;
   minimapDots: ExteriorMinimapMarker[];
   activeAmenityId: string | null;
   activeMinimapPoint: MinimapPoint;
@@ -752,44 +753,6 @@ function ExteriorMinimapGraphic({
         className="pointer-events-none absolute inset-0 block h-full w-full select-none object-cover brightness-[0.78] contrast-[1.08] saturate-[0.78]"
       />
 
-      {minimapTrailPoints.length > 1 ? (
-        <svg
-          className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
-          viewBox="0 0 100 100"
-          preserveAspectRatio="none"
-          aria-hidden
-        >
-          <polyline
-            points={minimapTrailPolyline}
-            fill="none"
-            stroke="rgba(2,8,5,0.72)"
-            strokeWidth={3.2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          />
-          <polyline
-            points={minimapTrailPolyline}
-            fill="none"
-            stroke="rgba(120,201,149,0.92)"
-            strokeWidth={1.35}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
-      ) : null}
-
-      {!isCompact && minimapTrailPoints.length > 0 ? (
-        <span
-          className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/90 bg-[#78c995] shadow-[0_0_0_4px_rgba(120,201,149,0.18),0_0_14px_rgba(120,201,149,0.32)]"
-          style={{
-            left: `${minimapTrailPoints[minimapTrailPoints.length - 1].leftPercent * 100}%`,
-            top: `${minimapTrailPoints[minimapTrailPoints.length - 1].topPercent * 100}%`,
-          }}
-        />
-      ) : null}
-
       {minimapDots.map((marker) => (
         <button
           key={marker.id}
@@ -815,7 +778,7 @@ function ExteriorMinimapGraphic({
                 ? "hover:scale-110"
                 : "cursor-default"
           } ${
-            activeAmenityId === marker.exteriorAmenityId
+            activeAmenityId === marker.id
               ? "border-white/90 bg-[#8bd3a7] shadow-[0_0_0_3px_rgba(120,201,149,0.2),0_0_12px_rgba(120,201,149,0.34)]"
               : "border-white/76 bg-white/82 shadow-[0_0_0_2px_rgba(0,0,0,0.18)]"
           }`}
@@ -916,8 +879,6 @@ function ExteriorMinimapPanel({
   handleMinimapPointerDown,
   handleMinimapPointerMove,
   handleMinimapPointerUp,
-  minimapTrailPoints,
-  minimapTrailPolyline,
   minimapDots,
   activeAmenityId,
   activeMinimapPoint,
@@ -936,12 +897,6 @@ function ExteriorMinimapPanel({
   handleMinimapPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
   handleMinimapPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => void;
   handleMinimapPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => void;
-  minimapTrailPoints: Array<{
-    nodeId: string;
-    leftPercent: number;
-    topPercent: number;
-  }>;
-  minimapTrailPolyline: string;
   minimapDots: ExteriorMinimapMarker[];
   activeAmenityId: string | null;
   activeMinimapPoint: MinimapPoint;
@@ -964,8 +919,6 @@ function ExteriorMinimapPanel({
             handleMinimapPointerDown={handleMinimapPointerDown}
             handleMinimapPointerMove={handleMinimapPointerMove}
             handleMinimapPointerUp={handleMinimapPointerUp}
-            minimapTrailPoints={minimapTrailPoints}
-            minimapTrailPolyline={minimapTrailPolyline}
             minimapDots={minimapDots}
             activeAmenityId={activeAmenityId}
             activeMinimapPoint={activeMinimapPoint}
@@ -1035,8 +988,6 @@ function ExteriorMinimapPanel({
             handleMinimapPointerDown={handleMinimapPointerDown}
             handleMinimapPointerMove={handleMinimapPointerMove}
             handleMinimapPointerUp={handleMinimapPointerUp}
-            minimapTrailPoints={minimapTrailPoints}
-            minimapTrailPolyline={minimapTrailPolyline}
             minimapDots={minimapDots}
             activeAmenityId={activeAmenityId}
             activeMinimapPoint={activeMinimapPoint}
@@ -1060,10 +1011,73 @@ export default function ExteriorPanoWalkthrough({
   subtitle = "Fast sphere-based exterior navigation",
 }: ExteriorPanoWalkthroughProps) {
   primeSignedAssetUrls(initialSignedAssetUrls);
-  const signedAssetUrls = useSignedAssetUrls([
-    ...amenities.map((amenity) => amenity.image),
-  ]);
   const graph = useMemo(() => buildExteriorTourGraph(nodes), [nodes]);
+  const quickNavigationAmenities = useMemo<ExteriorAmenity[]>(() => {
+    const amenityMetadataById = new Map(
+      amenities.map((amenity) => [amenity.id, amenity]),
+    );
+    const publicAssetBase = getPublicExteriorAssetBase(cdnBaseUrl);
+
+    return EXTERIOR_MINIMAP_LOCATIONS.flatMap((location) => {
+      const nodeIds = location.panoFrames
+        .map(getExteriorPanoNodeId)
+        .filter((nodeId) => Boolean(graph.byId[nodeId]));
+      const preferredStartingNodeId = getExteriorPanoNodeId(
+        location.startingPanoFrame,
+      );
+      const primaryNodeId = graph.byId[preferredStartingNodeId]
+        ? preferredStartingNodeId
+        : nodeIds[0];
+
+      if (!primaryNodeId) {
+        return [];
+      }
+
+      const primaryNode = graph.byId[primaryNodeId];
+      const metadata = location.exteriorAmenityId
+        ? amenityMetadataById.get(location.exteriorAmenityId)
+        : null;
+      const image =
+        metadata?.image ??
+        `${publicAssetBase}/${primaryNode.panoId}/preview.jpg`;
+
+      return [
+        {
+          id: location.id,
+          name: location.name,
+          image,
+          description:
+            metadata?.description ??
+            `Jump directly to the ${location.name} exterior walkthrough.`,
+          nodeIds,
+          primaryNodeId,
+          startingPano: {
+            name: primaryNode.panoId,
+            nodeId: primaryNodeId,
+            yaw: primaryNode.yaw,
+            pitch: primaryNode.pitch,
+            roll: primaryNode.roll,
+            facingAxis: primaryNode.facingAxis,
+            angle: primaryNode.yaw,
+            viewYaw: primaryNode.yaw,
+            viewPitch: primaryNode.pitch,
+          },
+          coordinate: {
+            ...location.coordinate,
+            z: 0,
+          },
+          summary: `${nodeIds.length} pano ${
+            nodeIds.length === 1 ? "stop" : "stops"
+          }`,
+        },
+      ];
+    });
+  }, [amenities, cdnBaseUrl, graph]);
+  const signedAssetUrls = useSignedAssetUrls(
+    quickNavigationAmenities
+      .map((amenity) => amenity.image)
+      .filter((image) => !/^(?:https?:\/\/|\/)/i.test(image)),
+  );
   const initialRequestedNodeId =
     (initialNodeId && graph.byId[initialNodeId] ? initialNodeId : null) ??
     graph.nodes[0]?.id ??
@@ -1082,7 +1096,6 @@ export default function ExteriorPanoWalkthrough({
   const [flythroughPhase, setFlythroughPhase] =
     useState<FlythroughPhase>("idle");
   const [historyDepth, setHistoryDepth] = useState(0);
-  const [visitedTrailNodeIds, setVisitedTrailNodeIds] = useState<string[]>([]);
   const [trailSecondsRemaining, setTrailSecondsRemaining] = useState(
     Math.ceil(TRAIL_ADVANCE_MS / 1000),
   );
@@ -1177,8 +1190,11 @@ export default function ExteriorPanoWalkthrough({
   );
   const nextTrailNodeId = sequential.nextId ?? graph.order[0] ?? null;
   const activeAmenity = useMemo(
-    () => amenities.find((amenity) => amenity.nodeIds.includes(activeNodeId)) ?? null,
-    [activeNodeId, amenities],
+    () =>
+      quickNavigationAmenities.find((amenity) =>
+        amenity.nodeIds.includes(activeNodeId),
+      ) ?? null,
+    [activeNodeId, quickNavigationAmenities],
   );
   const signedMinimapImageUrl = EXTERIOR_MINIMAP_IMAGE_URL;
   const fallbackMinimapImageUrl = LOCAL_EXTERIOR_MINIMAP_IMAGE_URL;
@@ -1194,16 +1210,9 @@ export default function ExteriorPanoWalkthrough({
     Boolean(fallbackPreviewUrl || previewOverlayUrl),
   );
   const exteriorPreloaderProgress = firstPanoPreloaderProgress;
-  const activeAmenityNodeIds = activeAmenity?.nodeIds.length
-    ? activeAmenity.nodeIds
-    : [activeNodeId];
-  const activeAmenityProgressIndex = Math.max(
-    0,
-    activeAmenityNodeIds.indexOf(activeNodeId),
-  );
   const visibleExteriorAmenities = useMemo(
-    () => amenities.filter((amenity) => amenity.id !== "general"),
-    [amenities],
+    () => quickNavigationAmenities,
+    [quickNavigationAmenities],
   );
   const {
     setFirstItemNode: setExteriorMenuFirstItemNode,
@@ -1274,7 +1283,7 @@ export default function ExteriorPanoWalkthrough({
 
     return projectMinimapPoint({
       x: activeNode.rawPosition.x / EXTERIOR_PANO_WORLD_UNITS_PER_METRE,
-      y: activeNode.rawPosition.y / EXTERIOR_PANO_WORLD_UNITS_PER_METRE,
+      y: -activeNode.rawPosition.y / EXTERIOR_PANO_WORLD_UNITS_PER_METRE,
     });
   }, [activeNode, projectMinimapPoint]);
   const updateMinimapHeading = useCallback(
@@ -1285,7 +1294,7 @@ export default function ExteriorPanoWalkthrough({
       }
 
       const forward = getViewForwardVector(node, yaw);
-      const rawHeading = Math.atan2(forward.y, forward.x);
+      const rawHeading = Math.atan2(-forward.y, forward.x);
       const headingState = minimapHeadingStateRef.current;
 
       if (headingState.lastRawHeading === null) {
@@ -1317,51 +1326,15 @@ export default function ExteriorPanoWalkthrough({
   );
   const minimapDots = useMemo(() => {
     const amenityById = new Map(
-      amenities.map((amenity) => [amenity.id, amenity]),
+      quickNavigationAmenities.map((amenity) => [amenity.id, amenity]),
     );
 
     return EXTERIOR_MINIMAP_LOCATIONS.map((location) => ({
       ...location,
-      amenity: location.exteriorAmenityId
-        ? amenityById.get(location.exteriorAmenityId) ?? null
-        : null,
+      amenity: amenityById.get(location.id) ?? null,
       ...projectMinimapPoint(location.coordinate),
     }));
-  }, [amenities, projectMinimapPoint]);
-  const minimapTrailPoints = useMemo(() => {
-    const orderedNodeIds = [...visitedTrailNodeIds, activeNodeId].filter(
-      (nodeId, index, list) => index === 0 || nodeId !== list[index - 1],
-    );
-
-    return orderedNodeIds
-      .map((nodeId) => {
-        const node = graph.byId[nodeId];
-
-        if (!node) {
-          return null;
-        }
-
-        return {
-          nodeId,
-          ...projectMinimapPoint({
-            x: node.rawPosition.x / EXTERIOR_PANO_WORLD_UNITS_PER_METRE,
-            y: node.rawPosition.y / EXTERIOR_PANO_WORLD_UNITS_PER_METRE,
-          }),
-        };
-      })
-      .filter(
-        (
-          point,
-        ): point is {
-          nodeId: string;
-          leftPercent: number;
-          topPercent: number;
-        } => Boolean(point),
-      );
-  }, [activeNodeId, graph.byId, projectMinimapPoint, visitedTrailNodeIds]);
-  const minimapTrailPolyline = minimapTrailPoints
-    .map((point) => `${point.leftPercent * 100},${point.topPercent * 100}`)
-    .join(" ");
+  }, [projectMinimapPoint, quickNavigationAmenities]);
 
   useEffect(() => {
     const fallbackYaw = activeNode ? degToRad(activeNode.yaw) : 0;
@@ -2290,14 +2263,6 @@ export default function ExteriorPanoWalkthrough({
             pushNavigationHistory(fromNode.id);
           }
 
-          setVisitedTrailNodeIds((current) => {
-            const next = current.length === 0 ? [fromNode.id] : [...current];
-            if (next[next.length - 1] !== targetId) {
-              next.push(targetId);
-            }
-            return next.slice(-80);
-          });
-
           startTransition(() => {
             setActiveNodeId(targetId);
           });
@@ -2412,14 +2377,6 @@ export default function ExteriorPanoWalkthrough({
           if (options.recordHistory !== false) {
             pushNavigationHistory(fromNode.id);
           }
-          setVisitedTrailNodeIds((current) => {
-            const next = current.length === 0 ? [fromNode.id] : [...current];
-            if (next[next.length - 1] !== targetId) {
-              next.push(targetId);
-            }
-            return next.slice(-80);
-          });
-
           startTransition(() => {
             setActiveNodeId(targetId);
           });
@@ -2625,13 +2582,6 @@ export default function ExteriorPanoWalkthrough({
             }
 
             pushNavigationHistory(fromNode.id);
-            setVisitedTrailNodeIds((current) => {
-              const next = current.length === 0 ? [fromNode.id] : [...current];
-              if (next[next.length - 1] !== targetId) {
-                next.push(targetId);
-              }
-              return next.slice(-80);
-            });
 
             startTransition(() => {
               setActiveNodeId(targetId);
@@ -2760,13 +2710,6 @@ export default function ExteriorPanoWalkthrough({
             }
 
             pushNavigationHistory(fromNode.id);
-            setVisitedTrailNodeIds((current) => {
-              const next = current.length === 0 ? [fromNode.id] : [...current];
-              if (next[next.length - 1] !== targetId) {
-                next.push(targetId);
-              }
-              return next.slice(-80);
-            });
 
             startTransition(() => {
               setActiveNodeId(targetId);
@@ -2829,13 +2772,6 @@ export default function ExteriorPanoWalkthrough({
               }
 
               pushNavigationHistory(fromNode.id);
-              setVisitedTrailNodeIds((current) => {
-                const next = current.length === 0 ? [fromNode.id] : [...current];
-                if (next[next.length - 1] !== targetId) {
-                  next.push(targetId);
-                }
-                return next.slice(-80);
-              });
 
               startTransition(() => {
                 setActiveNodeId(targetId);
@@ -3355,7 +3291,10 @@ export default function ExteriorPanoWalkthrough({
                 <AmenityCard
                   key={amenity.id}
                   amenity={amenity}
-                  imageSrc={signedAssetUrls[amenity.image] ?? EMPTY_IMAGE_DATA_URL}
+                  imageSrc={getAmenityMenuImageSrc(
+                    amenity.image,
+                    signedAssetUrls,
+                  )}
                   isActive={activeAmenityId === amenity.id}
                   compact
                   onClick={() => {
@@ -3392,7 +3331,10 @@ export default function ExteriorPanoWalkthrough({
                 <AmenityCard
                   key={amenity.id}
                   amenity={amenity}
-                  imageSrc={signedAssetUrls[amenity.image] ?? EMPTY_IMAGE_DATA_URL}
+                  imageSrc={getAmenityMenuImageSrc(
+                    amenity.image,
+                    signedAssetUrls,
+                  )}
                   isActive={activeAmenityId === amenity.id}
                   compact
                   onClick={() => {
@@ -3525,8 +3467,6 @@ export default function ExteriorPanoWalkthrough({
         <CurrentAmenityPanel
           name={activeAmenity?.name ?? "Exterior Trail"}
           description={activeAmenityDescription}
-          nodeIds={activeAmenityNodeIds}
-          progressIndex={activeAmenityProgressIndex}
         />
       </div>
 
@@ -3621,8 +3561,6 @@ export default function ExteriorPanoWalkthrough({
               handleMinimapPointerDown={handleMinimapPointerDown}
               handleMinimapPointerMove={handleMinimapPointerMove}
               handleMinimapPointerUp={handleMinimapPointerUp}
-              minimapTrailPoints={minimapTrailPoints}
-              minimapTrailPolyline={minimapTrailPolyline}
               minimapDots={minimapDots}
               activeAmenityId={activeAmenityId}
               activeMinimapPoint={activeMinimapPoint}
@@ -3647,8 +3585,6 @@ export default function ExteriorPanoWalkthrough({
           handleMinimapPointerDown={handleMinimapPointerDown}
           handleMinimapPointerMove={handleMinimapPointerMove}
           handleMinimapPointerUp={handleMinimapPointerUp}
-          minimapTrailPoints={minimapTrailPoints}
-          minimapTrailPolyline={minimapTrailPolyline}
           minimapDots={minimapDots}
           activeAmenityId={activeAmenityId}
           activeMinimapPoint={activeMinimapPoint}

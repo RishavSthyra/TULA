@@ -58,6 +58,7 @@ import {
   TOTAL_MASTER_PLAN_FRAMES,
 } from "@/data/masterPlanFrameCdnUrls";
 import {
+  MASTER_PLAN_HOTSPOT_FRAMES,
   MASTER_PLAN_HOTSPOT_KEYS,
   type MasterPlanHotspotKey,
   getNearestMasterPlanHotspot,
@@ -98,7 +99,7 @@ const MAX_TRIAL_BLOCK_MESH_PATTERN =
   /^g_([A-D])_([0-9A-Z]{2})_([0-9A-Z]{3,4})(?:_.+)?$/i;
 const TARGET_MODEL_HEIGHT = 10;
 const TOTAL_FRAMES = TOTAL_MASTER_PLAN_FRAMES;
-const SNAP_FRAMES = [1, 61, 121, 181, 241, 301] as const;
+const SNAP_FRAMES = MASTER_PLAN_HOTSPOT_FRAMES;
 const DRAG_THRESHOLD_PX = 8;
 const SNAP_ANIMATION_MIN_DURATION_MS = 180;
 const SNAP_ANIMATION_MAX_DURATION_MS = 340;
@@ -313,8 +314,6 @@ const TOWER_A_TRACKING_KEYS = [
   "A2",
   "A3",
   "A4",
-  "A5",
-  "A6",
 ] as const satisfies UnrealCameraKey[];
 const PRECOMPUTED_SCENE_DATA = precomputedSceneData as Record<
   TowerCode,

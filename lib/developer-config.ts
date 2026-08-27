@@ -36,8 +36,8 @@ import type { Model } from "mongoose";
 export const DEVELOPER_RUNTIME_CONFIG_TAG = "developer-runtime-config";
 const GLOBAL_CONFIG_KEY = "global";
 const PUBLISHED_CONFIG_KEY = "published";
-const MASTER_PLAN_HOTSPOT_KEYS = ["A1", "A2", "A3", "A4", "A5", "A6"] as const;
-const MASTER_PLAN_HOTSPOT_FRAMES = [1, 61, 121, 181, 241, 301] as const;
+const MASTER_PLAN_HOTSPOT_KEYS = ["A1", "A2", "A3", "A4"] as const;
+const MASTER_PLAN_HOTSPOT_FRAMES = [1, 91, 181, 271] as const;
 
 type TrackingEntry = {
   camera?: {
@@ -294,12 +294,12 @@ export function validateDeveloperRuntimeConfig(config: DeveloperRuntimeConfig) {
     if (!Number.isFinite(master.aspectRatio) || master.aspectRatio <= 0) {
       throw new Error("masterPlan.aspectRatio must be positive.");
     }
-    if (master.hotspots.length !== 6) {
-      throw new Error("masterPlan.hotspots must contain A1 through A6.");
+    if (master.hotspots.length !== 4) {
+      throw new Error("masterPlan.hotspots must contain A1 through A4.");
     }
     const keys = master.hotspots.map((hotspot) => hotspot.key).sort().join(",");
     if (keys !== MASTER_PLAN_HOTSPOT_KEYS.join(",")) {
-      throw new Error("masterPlan.hotspots must contain exactly A1 through A6.");
+      throw new Error("masterPlan.hotspots must contain exactly A1 through A4.");
     }
     master.hotspots.forEach((hotspot) => assertCamera(hotspot.camera, `masterPlan.hotspots.${hotspot.key}.camera`));
     MASTER_PLAN_HOTSPOT_KEYS.forEach((key) => {

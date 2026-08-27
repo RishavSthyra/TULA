@@ -1,13 +1,11 @@
 import type { InventoryApartment, TowerType } from "@/types/inventory";
 
-export const MASTER_PLAN_HOTSPOT_FRAMES = [1, 61, 121, 181, 241, 301] as const;
+export const MASTER_PLAN_HOTSPOT_FRAMES = [1, 91, 181, 271] as const;
 export const MASTER_PLAN_HOTSPOT_KEYS = [
   "A1",
   "A2",
   "A3",
   "A4",
-  "A5",
-  "A6",
 ] as const;
 
 export type MasterPlanHotspotKey = (typeof MASTER_PLAN_HOTSPOT_KEYS)[number];
@@ -31,14 +29,6 @@ const HOTSPOT_ALLOWED_UNIT_ENDINGS: Record<
   A4: {
     "Tower A": ["3", "4"],
     "Tower B": ["3", "4"],
-  },
-  A5: {
-    "Tower A": ["1", "3"],
-    "Tower B": ["4"],
-  },
-  A6: {
-    "Tower A": ["1"],
-    "Tower B": ["1"],
   },
 };
 

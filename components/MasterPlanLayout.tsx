@@ -39,6 +39,7 @@ import { Cormorant_Garamond } from "next/font/google";
 import TowerSelect from "./TowerSelect";
 import { scheduleAmenityVideoWarmup } from "@/lib/amenity-video-warmup";
 import {
+  MASTER_PLAN_HOTSPOT_FRAMES,
   getNearestMasterPlanHotspot,
   isInventoryApartmentAllowedAtHotspot,
 } from "@/lib/master-plan-hotspots";
@@ -58,7 +59,7 @@ const MATCHING_FLATS_PAGE_SIZE = 24;
 const FALLBACK_AREA_RANGE = { min: 1376.73, max: 2801.81 } as const;
 const AREA_RANGE_STEP = 0.01;
 const TOTAL_MASTER_PLAN_FRAMES = 360;
-const MASTER_PLAN_SNAP_FRAMES = [1, 61, 121, 181, 241, 301] as const;
+const MASTER_PLAN_SNAP_FRAMES = MASTER_PLAN_HOTSPOT_FRAMES;
 const SPECIAL_UNIT_VIDEO_TOWER: TowerType = "Tower B";
 const SPECIAL_UNIT_VIDEO_HOTSPOT = "A1";
 const SPECIAL_UNIT_VIDEO_FRAME = 1;

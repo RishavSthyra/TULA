@@ -42,5 +42,59 @@
     },
     "dollyDistance": 190.706,
     "targetDistance": 190.708
-  }
+  },
+  "cameraStops": [
+    {
+      "frame": 0,
+      "position": {
+        "x": 20.782,
+        "y": -159.331,
+        "z": 50
+      },
+      "rotationDegrees": {
+        "x": 82.467,
+        "y": 0,
+        "z": 0.006
+      }
+    },
+    {
+      "frame": 90,
+      "position": {
+        "x": 243.325,
+        "y": 29.78,
+        "z": 50
+      },
+      "rotationDegrees": {
+        "x": 83.59,
+        "y": 0,
+        "z": 90.013
+      }
+    },
+    {
+      "frame": 180,
+      "position": {
+        "x": 20.675,
+        "y": 218.794,
+        "z": 50
+      },
+      "rotationDegrees": {
+        "x": 82.467,
+        "y": 0,
+        "z": -179.962
+      }
+    },
+    {
+      "frame": 270,
+      "position": {
+        "x": -201.868,
+        "y": 29.683,
+        "z": 50
+      },
+      "rotationDegrees": {
+        "x": 83.594,
+        "y": 0,
+        "z": -89.987
+      }
+    }
+  ]
 }

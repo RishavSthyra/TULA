@@ -1,4 +1,9 @@
 import amenitiesPageData from "@/data/amenitiesPage.json";
+import {
+  isDirectAssetUrl,
+  isHlsAssetUrl,
+  resolveAmenitiesFinalAssetUrl,
+} from "@/lib/amenities-final-assets";
 import { getSignedAssetUrls } from "@/src/lib/signed-assets";
 
 type AmenitySeedItem = {
@@ -21,10 +26,15 @@ type WarmSchedule = {
 
 const AMENITY_VIDEO_ITEMS = (
   amenitiesPageData as { items: AmenitySeedItem[] }
-).items.filter(
-  (item): item is Required<Pick<AmenitySeedItem, "id" | "videoSrc">> =>
-    Boolean(item.videoSrc && item.videoSrc.trim()),
-);
+).items
+  .filter(
+    (item): item is Required<Pick<AmenitySeedItem, "id" | "videoSrc">> =>
+      Boolean(item.videoSrc && item.videoSrc.trim()),
+  )
+  .map((item) => ({
+    ...item,
+    videoSrc: resolveAmenitiesFinalAssetUrl(item.videoSrc),
+  }));
 
 const warmedAmenityVideoUrls = new Set<string>();
 const queuedAmenityVideoUrls = new Set<string>();
@@ -115,6 +125,23 @@ function warmAmenityVideoSource(
     return;
   }
 
+  if (isHlsAssetUrl(src)) {
+    void fetch(src, {
+      cache: "force-cache",
+      credentials: "omit",
+      mode: "cors",
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Amenity manifest request failed: ${response.status}`);
+        }
+
+        warmedAmenityVideoUrls.add(src);
+      })
+      .catch(() => undefined);
+    return;
+  }
+
   const preloadLink = document.createElement("link");
   preloadLink.rel = "preload";
   preloadLink.as = "video";
@@ -161,12 +188,21 @@ function warmAmenityVideoSource(
 
 async function getSignedAmenityVideoSources() {
   if (!amenityVideoSignMapPromise) {
-    amenityVideoSignMapPromise = getSignedAssetUrls(
-      AMENITY_VIDEO_ITEMS.map((item) => item.videoSrc),
-    ).catch((error) => {
-      amenityVideoSignMapPromise = null;
-      throw error;
-    });
+    const directUrls = Object.fromEntries(
+      AMENITY_VIDEO_ITEMS.filter((item) =>
+        isDirectAssetUrl(item.videoSrc),
+      ).map((item) => [item.videoSrc, item.videoSrc]),
+    );
+    const signableKeys = AMENITY_VIDEO_ITEMS.filter(
+      (item) => !isDirectAssetUrl(item.videoSrc),
+    ).map((item) => item.videoSrc);
+
+    amenityVideoSignMapPromise = getSignedAssetUrls(signableKeys)
+      .then((signedUrls) => ({ ...directUrls, ...signedUrls }))
+      .catch((error) => {
+        amenityVideoSignMapPromise = null;
+        throw error;
+      });
   }
 
   return amenityVideoSignMapPromise;

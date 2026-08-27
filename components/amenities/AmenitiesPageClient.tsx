@@ -30,6 +30,8 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
+import CloudinaryHlsVideo from "@/components/CloudinaryHlsVideo";
+import { isHlsAssetUrl } from "@/lib/amenities-final-assets";
 import { scheduleAmenityVideoWarmup } from "@/lib/amenity-video-warmup";
 
 const displaySerif = Cormorant_Garamond({
@@ -99,7 +101,7 @@ const CAROUSEL_TRANSITION_MS = 580;
 const COMPACT_UI_AUTO_HIDE_MS = 2000;
 const COMPACT_UI_MEDIA_QUERY = "(max-width: 1279px)";
 
-function hasMediaSource(value?: string) {
+function hasMediaSource(value?: string): value is string {
   return Boolean(value && value.trim().length > 0);
 }
 
@@ -243,7 +245,6 @@ function FilmstripThumbnail({
           }`}
         >
           <AmenityThumbnail amenity={item.amenity} priority={isActive} />
-          <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),transparent_42%,rgba(1,4,2,0.36)_100%)]" />
         </motion.button>
       </div>
     </motion.div>
@@ -773,7 +774,10 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
       return;
     }
 
-    if (!hasMediaSource(activeAmenity.videoSrc)) {
+    if (
+      !hasMediaSource(activeAmenity.videoSrc) ||
+      isHlsAssetUrl(activeAmenity.videoSrc)
+    ) {
       const frameId = window.requestAnimationFrame(() => {
         setDisplayedAmenityId(activeAmenity.id);
       });
@@ -816,6 +820,10 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
   }, [activeAmenity, displayedAmenityId]);
 
   useEffect(() => {
+    if (isHlsAssetUrl(displayedAmenity?.videoSrc)) {
+      return;
+    }
+
     const frameId = window.requestAnimationFrame(() => {
       const video = videoRef.current;
 
@@ -833,7 +841,7 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
     return () => {
       window.cancelAnimationFrame(frameId);
     };
-  }, [displayedAmenityId]);
+  }, [displayedAmenity?.videoSrc, displayedAmenityId]);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -862,7 +870,7 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
       {/* Full-screen amenity media */}
       <div className="absolute inset-0" aria-hidden="true">
         {hasMediaSource(displayedAmenity.videoSrc) ? (
-          <video
+          <CloudinaryHlsVideo
             ref={videoRef}
             key={displayedAmenity.videoSrc}
             className="h-full w-full object-cover object-center"
@@ -877,6 +885,7 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
             loop
             playsInline
             preload="auto"
+            smoothStart
             onPlay={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
           />
@@ -900,10 +909,10 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
         )}
       </div>
 
-      {/* Cinematic gradients: no visible UI container */}
-      <div className="pointer-events-none absolute inset-0 z-[1] bg-[linear-gradient(180deg,rgba(2,5,3,0.64)_0%,rgba(2,5,3,0.15)_15%,transparent_34%)]" />
-      <div className="pointer-events-none absolute inset-0 z-[1] bg-[linear-gradient(90deg,rgba(2,5,3,0.82)_0%,rgba(2,5,3,0.55)_18%,rgba(2,5,3,0.12)_34%,transparent_51%)]" />
-      <div className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(ellipse_at_50%_112%,rgba(0,0,0,0.96)_0%,rgba(0,0,0,0.48)_39%,transparent_66%),linear-gradient(180deg,transparent_53%,rgba(2,5,3,0.12)_66%,rgba(2,5,3,0.86)_100%)]" />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[38%] bg-[linear-gradient(180deg,transparent_0%,rgba(2,5,3,0.06)_30%,rgba(2,5,3,0.42)_72%,rgba(2,5,3,0.68)_100%)]"
+      />
 
       {/* Header */}
       <header className="absolute left-5 right-5 top-4 z-20 flex min-h-[58px] items-center sm:left-[34px] sm:right-[38px] sm:top-[24px]">

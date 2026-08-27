@@ -1,6 +1,11 @@
 import AmenitiesPageClient, {
   type AmenitiesPageData,
 } from "@/components/amenities/AmenitiesPageClient";
+import amenitiesPageData from "@/data/amenitiesPage.json";
+import {
+  isDirectAssetUrl,
+  resolveAmenitiesFinalAssetUrl,
+} from "@/lib/amenities-final-assets";
 import { signR2AssetKeys } from "@/lib/server/r2-signed-assets";
 import { buildPageMetadata } from "@/lib/metadata";
 import { getPublishedDeveloperRuntimeConfig } from "@/lib/developer-config";
@@ -8,10 +13,10 @@ import { getPublishedDeveloperRuntimeConfig } from "@/lib/developer-config";
 export const metadata = buildPageMetadata({
   title: "Amenities",
   description:
-    "Explore the amenity collection at Trifecta Veranza with videos, thumbnails, and details powered by editable page data.",
+    "Explore the landscaped, wellness, recreation, and community amenities at Whispers of Trees.",
   keywords: [
-    "Trifecta Veranza amenities",
-    "rooftop leisure deck",
+    "Whispers of Trees amenities",
+    "Tula Properties amenities",
     "residential amenities",
     "project amenities",
   ],
@@ -19,10 +24,24 @@ export const metadata = buildPageMetadata({
 
 export default async function AmenitiesPage() {
   const runtimeConfig = await getPublishedDeveloperRuntimeConfig();
-  const typedData = runtimeConfig.amenities.pageData as AmenitiesPageData;
+  const runtimePageData = runtimeConfig.amenities.pageData as AmenitiesPageData;
+  const canonicalPageData = amenitiesPageData as AmenitiesPageData;
+  const typedData: AmenitiesPageData = {
+    ...runtimePageData,
+    ...canonicalPageData,
+    items: canonicalPageData.items.map((item) => ({
+      ...item,
+      videoSrc: item.videoSrc
+        ? resolveAmenitiesFinalAssetUrl(item.videoSrc)
+        : item.videoSrc,
+      thumbnailSrc: item.thumbnailSrc
+        ? resolveAmenitiesFinalAssetUrl(item.thumbnailSrc)
+        : item.thumbnailSrc,
+    })),
+  };
   const assetKeys = typedData.items.flatMap((item) =>
     [item.videoSrc, item.thumbnailSrc].filter(
-      (value): value is string => Boolean(value),
+      (value): value is string => Boolean(value && !isDirectAssetUrl(value)),
     ),
   );
   const signedAssetUrls = signR2AssetKeys(assetKeys);

@@ -8,6 +8,7 @@ import {
   type VideoHTMLAttributes,
 } from "react";
 import Hls, { type ErrorData } from "hls.js";
+import { isHlsAssetUrl } from "@/lib/amenities-final-assets";
 
 type CloudinaryHlsVideoProps = Omit<
   VideoHTMLAttributes<HTMLVideoElement>,
@@ -15,7 +16,7 @@ type CloudinaryHlsVideoProps = Omit<
 > & {
   src: string;
   fallbackSrc?: string;
-  preferHighQualityStart?: boolean;
+  smoothStart?: boolean;
 };
 
 function setRef(ref: Ref<HTMLVideoElement> | undefined, node: HTMLVideoElement | null) {
@@ -29,7 +30,11 @@ function setRef(ref: Ref<HTMLVideoElement> | undefined, node: HTMLVideoElement |
   ref.current = node;
 }
 
-function toCloudinaryHlsUrl(src: string) {
+function toHlsUrl(src: string) {
+  if (isHlsAssetUrl(src)) {
+    return src;
+  }
+
   const [base, query = ""] = src.split("?");
 
   if (!base.includes("/video/upload/")) {
@@ -44,35 +49,34 @@ function toCloudinaryHlsUrl(src: string) {
   return `${withoutExtension}.m3u8${query ? `?${query}` : ""}`;
 }
 
-function getPreferredStartLevel(hls: Hls, video: HTMLVideoElement) {
-  const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-  const targetWidth =
-    Math.max(video.clientWidth, window.innerWidth || 0) * pixelRatio;
-  const targetHeight =
-    Math.max(video.clientHeight, window.innerHeight || 0) * pixelRatio;
+function getSmoothStartLevel(hls: Hls) {
+  const exact1080pLevel = hls.levels.findIndex(
+    (level) => level.width === 1920 && level.height === 1080,
+  );
 
-  let fallbackLevel = -1;
-
-  for (let index = 0; index < hls.levels.length; index += 1) {
-    const level = hls.levels[index];
-    if (!level) continue;
-
-    fallbackLevel = index;
-
-    const matchesWidth = level.width >= targetWidth * 0.9;
-    const matchesHeight = level.height >= targetHeight * 0.9;
-
-    if (matchesWidth || matchesHeight) {
-      return index;
-    }
+  if (exact1080pLevel >= 0) {
+    return exact1080pLevel;
   }
 
-  return fallbackLevel;
+  let bestLevel = -1;
+  let bestPixels = -1;
+
+  hls.levels.forEach((level, index) => {
+    const pixels = level.width * level.height;
+    const fitsSmoothStart = level.width <= 1920 && level.height <= 1080;
+
+    if (fitsSmoothStart && pixels > bestPixels) {
+      bestLevel = index;
+      bestPixels = pixels;
+    }
+  });
+
+  return bestLevel >= 0 ? bestLevel : 0;
 }
 
 const CloudinaryHlsVideo = forwardRef<HTMLVideoElement, CloudinaryHlsVideoProps>(
   function CloudinaryHlsVideo(
-    { src, fallbackSrc, preferHighQualityStart = false, ...videoProps },
+    { src, fallbackSrc, smoothStart = false, ...videoProps },
     forwardedRef,
   ) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -99,8 +103,10 @@ const CloudinaryHlsVideo = forwardRef<HTMLVideoElement, CloudinaryHlsVideoProps>
       const video = videoRef.current;
       if (!video) return;
 
-      const hlsSrc = toCloudinaryHlsUrl(src);
+      const hlsSrc = toHlsUrl(src);
       const directSrc = fallbackSrc ?? src;
+      let networkRecoveryAttempts = 0;
+      let mediaRecoveryAttempts = 0;
       const releaseHls = () => {
         hlsRef.current?.destroy();
         hlsRef.current = null;
@@ -138,42 +144,70 @@ const CloudinaryHlsVideo = forwardRef<HTMLVideoElement, CloudinaryHlsVideoProps>
           enableWorker: true,
           capLevelToPlayerSize: true,
           maxDevicePixelRatio: 2,
-          abrEwmaDefaultEstimate: preferHighQualityStart ? 12_000_000 : 2_000_000,
-          abrEwmaDefaultEstimateMax: preferHighQualityStart
-            ? 20_000_000
-            : 8_000_000,
+          autoStartLoad: !smoothStart,
+          testBandwidth: !smoothStart,
+          lowLatencyMode: false,
+          maxBufferLength: smoothStart ? 45 : 30,
+          maxMaxBufferLength: smoothStart ? 90 : 60,
+          backBufferLength: 30,
+          abrEwmaDefaultEstimate: smoothStart ? 6_500_000 : 2_000_000,
+          abrEwmaDefaultEstimateMax: smoothStart ? 20_000_000 : 8_000_000,
+          abrBandWidthFactor: smoothStart ? 0.82 : 0.95,
+          abrBandWidthUpFactor: smoothStart ? 0.62 : 0.7,
+          fetchSetup: (context, initParams) =>
+            new Request(context.url, {
+              ...initParams,
+              cache: "force-cache",
+            }),
         });
 
       hlsRef.current = hls;
 
       const handleManifestParsed = () => {
-        if (!preferHighQualityStart) {
+        if (!smoothStart) {
           return;
         }
 
-        const preferredStartLevel = getPreferredStartLevel(hls, video);
-        if (preferredStartLevel < 0) {
-          return;
-        }
-
-        hls.startLevel = preferredStartLevel;
-        hls.nextLoadLevel = preferredStartLevel;
-        hls.nextAutoLevel = preferredStartLevel;
-        hls.bandwidthEstimate = Math.max(
-          hls.levels[preferredStartLevel]?.bitrate ?? 0,
-          hls.abrEwmaDefaultEstimate,
-        );
+        hls.startLevel = getSmoothStartLevel(hls);
+        hls.startLoad(-1);
       };
 
       const handleHlsError = (_event: string, data: ErrorData) => {
         if (!data.fatal) return;
 
+        if (
+          data.type === Hls.ErrorTypes.NETWORK_ERROR &&
+          networkRecoveryAttempts < 2
+        ) {
+          networkRecoveryAttempts += 1;
+          hls.startLoad();
+          return;
+        }
+
+        if (
+          data.type === Hls.ErrorTypes.MEDIA_ERROR &&
+          mediaRecoveryAttempts < 1
+        ) {
+          mediaRecoveryAttempts += 1;
+          hls.recoverMediaError();
+          return;
+        }
+
         releaseHls();
-        loadDirectSource();
+
+        if (fallbackSrc && !isHlsAssetUrl(fallbackSrc)) {
+          video.src = fallbackSrc;
+          video.load();
+        }
+      };
+
+      const handleFragmentBuffered = () => {
+        networkRecoveryAttempts = 0;
       };
 
       hls.on(Hls.Events.MANIFEST_PARSED, handleManifestParsed);
       hls.on(Hls.Events.ERROR, handleHlsError);
+      hls.on(Hls.Events.FRAG_BUFFERED, handleFragmentBuffered);
 
       if (loadedHlsSrcRef.current !== hlsSrc) {
         hls.stopLoad();
@@ -188,8 +222,9 @@ const CloudinaryHlsVideo = forwardRef<HTMLVideoElement, CloudinaryHlsVideoProps>
       return () => {
         hls.off(Hls.Events.MANIFEST_PARSED, handleManifestParsed);
         hls.off(Hls.Events.ERROR, handleHlsError);
+        hls.off(Hls.Events.FRAG_BUFFERED, handleFragmentBuffered);
       };
-    }, [fallbackSrc, preferHighQualityStart, src]);
+    }, [fallbackSrc, smoothStart, src]);
 
     return (
       <video
