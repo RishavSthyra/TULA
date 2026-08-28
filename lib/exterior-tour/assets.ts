@@ -1,0 +1,7 @@
+export const EXTERIOR_PANO_CDN_BASE_PATH =
+  "TULA/Panos/exterior-pano-changed";
+
+export const EXTERIOR_INITIAL_PANO_FOLDER = "PANO.00000";
+
+export const EXTERIOR_INITIAL_PREVIEW_KEY =
+  `${EXTERIOR_PANO_CDN_BASE_PATH}/${EXTERIOR_INITIAL_PANO_FOLDER}/preview.jpg`;

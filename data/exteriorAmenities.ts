@@ -1,6 +1,8 @@
 import amenityCoordinates from "@/data/AminetiesCoordinates.json";
 import legacyExteriorNodes from "@/data/trifecta_pano_walkthrough_data_Exterior1.json";
 import exteriorNodes from "@/data/TULA Landscape 20082026 PANO_pano_walkthrough_data_2.json";
+import { EXTERIOR_PANO_CDN_BASE_PATH } from "@/lib/exterior-tour/assets";
+import { exteriorImageFilenameToPanoId } from "@/lib/exterior-tour/nodes";
 import type { ExteriorPanoNodeSource } from "@/lib/exterior-tour/types";
 
 type AmenityCoordinate = {
@@ -211,7 +213,6 @@ function createSummary(nodeIds: string[]) {
 
 export const AMENITY_IMAGE_PLACEHOLDER_URL =
   "images/amenities-compressed/preview/Amphi Theatre.avif";
-const EXTERIOR_PANO_CDN_BASE = "exterior-panos-trifecta";
 
 const amenityDefinitions: ExteriorAmenityDefinition[] = [
   {
@@ -810,13 +811,13 @@ startingPano: startingPano("LS_BP_panoPath_Exterior32_F0097", {
 ];
 
 function getAmenityPreviewImage(nodeId: string) {
-  const source = legacyExteriorNodeSourceMap.get(nodeId);
-  const folderName = (source?.image_filename ?? `LS_${nodeId}`).replace(
-    /\.[^.]+$/,
-    "",
-  );
+  const currentNodeId = resolveAvailablePanoNodeId(nodeId) ?? nodeId;
+  const source = exteriorNodeSourceMap.get(currentNodeId);
+  const folderName = source
+    ? exteriorImageFilenameToPanoId(source.image_filename)
+    : currentNodeId;
 
-  return `${EXTERIOR_PANO_CDN_BASE}/${folderName}/preview.jpg`;
+  return `${EXTERIOR_PANO_CDN_BASE_PATH}/${folderName}/preview.jpg`;
 }
 
 function getAmenityPrimaryNodeId(amenity: ExteriorAmenityDefinition) {

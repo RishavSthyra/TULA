@@ -1,4 +1,5 @@
 import ExteriorPanoWalkthrough from "@/components/tour/ExteriorPanoWalkthrough";
+import { exteriorAmenities as canonicalExteriorAmenities } from "@/data/exteriorAmenities";
 import { buildPageMetadata } from "@/lib/metadata";
 import {
   getAssetWorkerDomain,
@@ -6,6 +7,10 @@ import {
 } from "@/lib/server/r2-signed-assets";
 import type { ExteriorPanoNodeSource } from "@/lib/exterior-tour/types";
 import { getPublishedDeveloperRuntimeConfig } from "@/lib/developer-config";
+import {
+  EXTERIOR_INITIAL_PREVIEW_KEY,
+  EXTERIOR_PANO_CDN_BASE_PATH,
+} from "@/lib/exterior-tour/assets";
 
 function isIgnoredExteriorPano(node: ExteriorPanoNodeSource) {
   return (
@@ -52,13 +57,20 @@ function ExteriorWalkthroughHead({ initialPreviewKey }: { initialPreviewKey?: st
 
 export default async function ExteriorTourPage() {
   const runtimeConfig = await getPublishedDeveloperRuntimeConfig();
-  const exterior = runtimeConfig.exterior;
+  const exterior = {
+    ...runtimeConfig.exterior,
+    panoBasePath: EXTERIOR_PANO_CDN_BASE_PATH,
+    initialPreviewKey: EXTERIOR_INITIAL_PREVIEW_KEY,
+  };
   const exteriorTourNodes = exterior.nodes.filter((node) => !isIgnoredExteriorPano(node));
   const preferredInitialNodeId =
     (exterior.initialNodeId && exteriorTourNodes.find((node) => node.id === exterior.initialNodeId)?.id) ??
     exteriorTourNodes[0]?.id;
   const signedExteriorMenuAssets = Object.fromEntries(
-    runtimeConfig.amenities.exteriorAmenities.map((amenity) => [amenity.image, signR2AssetKey(amenity.image)]),
+    canonicalExteriorAmenities.map((amenity) => [
+      amenity.image,
+      signR2AssetKey(amenity.image),
+    ]),
   );
 
   return (
@@ -71,7 +83,7 @@ export default async function ExteriorTourPage() {
           cdnBaseUrl={exterior.panoBasePath}
           initialNodeId={preferredInitialNodeId}
           initialSignedAssetUrls={signedExteriorMenuAssets}
-          amenities={runtimeConfig.amenities.exteriorAmenities}
+          amenities={canonicalExteriorAmenities}
           className="h-full w-full rounded-none"
           title={exterior.title}
           subtitle={exterior.subtitle}

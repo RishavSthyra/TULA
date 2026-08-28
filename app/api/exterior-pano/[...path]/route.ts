@@ -1,11 +1,10 @@
 import { NextRequest } from "next/server";
+import { EXTERIOR_PANO_CDN_BASE_PATH } from "@/lib/exterior-tour/assets";
 import { signR2AssetKey } from "@/lib/server/r2-signed-assets";
-
-const EXTERIOR_PANO_BASE_PATH = "exterior-panos-trifecta";
 
 function buildSignedExteriorPanoUrl(pathSegments: string[]) {
   const safePath = pathSegments.map((segment) => segment.replace(/^\/+/, "")).join("/");
-  return signR2AssetKey(`${EXTERIOR_PANO_BASE_PATH}/${safePath}`);
+  return signR2AssetKey(`${EXTERIOR_PANO_CDN_BASE_PATH}/${safePath}`);
 }
 
 async function proxyExteriorPano(

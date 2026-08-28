@@ -28,12 +28,24 @@ export function imageFilenameToPanoId(filename: string) {
   return filename.replace(/\.[^.]+$/, "").replace(/^NewLS_/i, "LS_");
 }
 
+export function exteriorImageFilenameToPanoId(filename: string) {
+  const frameMatch = filename.match(/_F(\d+)(?:\.[^.]+)?$/i);
+
+  if (!frameMatch) {
+    return imageFilenameToPanoId(filename);
+  }
+
+  return `PANO.${frameMatch[1].padStart(5, "0")}`;
+}
+
 export function formatExteriorNodeLabel(panoId: string, order: number) {
   const segmentMatch = panoId.match(/Exterior(\d+)/i);
-  const frameMatch = panoId.match(/F(\d{4})$/i);
+  const frameMatch = panoId.match(/(?:F|PANO\.)(\d{4,5})$/i);
 
   const segment = segmentMatch?.[1];
-  const frame = frameMatch?.[1] ?? String(order + 1).padStart(4, "0");
+  const frame = frameMatch
+    ? String(Number(frameMatch[1])).padStart(4, "0")
+    : String(order + 1).padStart(4, "0");
 
   return segment
     ? `Exterior ${segment} / Node ${frame}`
@@ -60,7 +72,7 @@ function buildBaseNode(source: ExteriorPanoNodeSource, order: number): ExteriorT
     perpendicularRight(forward),
   );
   const left = normalizePlanar(source.left_vector ?? negativeVec3(right), negativeVec3(right));
-  const panoId = imageFilenameToPanoId(source.image_filename);
+  const panoId = exteriorImageFilenameToPanoId(source.image_filename);
 
   return {
     id: source.id,

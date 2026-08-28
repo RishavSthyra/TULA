@@ -32,6 +32,10 @@ import type {
   Vector3Config,
 } from "@/types/developer-config";
 import type { Model } from "mongoose";
+import {
+  EXTERIOR_INITIAL_PREVIEW_KEY,
+  EXTERIOR_PANO_CDN_BASE_PATH,
+} from "@/lib/exterior-tour/assets";
 
 export const DEVELOPER_RUNTIME_CONFIG_TAG = "developer-runtime-config";
 const GLOBAL_CONFIG_KEY = "global";
@@ -170,11 +174,10 @@ export const DEFAULT_DEVELOPER_RUNTIME_CONFIG: DeveloperRuntimeConfig = {
     fallbackImageKey: "images/first_frame_again.png",
   },
   exterior: {
-    panoBasePath: "TULA/Panos/exterior-pano-remaining-optimised",
+    panoBasePath: EXTERIOR_PANO_CDN_BASE_PATH,
     nodes: exteriorNodes as ExteriorPanoNodeSource[],
     initialNodeId: "PANO_Spline_F0000",
-    initialPreviewKey:
-      "TULA/Panos/exterior-pano-remaining-optimised/LS_PANO_Spline_F0000/preview.jpg",
+    initialPreviewKey: EXTERIOR_INITIAL_PREVIEW_KEY,
     minimapKey: "images/Final_5.avif",
     fallbackImageKey: "images/exterior-minimap-fallback.jpg",
     title: "Trifecta Exterior Walkthrough",

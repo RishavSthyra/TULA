@@ -4,7 +4,7 @@ import os from "os"
 import sharp from "sharp"
 
 const INPUT = "./raw-panos"
-const OUTPUT = "./public/exterior-pano-remaining-optimised"
+const OUTPUT = "./public/exterior-pano-changed"
 
 const PREVIEW_WIDTH = 2000
 
@@ -13,7 +13,9 @@ const CPU_THREADS =
     ? os.availableParallelism()
     : os.cpus().length
 
-const SHARP_THREADS_PER_JOB = Math.max(1, Math.floor(CPU_THREADS / 4))
+// Each tile is an independent Sharp job. One libvips thread per tile lets the
+// parallel tile queue use all CPU cores without oversubscribing the machine.
+const SHARP_THREADS_PER_JOB = 1
 
 sharp.concurrency(SHARP_THREADS_PER_JOB)
 sharp.simd(true)
@@ -22,8 +24,8 @@ sharp.simd(true)
 // time keeps memory stable while its independent tiles use all CPU cores.
 const FILE_CONCURRENCY = 1
 const TILE_CONCURRENCY = Math.max(4, Math.min(16, CPU_THREADS))
-const WEBP_TILE_QUALITY = 92
-const WEBP_TILE_EFFORT = 6
+const JPEG_TILE_QUALITY = 95
+const JPEG_TILE_CHROMA_SUBSAMPLING = "4:4:4"
 
 // set these based on your pano size
 // for 12288 x 6144 use:
@@ -45,7 +47,14 @@ type TileJob = {
 }
 
 function getPanoId(file: string): string {
-  return path.parse(file).name.replace(/^NewLS_/i, "LS_")
+  const fileName = path.parse(file).name
+  const frameMatch = fileName.match(/_F(\d+)$/i)
+
+  if (frameMatch) {
+    return `PANO.${frameMatch[1].padStart(5, "0")}`
+  }
+
+  return fileName
 }
 
 function ensureDir(dir: string): void {
@@ -57,26 +66,26 @@ function pathExists(targetPath: string): boolean {
 }
 
 function getTilePath(tilesFolder: string, job: Pick<TileJob, "col" | "row">) {
-  return path.join(tilesFolder, `tile_${job.col}_${job.row}.webp`)
+  return path.join(tilesFolder, `tile_${job.col}_${job.row}.jpg`)
 }
 
 function getPendingTilePath(
   tilesFolder: string,
   job: Pick<TileJob, "col" | "row">
 ) {
-  return path.join(tilesFolder, `tile_${job.col}_${job.row}.partial.webp`)
+  return path.join(tilesFolder, `tile_${job.col}_${job.row}.partial.jpg`)
 }
 
-function assertNoLegacyJpegTiles(tilesFolder: string): void {
+function assertNoLegacyWebpTiles(tilesFolder: string): void {
   if (!pathExists(tilesFolder)) return
 
   const legacyTiles = fs
     .readdirSync(tilesFolder)
-    .filter((file) => /\.jpe?g$/i.test(file))
+    .filter((file) => /\.webp$/i.test(file))
 
   if (legacyTiles.length > 0) {
     throw new Error(
-      `Legacy JPEG tiles found in ${tilesFolder}. Use the clean optimized output directory instead of mixing JPEG and WebP tiles.`
+      `Legacy WebP tiles found in ${tilesFolder}. Use a clean output directory instead of mixing WebP and JPEG tiles.`
     )
   }
 }
@@ -98,11 +107,11 @@ function isAlreadyProcessed(folder: string): boolean {
     }
     const tileFiles = fs
       .readdirSync(tilesFolder)
-      .filter((file) => /^tile_\d+_\d+\.webp$/i.test(file))
+      .filter((file) => /^tile_\d+_\d+\.jpg$/i.test(file))
 
     return (
-      meta.tileFormat === "webp" &&
-      meta.tileUrl === "tiles/tile_{col}_{row}.webp" &&
+      meta.tileFormat === "jpg" &&
+      meta.tileUrl === "tiles/tile_{col}_{row}.jpg" &&
       tileFiles.length === TARGET_COLS * TARGET_ROWS
     )
   } catch {
@@ -130,7 +139,7 @@ async function processImage(file: string): Promise<void> {
   const folder = path.join(OUTPUT, panoId)
   const tilesFolder = path.join(folder, "tiles")
 
-  assertNoLegacyJpegTiles(tilesFolder)
+  assertNoLegacyWebpTiles(tilesFolder)
 
   if (isAlreadyProcessed(folder)) {
     console.log(`skipping: ${file} already processed`)
@@ -234,11 +243,10 @@ async function processImage(file: string): Promise<void> {
               width: job.width,
               height: job.height,
             })
-            .webp({
-              quality: WEBP_TILE_QUALITY,
-              effort: WEBP_TILE_EFFORT,
-              preset: "picture",
-              smartSubsample: true,
+            .jpeg({
+              quality: JPEG_TILE_QUALITY,
+              chromaSubsampling: JPEG_TILE_CHROMA_SUBSAMPLING,
+              mozjpeg: false,
             })
             .toFile(pendingTilePath)
 
@@ -261,8 +269,8 @@ async function processImage(file: string): Promise<void> {
     tileWidth,
     tileHeight,
     preview: "preview.jpg",
-    tileFormat: "webp",
-    tileUrl: "tiles/tile_{col}_{row}.webp",
+    tileFormat: "jpg",
+    tileUrl: "tiles/tile_{col}_{row}.jpg",
   }
 
   fs.writeFileSync(
@@ -295,8 +303,8 @@ async function run(): Promise<void> {
   console.log("Sharp threads per job:", SHARP_THREADS_PER_JOB)
   console.log("tile concurrency:", TILE_CONCURRENCY)
   console.log("grid:", `${TARGET_COLS} x ${TARGET_ROWS}`)
-  console.log("WebP tile quality:", WEBP_TILE_QUALITY)
-  console.log("WebP tile effort:", WEBP_TILE_EFFORT)
+  console.log("JPEG tile quality:", JPEG_TILE_QUALITY)
+  console.log("JPEG chroma subsampling:", JPEG_TILE_CHROMA_SUBSAMPLING)
 
   const totalStart = Date.now()
 
