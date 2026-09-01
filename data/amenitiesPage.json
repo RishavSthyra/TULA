@@ -5,30 +5,6 @@
   "summary": "Cinematic amenity films with high-resolution first-frame previews.",
   "items": [
     {
-      "id": "butterfly-garden",
-      "title": "Butterfly Garden",
-      "category": "Nature",
-      "shortDescription": "A colourful garden habitat shaped for butterflies, flowering plants, and quiet discovery.",
-      "details": "A richly planted garden where seasonal blooms create a calm setting for nature and everyday pause.",
-      "videoSrc": "https://cdn.sthyra.com/TULA/Videos/Amenities%20Optimised/Butterfly%20Garden.mp4",
-      "thumbnailSrc": "https://cdn.sthyra.com/TULA/Images/Amenities%20First%20Frames/Butterfly%20Garden.avif",
-      "tags": ["Butterflies", "Garden", "Nature"],
-      "statLabel": "Mood",
-      "statValue": "Vibrant"
-    },
-    {
-      "id": "play-area",
-      "title": "Play Area",
-      "category": "Recreation",
-      "shortDescription": "An open recreation space designed for energetic play and relaxed outdoor time.",
-      "details": "A welcoming play setting that supports movement, shared activities, and everyday recreation.",
-      "videoSrc": "https://cdn.sthyra.com/TULA/Videos/Amenities%20Optimised/Play%20Area.mp4",
-      "thumbnailSrc": "https://cdn.sthyra.com/TULA/Images/Amenities%20First%20Frames/Play%20Area.avif",
-      "tags": ["Play", "Outdoor", "Recreation"],
-      "statLabel": "Energy",
-      "statValue": "Active"
-    },
-    {
       "id": "pool",
       "title": "Pool",
       "category": "Leisure",
@@ -39,6 +15,18 @@
       "tags": ["Pool", "Leisure", "Relaxation"],
       "statLabel": "Pace",
       "statValue": "Relaxed"
+    },
+    {
+      "id": "butterfly-garden",
+      "title": "Butterfly Garden",
+      "category": "Nature",
+      "shortDescription": "A colourful garden habitat shaped for butterflies, flowering plants, and quiet discovery.",
+      "details": "A richly planted garden where seasonal blooms create a calm setting for nature and everyday pause.",
+      "videoSrc": "https://cdn.sthyra.com/TULA/Videos/Amenities%20Optimised/Butterfly%20Garden.mp4",
+      "thumbnailSrc": "https://cdn.sthyra.com/TULA/Images/Amenities%20First%20Frames/Butterfly%20Garden.avif",
+      "tags": ["Butterflies", "Garden", "Nature"],
+      "statLabel": "Mood",
+      "statValue": "Vibrant"
     },
     {
       "id": "swimming-pool",
@@ -87,18 +75,6 @@
       "tags": ["Garden", "Walk", "Nature"],
       "statLabel": "Feel",
       "statValue": "Immersive"
-    },
-    {
-      "id": "kids-play-area",
-      "title": "Kids Play Area",
-      "category": "Family",
-      "shortDescription": "A colourful and welcoming play zone designed for younger residents.",
-      "details": "A landscaped children’s area supporting active play, easy supervision, and everyday fun.",
-      "videoSrc": "https://cdn.sthyra.com/TULA/Videos/Amenities%20Optimised/kids%20play%20area.mp4",
-      "thumbnailSrc": "https://cdn.sthyra.com/TULA/Images/Amenities%20First%20Frames/kids%20play%20area.avif",
-      "tags": ["Kids", "Active", "Family"],
-      "statLabel": "Use",
-      "statValue": "Daily"
     },
     {
       "id": "tennis",
