@@ -1,7 +1,6 @@
 import amenitiesPageData from "@/data/amenitiesPage.json";
 import {
   isDirectAssetUrl,
-  isHlsAssetUrl,
   resolveAmenitiesFinalAssetUrl,
 } from "@/lib/amenities-final-assets";
 import { getSignedAssetUrls } from "@/src/lib/signed-assets";
@@ -17,11 +16,27 @@ type NavigatorConnectionLike = {
   saveData?: boolean;
 };
 
-type WarmSchedule = {
-  aggressiveCount: number;
-  initialDelayMs: number;
+type IdleDeadlineLike = {
+  didTimeout: boolean;
+  timeRemaining: () => number;
+};
+
+type IdleWindow = Window & {
+  requestIdleCallback?: (
+    callback: (deadline: IdleDeadlineLike) => void,
+    options?: { timeout: number },
+  ) => number;
+  cancelIdleCallback?: (handle: number) => void;
+};
+
+type WarmQueueItem = {
   intervalMs: number;
-  maxCount: number;
+  src: string;
+};
+
+type ActiveWarmup = {
+  cancel: (requeue: boolean) => void;
+  src: string;
 };
 
 const AMENITY_VIDEO_ITEMS = (
@@ -38,7 +53,13 @@ const AMENITY_VIDEO_ITEMS = (
 
 const warmedAmenityVideoUrls = new Set<string>();
 const queuedAmenityVideoUrls = new Set<string>();
+const pendingWarmups: WarmQueueItem[] = [];
+
+let activeWarmup: ActiveWarmup | null = null;
 let amenityVideoSignMapPromise: Promise<Record<string, string>> | null = null;
+let delayTimerId: number | null = null;
+let idleCallbackId: number | null = null;
+let visibilityListenerInstalled = false;
 
 function getAmenityVideoItemsOrdered(currentAmenityId?: string) {
   if (!currentAmenityId) {
@@ -53,10 +74,27 @@ function getAmenityVideoItemsOrdered(currentAmenityId?: string) {
     return [...AMENITY_VIDEO_ITEMS];
   }
 
-  return [
-    ...AMENITY_VIDEO_ITEMS.slice(currentIndex),
-    ...AMENITY_VIDEO_ITEMS.slice(0, currentIndex),
-  ];
+  const orderedItems: typeof AMENITY_VIDEO_ITEMS = [];
+  const addedIds = new Set([currentAmenityId]);
+
+  for (let distance = 1; distance < AMENITY_VIDEO_ITEMS.length; distance += 1) {
+    const nextIndex =
+      (currentIndex + distance) % AMENITY_VIDEO_ITEMS.length;
+    const previousIndex =
+      (currentIndex - distance + AMENITY_VIDEO_ITEMS.length) %
+      AMENITY_VIDEO_ITEMS.length;
+
+    [nextIndex, previousIndex].forEach((index) => {
+      const item = AMENITY_VIDEO_ITEMS[index];
+
+      if (!addedIds.has(item.id)) {
+        addedIds.add(item.id);
+        orderedItems.push(item);
+      }
+    });
+  }
+
+  return orderedItems;
 }
 
 function isConstrainedAmenityWarmupEnvironment() {
@@ -76,81 +114,100 @@ function isConstrainedAmenityWarmupEnvironment() {
   const lowMemory =
     typeof nav.deviceMemory === "number" && nav.deviceMemory <= 4;
   const lowCpu =
-    typeof nav.hardwareConcurrency === "number" && nav.hardwareConcurrency <= 4;
+    typeof nav.hardwareConcurrency === "number" &&
+    nav.hardwareConcurrency <= 4;
 
   return lowBandwidth || lowMemory || lowCpu;
 }
 
-function getWarmSchedule(profile: WarmProfile): WarmSchedule {
-  const constrained = isConstrainedAmenityWarmupEnvironment();
-
+function getWarmPolicy(profile: WarmProfile) {
   switch (profile) {
     case "home":
-      return {
-        aggressiveCount: 0,
-        initialDelayMs: constrained ? 1800 : 1100,
-        intervalMs: constrained ? 2100 : 1350,
-        maxCount: constrained ? 4 : 6,
-      };
+      return { initialDelayMs: 1200, intervalMs: 2800, maxCount: 2 };
     case "master-plan":
-      return {
-        aggressiveCount: 0,
-        initialDelayMs: constrained ? 2400 : 1600,
-        intervalMs: constrained ? 2400 : 1700,
-        maxCount: constrained ? 3 : 5,
-      };
+      return { initialDelayMs: 1600, intervalMs: 3200, maxCount: 2 };
     case "amenities":
       return {
-        aggressiveCount: constrained ? 2 : 3,
-        initialDelayMs: 0,
-        intervalMs: constrained ? 950 : 650,
-        maxCount: AMENITY_VIDEO_ITEMS.length,
-      };
-    default:
-      return {
-        aggressiveCount: 0,
-        initialDelayMs: 1200,
-        intervalMs: 1400,
-        maxCount: 4,
+        initialDelayMs: 1800,
+        intervalMs: 2600,
+        maxCount: AMENITY_VIDEO_ITEMS.length - 1,
       };
   }
 }
 
-function warmAmenityVideoSource(
-  src: string,
-  preloadMode: "auto" | "metadata",
-  releaseDelayMs: number,
-) {
-  if (typeof document === "undefined") {
+function clearScheduledWarmup() {
+  if (typeof window === "undefined") {
     return;
   }
 
-  if (isHlsAssetUrl(src)) {
-    void fetch(src, {
-      cache: "force-cache",
-      credentials: "omit",
-      mode: "cors",
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`Amenity manifest request failed: ${response.status}`);
-        }
+  if (delayTimerId !== null) {
+    window.clearTimeout(delayTimerId);
+    delayTimerId = null;
+  }
 
-        warmedAmenityVideoUrls.add(src);
-      })
-      .catch(() => undefined);
+  if (idleCallbackId !== null) {
+    (window as IdleWindow).cancelIdleCallback?.(idleCallbackId);
+    idleCallbackId = null;
+  }
+}
+
+function scheduleNextWarmup(delayMs: number) {
+  if (
+    typeof window === "undefined" ||
+    activeWarmup ||
+    delayTimerId !== null ||
+    idleCallbackId !== null ||
+    pendingWarmups.length === 0 ||
+    isConstrainedAmenityWarmupEnvironment() ||
+    document.visibilityState === "hidden"
+  ) {
     return;
   }
 
-  const preloadLink = document.createElement("link");
-  preloadLink.rel = "preload";
-  preloadLink.as = "video";
-  preloadLink.href = src;
-  preloadLink.crossOrigin = "anonymous";
-  document.head.appendChild(preloadLink);
+  delayTimerId = window.setTimeout(() => {
+    delayTimerId = null;
+    const idleWindow = window as IdleWindow;
+    const begin = () => {
+      idleCallbackId = null;
+      beginNextWarmup();
+    };
+
+    if (idleWindow.requestIdleCallback) {
+      idleCallbackId = idleWindow.requestIdleCallback(begin, { timeout: 1600 });
+      return;
+    }
+
+    delayTimerId = window.setTimeout(begin, 180);
+  }, Math.max(0, delayMs));
+}
+
+function beginNextWarmup() {
+  if (
+    activeWarmup ||
+    isConstrainedAmenityWarmupEnvironment() ||
+    document.visibilityState === "hidden"
+  ) {
+    return;
+  }
+
+  const item = pendingWarmups.shift();
+
+  if (!item) {
+    return;
+  }
+
+  queuedAmenityVideoUrls.delete(item.src);
+
+  if (warmedAmenityVideoUrls.has(item.src)) {
+    scheduleNextWarmup(0);
+    return;
+  }
 
   const video = document.createElement("video");
-  video.preload = preloadMode;
+  let settled = false;
+  let timeoutId: number | null = null;
+
+  video.preload = "metadata";
   video.muted = true;
   video.defaultMuted = true;
   video.playsInline = true;
@@ -158,32 +215,101 @@ function warmAmenityVideoSource(
   video.setAttribute("muted", "");
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
-  video.src = src;
+  video.src = item.src;
 
-  const release = () => {
-    window.setTimeout(() => {
-      video.pause();
-      video.removeAttribute("src");
-      video.load();
-      preloadLink.remove();
-    }, releaseDelayMs);
+  const finish = (warmed: boolean, requeue = false) => {
+    if (settled) {
+      return;
+    }
+
+    settled = true;
+
+    if (timeoutId !== null) {
+      window.clearTimeout(timeoutId);
+    }
+
+    video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+    video.removeEventListener("error", handleError);
+    video.pause();
+    video.removeAttribute("src");
+    video.load();
+
+    if (warmed) {
+      warmedAmenityVideoUrls.add(item.src);
+    } else if (requeue && !queuedAmenityVideoUrls.has(item.src)) {
+      queuedAmenityVideoUrls.add(item.src);
+      pendingWarmups.unshift(item);
+    }
+
+    activeWarmup = null;
+
+    if (!requeue) {
+      scheduleNextWarmup(item.intervalMs);
+    }
   };
 
-  const markWarmed = () => {
-    warmedAmenityVideoUrls.add(src);
-    release();
+  const handleLoadedMetadata = () => finish(true);
+  const handleError = () => finish(false);
+
+  activeWarmup = {
+    src: item.src,
+    cancel: (requeue) => finish(false, requeue),
   };
 
-  video.addEventListener("loadedmetadata", markWarmed, { once: true });
-  video.addEventListener("canplay", markWarmed, { once: true });
-  video.addEventListener(
-    "error",
-    () => {
-      release();
-    },
-    { once: true },
-  );
+  video.addEventListener("loadedmetadata", handleLoadedMetadata, { once: true });
+  video.addEventListener("error", handleError, { once: true });
+  timeoutId = window.setTimeout(handleError, 12000);
   video.load();
+}
+
+function installVisibilityListener() {
+  if (visibilityListenerInstalled || typeof document === "undefined") {
+    return;
+  }
+
+  visibilityListenerInstalled = true;
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      clearScheduledWarmup();
+      activeWarmup?.cancel(true);
+      return;
+    }
+
+    scheduleNextWarmup(500);
+  });
+}
+
+function replacePendingWarmups(items: WarmQueueItem[]) {
+  pendingWarmups.forEach((item) => queuedAmenityVideoUrls.delete(item.src));
+  pendingWarmups.length = 0;
+
+  items.forEach((item) => {
+    if (
+      item.src === activeWarmup?.src ||
+      warmedAmenityVideoUrls.has(item.src) ||
+      queuedAmenityVideoUrls.has(item.src)
+    ) {
+      return;
+    }
+
+    queuedAmenityVideoUrls.add(item.src);
+    pendingWarmups.push(item);
+  });
+}
+
+function appendPendingWarmups(items: WarmQueueItem[]) {
+  items.forEach((item) => {
+    if (
+      item.src === activeWarmup?.src ||
+      warmedAmenityVideoUrls.has(item.src) ||
+      queuedAmenityVideoUrls.has(item.src)
+    ) {
+      return;
+    }
+
+    queuedAmenityVideoUrls.add(item.src);
+    pendingWarmups.push(item);
+  });
 }
 
 async function getSignedAmenityVideoSources() {
@@ -197,7 +323,11 @@ async function getSignedAmenityVideoSources() {
       (item) => !isDirectAssetUrl(item.videoSrc),
     ).map((item) => item.videoSrc);
 
-    amenityVideoSignMapPromise = getSignedAssetUrls(signableKeys)
+    amenityVideoSignMapPromise = (
+      signableKeys.length > 0
+        ? getSignedAssetUrls(signableKeys)
+        : Promise.resolve({})
+    )
       .then((signedUrls) => ({ ...directUrls, ...signedUrls }))
       .catch((error) => {
         amenityVideoSignMapPromise = null;
@@ -215,46 +345,34 @@ export function scheduleAmenityVideoWarmup({
   currentAmenityId?: string;
   profile: WarmProfile;
 }) {
-  if (typeof window === "undefined") {
+  if (
+    typeof window === "undefined" ||
+    isConstrainedAmenityWarmupEnvironment()
+  ) {
     return;
   }
 
+  installVisibilityListener();
+
   void getSignedAmenityVideoSources()
     .then((signedSrcByKey) => {
-      const orderedItems = getAmenityVideoItemsOrdered(currentAmenityId);
-      const { aggressiveCount, initialDelayMs, intervalMs, maxCount } =
-        getWarmSchedule(profile);
+      const policy = getWarmPolicy(profile);
+      const items = getAmenityVideoItemsOrdered(currentAmenityId)
+        .slice(0, policy.maxCount)
+        .flatMap((item) => {
+          const src = signedSrcByKey[item.videoSrc];
+          return src ? [{ src, intervalMs: policy.intervalMs }] : [];
+        });
 
-      orderedItems.slice(0, maxCount).forEach((item, index) => {
-        const src = signedSrcByKey[item.videoSrc];
+      if (profile === "amenities") {
+        activeWarmup?.cancel(false);
+        replacePendingWarmups(items);
+        clearScheduledWarmup();
+      } else {
+        appendPendingWarmups(items);
+      }
 
-        if (!src || warmedAmenityVideoUrls.has(src) || queuedAmenityVideoUrls.has(src)) {
-          return;
-        }
-
-        queuedAmenityVideoUrls.add(src);
-
-        const isAggressive = index < aggressiveCount;
-        const delayMs =
-          initialDelayMs +
-          (isAggressive
-            ? index * 180
-            : aggressiveCount * 180 + (index - aggressiveCount) * intervalMs);
-
-        window.setTimeout(() => {
-          queuedAmenityVideoUrls.delete(src);
-
-          if (warmedAmenityVideoUrls.has(src)) {
-            return;
-          }
-
-          warmAmenityVideoSource(
-            src,
-            isAggressive ? "auto" : "metadata",
-            isAggressive ? 5000 : 1500,
-          );
-        }, delayMs);
-      });
+      scheduleNextWarmup(policy.initialDelayMs);
     })
     .catch(() => undefined);
 }

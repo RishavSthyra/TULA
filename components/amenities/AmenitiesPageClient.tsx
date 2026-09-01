@@ -30,8 +30,6 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
-import CloudinaryHlsVideo from "@/components/CloudinaryHlsVideo";
-import { isHlsAssetUrl } from "@/lib/amenities-final-assets";
 import { scheduleAmenityVideoWarmup } from "@/lib/amenity-video-warmup";
 
 const displaySerif = Cormorant_Garamond({
@@ -768,10 +766,7 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
       return;
     }
 
-    if (
-      !hasMediaSource(activeAmenity.videoSrc) ||
-      isHlsAssetUrl(activeAmenity.videoSrc)
-    ) {
+    if (!hasMediaSource(activeAmenity.videoSrc)) {
       const frameId = window.requestAnimationFrame(() => {
         setDisplayedAmenityId(activeAmenity.id);
       });
@@ -814,10 +809,6 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
   }, [activeAmenity, displayedAmenityId]);
 
   useEffect(() => {
-    if (isHlsAssetUrl(displayedAmenity?.videoSrc)) {
-      return;
-    }
-
     const frameId = window.requestAnimationFrame(() => {
       const video = videoRef.current;
 
@@ -864,25 +855,38 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
       {/* Full-screen amenity media */}
       <div className="absolute inset-0" aria-hidden="true">
         {hasMediaSource(displayedAmenity.videoSrc) ? (
-          <CloudinaryHlsVideo
-            ref={videoRef}
-            key={displayedAmenity.videoSrc}
-            className="h-full w-full object-cover object-center"
-            src={displayedAmenity.videoSrc}
-            poster={
-              hasMediaSource(displayedAmenity.thumbnailSrc)
-                ? displayedAmenity.thumbnailSrc
-                : undefined
-            }
-            autoPlay
-            muted={isMuted}
-            loop
-            playsInline
-            preload="auto"
-            preferHighestQuality
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-          />
+          <>
+            {hasMediaSource(displayedAmenity.thumbnailSrc) ? (
+              <Image
+                key={`${displayedAmenity.thumbnailSrc}-fallback`}
+                src={displayedAmenity.thumbnailSrc}
+                alt=""
+                fill
+                unoptimized
+                sizes="100vw"
+                className="object-cover object-center"
+              />
+            ) : null}
+            <video
+              ref={videoRef}
+              key={displayedAmenity.videoSrc}
+              className="relative z-[1] h-full w-full object-cover object-center"
+              src={displayedAmenity.videoSrc}
+              poster={
+                hasMediaSource(displayedAmenity.thumbnailSrc)
+                  ? displayedAmenity.thumbnailSrc
+                  : undefined
+              }
+              autoPlay
+              muted={isMuted}
+              loop
+              playsInline
+              preload="auto"
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onError={() => setIsPlaying(false)}
+            />
+          </>
         ) : hasMediaSource(displayedAmenity.thumbnailSrc) ? (
           <Image
             key={displayedAmenity.thumbnailSrc}

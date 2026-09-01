@@ -1,10 +1,11 @@
 import React from "react";
 import type { Metadata } from "next";
+import { SITE_NAME } from "@/lib/metadata";
 
 export const metadata: Metadata = {
   title: {
-    default: "Admin",
-    template: "%s | Admin",
+    default: `Admin | ${SITE_NAME}`,
+    template: `%s | ${SITE_NAME}`,
   },
   robots: {
     index: false,

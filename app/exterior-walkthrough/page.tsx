@@ -22,12 +22,12 @@ function isIgnoredExteriorPano(node: ExteriorPanoNodeSource) {
 export const metadata = buildPageMetadata({
   title: "Exterior Walkthrough",
   description:
-    "Experience the exterior panoramic walkthrough for Trifecta Veranza with directional navigation and fast node-to-node transitions.",
+    "Experience the exterior panoramic walkthrough for TULA Whispers of Trees with directional navigation and fast node-to-node transitions.",
   keywords: [
     "exterior walkthrough",
     "panorama tour",
     "site walkthrough",
-    "Trifecta Veranza exterior",
+    "TULA Whispers of Trees exterior",
   ],
 });
 

@@ -16,7 +16,7 @@ export const metadata = buildPageMetadata({
     "Explore the landscaped, wellness, recreation, and community amenities at Whispers of Trees.",
   keywords: [
     "Whispers of Trees amenities",
-    "Tula Properties amenities",
+    "TULA Whispers of Trees amenities",
     "residential amenities",
     "project amenities",
   ],

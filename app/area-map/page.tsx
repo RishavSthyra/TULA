@@ -5,12 +5,12 @@ import { buildPageMetadata } from "@/lib/metadata";
 export const metadata = buildPageMetadata({
   title: "Area Map",
   description:
-    "Explore the surrounding area, nearby landmarks, and location context for Trifecta Veranza through the interactive area map.",
+    "Explore the surrounding area, nearby landmarks, and location context for TULA Whispers of Trees through the interactive area map.",
   keywords: [
     "area map",
     "location map",
     "nearby landmarks",
-    "Trifecta Veranza location",
+    "TULA Whispers of Trees location",
   ],
 });
 

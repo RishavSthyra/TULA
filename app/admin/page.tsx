@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const metadata = buildPageMetadata({
   title: "Inventory Dashboard",
   description:
-    "Protected inventory administration dashboard for Trifecta Veranza.",
+    "Protected inventory administration dashboard for TULA Whispers of Trees.",
   robots: {
     index: false,
     follow: false,

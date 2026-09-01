@@ -14,9 +14,9 @@ import { TOWER_SELECTION_IMAGE_URL } from "@/lib/tower-selection-assets";
 export const metadata = buildPageMetadata({
   title: "Master Plan",
   description:
-    "Explore the Trifecta Veranza master plan with interactive hotspot navigation, apartment discovery, and tower-level filtering.",
+    "Explore the TULA Whispers of Trees master plan with interactive hotspot navigation, apartment discovery, and tower-level filtering.",
   keywords: [
-    "Trifecta Veranza master plan",
+    "TULA Whispers of Trees master plan",
     "interactive master plan",
     "apartment explorer",
     "tower layout",

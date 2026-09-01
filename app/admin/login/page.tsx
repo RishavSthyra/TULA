@@ -4,7 +4,7 @@ import { buildPageMetadata } from "@/lib/metadata";
 export const metadata = buildPageMetadata({
   title: "Admin Login",
   description:
-    "Secure sign-in for the Trifecta Veranza inventory administration area.",
+    "Secure sign-in for the TULA Whispers of Trees inventory administration area.",
   robots: {
     index: false,
     follow: false,

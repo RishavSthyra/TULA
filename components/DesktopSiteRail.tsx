@@ -18,6 +18,7 @@ import {
   isSiteNavItemActive,
   siteNavItems,
 } from "@/lib/site-navigation";
+import { SITE_ICON_URL } from "@/lib/metadata";
 import { cn } from "@/lib/utils";
 
 const railSerif = Cormorant_Garamond({
@@ -59,7 +60,7 @@ export default function DesktopSiteRail({
 
       <div className="relative z-10 flex flex-col items-center">
         <Image 
-        src={'https://cdn.sthyra.com/TULA/Images/Whisper_of_Tree_Logo_Gold%202.avif'}
+        src={SITE_ICON_URL}
         className="h-auto w-auto"
         width={100}
         height={100}

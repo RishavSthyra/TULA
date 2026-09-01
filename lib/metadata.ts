@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 
-export const SITE_NAME = "Trifecta Veranza";
+export const SITE_NAME = "TULA Whispers of Trees";
 export const DEFAULT_DESCRIPTION =
-  "Luxury residences, immersive walkthroughs, master plan exploration, and project details for Trifecta Veranza.";
+  "TULA Whispers of Trees";
+export const SITE_ICON_URL =
+  "https://cdn.sthyra.com/TULA/Images/Whisper_of_Tree_Logo_Gold%202.avif";
 
 type BuildPageMetadataOptions = {
   title: string;

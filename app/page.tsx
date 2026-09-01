@@ -13,10 +13,10 @@ const HOME_FIRST_FRAME_URL =
   "https://cdn.sthyra.com/TULA/Videos/Home%20Page2_first_frame.avif";
 
 export const metadata = buildPageMetadata({
-  title: "TULA",
-  description: "TULA",
+  title: "TULA Whispers of Trees",
+  description: "TULA Whispers of Trees",
   keywords: [
-    "Trifecta Veranza",
+    "TULA Whispers of Trees",
     "luxury apartments",
     "master plan",
     "project overview",

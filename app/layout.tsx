@@ -3,7 +3,11 @@ import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 import AppShell from "@/components/AppShell";
-import { DEFAULT_DESCRIPTION, SITE_NAME } from "@/lib/metadata";
+import {
+  DEFAULT_DESCRIPTION,
+  SITE_ICON_URL,
+  SITE_NAME,
+} from "@/lib/metadata";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -18,9 +22,9 @@ export const metadata: Metadata = {
   description: DEFAULT_DESCRIPTION,
   applicationName: SITE_NAME,
   icons: {
-    icon: "/VeranzaFavicon.svg",
-    shortcut: "/VeranzaFavicon.svg",
-    apple: "/VeranzaFavicon.svg",
+    icon: SITE_ICON_URL,
+    shortcut: SITE_ICON_URL,
+    apple: SITE_ICON_URL,
   },
   openGraph: {
     title: SITE_NAME,

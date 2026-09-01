@@ -4,9 +4,9 @@ import { buildPageMetadata } from "@/lib/metadata";
 export const metadata = buildPageMetadata({
   title: "About",
   description:
-    "Learn more about Trifecta Veranza and the digital experience built around its residences and walkthroughs.",
+    "Learn more about TULA Whispers of Trees and the digital experience built around its residences and walkthroughs.",
   keywords: [
-    "about Trifecta Veranza",
+    "about TULA Whispers of Trees",
     "project information",
     "residential development",
   ],

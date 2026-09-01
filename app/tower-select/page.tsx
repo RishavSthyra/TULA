@@ -5,11 +5,11 @@ import { TOWER_SELECTION_IMAGE_URL } from "@/lib/tower-selection-assets";
 export const metadata = buildPageMetadata({
   title: "Tower Select",
   description:
-    "Choose between towers and continue into the Trifecta Veranza apartment exploration flow.",
+    "Choose between towers and continue into the TULA Whispers of Trees apartment exploration flow.",
   keywords: [
     "tower select",
     "tower chooser",
-    "Trifecta Veranza towers",
+    "TULA Whispers of Trees towers",
     "apartment selection",
   ],
 });
