@@ -1,6 +1,5 @@
 "use client";
 
-import NextImage from "next/image";
 import { forwardRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
@@ -16,6 +15,7 @@ import {
 import { Cormorant_Garamond } from "next/font/google";
 import type { InventoryApartment } from "@/types/inventory";
 import { formatBlockLabel } from "@/lib/inventory-display";
+import SignedImage from "@/src/components/common/SignedImage";
 
 type SelectedFlatDetailsPanelProps = {
   apartment: InventoryApartment;
@@ -517,7 +517,7 @@ const SelectedFlatDetailsPanel = forwardRef<
                 <div className="p-4">
                   <div className="relative overflow-hidden rounded-[24px] border border-[#d8bd78]/55 bg-[#f8f4e8]/70">
                     <div className="relative aspect-[16/10] w-full">
-                      <NextImage
+                      <SignedImage
                         src={apartment.floorPlanImage}
                         alt={`${apartment.title} mapped floor plan`}
                         fill

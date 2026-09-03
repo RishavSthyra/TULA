@@ -46,6 +46,7 @@ import { readJsonResponse } from "@/lib/utils";
 import { formatBlockLabel } from "@/lib/inventory-display";
 import type { InventoryApartment, TowerType } from "@/types/inventory";
 import type { MasterPlanDeveloperConfig } from "@/types/developer-config";
+import SignedImage from "@/src/components/common/SignedImage";
 import { primeSignedAssetUrls } from "@/src/lib/signed-assets";
 import { useSignedAssetUrls } from "@/src/lib/use-signed-assets";
 
@@ -495,7 +496,7 @@ function SelectedFlatPlanPanel({
           </div>
 
           <div className="relative z-10 mx-auto mt-7 aspect-[4/4.55] w-[78%] max-w-[20rem] 2xl:mt-8 2xl:w-[80%]">
-            <NextImage
+            <SignedImage
               src={apartment.floorPlanImage}
               alt={`${apartment.title} floor plan`}
               fill

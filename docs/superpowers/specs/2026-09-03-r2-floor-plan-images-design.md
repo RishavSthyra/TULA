@@ -6,7 +6,7 @@ Serve apartment floor-plan images from Cloudflare R2 through the application's e
 
 ## Design
 
-Both floor-plan previews will use the shared `SignedImage` component. Each preview will pass `apartment.floorPlanR2Key`, which is the mapped R2 object key, rather than `apartment.floorPlanImage`, which is a legacy CDN URL.
+Both floor-plan previews will use the shared `SignedImage` component. Each preview will pass `apartment.floorPlanImage`, whose legacy CDN URL contains the real R2 object path under `TULA/Images/New Floor Plans`. The signing helper will strip the legacy `https://cdn.sthyra.com/` origin and sign the remaining R2 key.
 
 `SignedImage` will request a signed URL from `/api/sign-asset`. The server will validate the key, sign it using `ASSET_SECRET`, and return a Cloudflare asset-worker URL. The image will remain unoptimized so the browser requests the signed Cloudflare URL directly and does not proxy it through `/_next/image`.
 
@@ -25,5 +25,5 @@ The existing transparent placeholder will be shown while the signed URL is loadi
 
 - Run ESLint on the changed components.
 - Run the production build/type checks.
-- Confirm neither floor-plan preview references `apartment.floorPlanImage`.
-- Confirm both previews reference `apartment.floorPlanR2Key` through `SignedImage`.
+- Confirm both previews reference `apartment.floorPlanImage` through `SignedImage`.
+- Confirm the signed request retains the `TULA/Images/New Floor Plans/...` object path rather than the non-existent suggested `floor-plans/...` key.
