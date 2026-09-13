@@ -55,30 +55,3 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.\
 
-
-
-
-## ENV
-
-SMTP_HOST = "sandbox.smtp.mailtrap.io"
-SMTP_PORT = "2525"
-SMTP_USER = "121fa6c516e293"
-SMTP_PASS = "51290f3a2ec291"
-SMTP_TO= "rishav@sthyra.com"
-MONGODB_URI="mongodb://rishav_db_user:XTQRElKq3WCRNknu@ac-t0gvank-shard-00-00.77n4jhn.mongodb.net:27017,ac-t0gvank-shard-00-01.77n4jhn.mongodb.net:27017,ac-t0gvank-shard-00-02.77n4jhn.mongodb.net:27017/?ssl=true&replicaSet=atlas-4jofd4-shard-0&authSource=admin&retryWrites=true&w=majority"
-MONGODB_DB_NAME="project_0"
-ASSET_SECRET = "4e30b98b91b4775c049a924c350ace8a"
-
-## ENV LOCAL
-
-ADMIN_SESSION_SECRET=8b66e8f1db8647a5a728a78d16c8cb95fb986be561f3490b8cb39ee4332032d6
-ASSET_WORKER_DOMAIN=https://assets.sthyra.com
-
-
-## ENV EXAMPLE 
-
-NEXT_PUBLIC_TRIFECTA_REMOTE_CONTROL_ENABLED=false
-NEXT_PUBLIC_TRIFECTA_REMOTE_CONTROL_RELAY_URL=ws://127.0.0.1:8787/session
-NEXT_PUBLIC_TRIFECTA_REMOTE_CONTROL_SESSION_CODE=
-ASSET_SECRET=your_secret_here
-ASSET_WORKER_DOMAIN=https://assets.sthyra.com
