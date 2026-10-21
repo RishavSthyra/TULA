@@ -52,11 +52,13 @@ import {
   buildExteriorTourGraph,
   getNodeHeading,
   imageFilenameToPanoId,
+  preserveViewYawBetweenNodes,
 } from "@/lib/exterior-tour/nodes";
 import { clamp, degToRad, distancePlanar, dotPlanar, normalizePlanar, wrapAngleRad } from "@/lib/exterior-tour/math";
 import type {
   DirectionalNavMap,
   ExteriorPanoNodeSource,
+  ExteriorTourGraph,
   ExteriorTourNode,
   NavigationDirection,
   PanoMeta,
@@ -222,7 +224,18 @@ type InteriorPanoWalkthroughProps = {
   initialNodeId?: string;
   className?: string;
   config?: InteriorDeveloperConfig;
+  panoOnly?: boolean;
+  preserveViewDirection?: boolean;
+  blockedNavigationPairs?: ReadonlyArray<readonly [string, string]>;
+  additionalNavigationPairs?: ReadonlyArray<readonly [string, string]>;
+  navigationYawOverrides?: ReadonlyArray<readonly [string, string, number]>;
 };
+
+const EMPTY_BLOCKED_NAVIGATION_PAIRS: ReadonlyArray<readonly [string, string]> = [];
+const EMPTY_ADDITIONAL_NAVIGATION_PAIRS: ReadonlyArray<readonly [string, string]> = [];
+const EMPTY_NAVIGATION_YAW_OVERRIDES: ReadonlyArray<
+  readonly [string, string, number]
+> = [];
 
 type ResolvedPano = {
   nodeId: string;
@@ -785,9 +798,9 @@ function ArrowButton({
       aria-label={label}
       onClick={onClick}
       disabled={disabled}
-      className="group flex h-12 w-12 touch-manipulation items-center justify-center rounded-[1.15rem] border border-white/30 bg-[linear-gradient(180deg,rgba(255,255,255,0.22),rgba(214,224,230,0.1))] text-white shadow-[0_18px_38px_rgba(0,0,0,0.24)] backdrop-blur-2xl transition duration-200 active:scale-95 hover:border-white/40 hover:bg-white/[0.18] disabled:cursor-not-allowed disabled:opacity-30"
+      className="interior-direction-button group flex h-10 w-10 touch-manipulation items-center justify-center rounded-full text-white/84 transition duration-200 active:scale-95 sm:h-11 sm:w-11 disabled:cursor-not-allowed disabled:opacity-28"
     >
-      <Icon className="h-5 w-5 transition duration-200 group-hover:scale-110" />
+      <Icon className="h-4 w-4 stroke-[1.65] transition duration-200 group-hover:text-[#8bd3a7] sm:h-4.5 sm:w-4.5" />
     </button>
   );
 }
@@ -1109,10 +1122,57 @@ function vectorFromAngle(angle: number) {
   };
 }
 
+function getNavigationPairKey(firstNodeId: string, secondNodeId: string) {
+  return [firstNodeId, secondNodeId].sort().join("::");
+}
+
+function getNavigationYawOverride(
+  overrides: ReadonlyArray<readonly [string, string, number]>,
+  fromNodeId: string,
+  toNodeId: string,
+) {
+  const override = overrides.find(
+    ([from, to]) => from === fromNodeId && to === toNodeId,
+  );
+
+  return override ? degToRad(override[2]) : undefined;
+}
+
+function getConnectedNavigationCandidates(
+  graph: ExteriorTourGraph,
+  activeNode: ExteriorTourNode,
+  blockedNavigationPairKeys: ReadonlySet<string>,
+  additionalNavigationPairs: ReadonlyArray<readonly [string, string]>,
+) {
+  const candidateIds = new Set(activeNode.neighbors.map((neighbor) => neighbor.id));
+
+  for (const [firstNodeId, secondNodeId] of additionalNavigationPairs) {
+    if (firstNodeId === activeNode.id) {
+      candidateIds.add(secondNodeId);
+    } else if (secondNodeId === activeNode.id) {
+      candidateIds.add(firstNodeId);
+    }
+  }
+
+  return graph.nodes.filter(
+    (node) =>
+      candidateIds.has(node.id) &&
+      !blockedNavigationPairKeys.has(
+        getNavigationPairKey(activeNode.id, node.id),
+      ),
+  );
+}
+
 function getViewRelativeNavigationTargets(
-  graph: { nodes: ExteriorTourNode[] },
+  graph: ExteriorTourGraph,
   activeNode: ExteriorTourNode | undefined,
   currentYaw: number,
+  connectedOnly = false,
+  blockedNavigationPairKeys: ReadonlySet<string> = new Set(),
+  additionalNavigationPairs: ReadonlyArray<readonly [string, string]> =
+    EMPTY_ADDITIONAL_NAVIGATION_PAIRS,
+  navigationYawOverrides: ReadonlyArray<readonly [string, string, number]> =
+    EMPTY_NAVIGATION_YAW_OVERRIDES,
 ): DirectionalNavMap {
   const emptyTarget = {
     forward: { direction: "forward" as const, node: null, score: -Infinity },
@@ -1132,13 +1192,20 @@ function getViewRelativeNavigationTargets(
     right: worldForwardAngle + Math.PI / 2,
     backward: worldForwardAngle + Math.PI,
   };
-  const candidates = graph.nodes.filter((node) => node.id !== activeNode.id);
+  const candidates = connectedOnly
+    ? getConnectedNavigationCandidates(
+        graph,
+        activeNode,
+        blockedNavigationPairKeys,
+        additionalNavigationPairs,
+      )
+    : graph.nodes.filter((node) => node.id !== activeNode.id);
 
   return {
-    forward: getBestDirectionalTarget(activeNode, candidates, desiredAngles.forward, "forward"),
-    left: getBestDirectionalTarget(activeNode, candidates, desiredAngles.left, "left"),
-    right: getBestDirectionalTarget(activeNode, candidates, desiredAngles.right, "right"),
-    backward: getBestDirectionalTarget(activeNode, candidates, desiredAngles.backward, "backward"),
+    forward: getBestDirectionalTarget(activeNode, candidates, desiredAngles.forward, "forward", navigationYawOverrides),
+    left: getBestDirectionalTarget(activeNode, candidates, desiredAngles.left, "left", navigationYawOverrides),
+    right: getBestDirectionalTarget(activeNode, candidates, desiredAngles.right, "right", navigationYawOverrides),
+    backward: getBestDirectionalTarget(activeNode, candidates, desiredAngles.backward, "backward", navigationYawOverrides),
   };
 }
 
@@ -1147,6 +1214,7 @@ function getBestDirectionalTarget(
   candidates: ExteriorTourNode[],
   desiredAngle: number,
   direction: NavigationDirection,
+  navigationYawOverrides: ReadonlyArray<readonly [string, string, number]>,
 ) {
   const desiredVector = vectorFromAngle(desiredAngle);
   const ranked = candidates
@@ -1156,7 +1224,15 @@ function getBestDirectionalTarget(
         y: candidate.rawPosition.y - activeNode.rawPosition.y,
         z: 0,
       };
-      const directionVector = normalizePlanar(delta, desiredVector);
+      const yawOverride = getNavigationYawOverride(
+        navigationYawOverrides,
+        activeNode.id,
+        candidate.id,
+      );
+      const directionVector =
+        yawOverride === undefined
+          ? normalizePlanar(delta, desiredVector)
+          : vectorFromAngle(getNodeHeading(activeNode) + yawOverride);
       const distance = distancePlanar(activeNode.rawPosition, candidate.rawPosition);
       const alignment = dotPlanar(directionVector, desiredVector);
       const distanceBias =
@@ -1183,14 +1259,20 @@ function getBestDirectionalTarget(
   return best;
 }
 
-function buildLinkPosition(node: ExteriorTourNode, target: ExteriorTourNode): Position {
+function buildLinkPosition(
+  node: ExteriorTourNode,
+  target: ExteriorTourNode,
+  yawOverride?: number,
+): Position {
   const dx = target.rawPosition.x - node.rawPosition.x;
   const dy = target.rawPosition.y - node.rawPosition.y;
   const dz = target.rawPosition.z - node.rawPosition.z;
   const planarDistance = Math.max(distancePlanar(node.rawPosition, target.rawPosition), 1);
 
   return {
-    yaw: wrapAngleRad(Math.atan2(dy, dx) - getNodeHeading(node)),
+    yaw:
+      yawOverride ??
+      wrapAngleRad(Math.atan2(dy, dx) - getNodeHeading(node)),
     pitch: clamp(Math.atan2(dz, planarDistance), MIN_PITCH, MAX_PITCH),
   };
 }
@@ -1199,11 +1281,17 @@ export default function InteriorPanoWalkthrough({
   initialNodeId,
   className,
   config,
+  panoOnly = false,
+  preserveViewDirection = false,
+  blockedNavigationPairs = EMPTY_BLOCKED_NAVIGATION_PAIRS,
+  additionalNavigationPairs = EMPTY_ADDITIONAL_NAVIGATION_PAIRS,
+  navigationYawOverrides = EMPTY_NAVIGATION_YAW_OVERRIDES,
 }: InteriorPanoWalkthroughProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const requestedBareShellMode = getWalkthroughMode(searchParams) === "bare-shell";
+  const requestedBareShellMode =
+    !panoOnly && getWalkthroughMode(searchParams) === "bare-shell";
   const [isBareShellMode, setIsBareShellMode] = useState(requestedBareShellMode);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDimensionsVisible, setIsDimensionsVisible] = useState(false);
@@ -1231,14 +1319,19 @@ export default function InteriorPanoWalkthrough({
   const goToNodeRef = useRef<(targetId: string) => Promise<void>>(async () => {});
 
   const allNodes = useMemo(
-    () =>
-      isBareShellMode
-        ? (config?.bareShellNodes ?? (bareShellNavData as ExteriorPanoNodeSource[]))
-        : [
-            ...(config?.furnishedNodes ?? (furnishedNavData as ExteriorPanoNodeSource[])),
-            FURNISHED_BALCONY_NODE,
-          ],
-    [config?.bareShellNodes, config?.furnishedNodes, isBareShellMode],
+    () => {
+      if (isBareShellMode) {
+        return config?.bareShellNodes ?? (bareShellNavData as ExteriorPanoNodeSource[]);
+      }
+
+      const furnishedNodes =
+        config?.furnishedNodes ?? (furnishedNavData as ExteriorPanoNodeSource[]);
+
+      return panoOnly
+        ? furnishedNodes
+        : [...furnishedNodes, FURNISHED_BALCONY_NODE];
+    },
+    [config?.bareShellNodes, config?.furnishedNodes, isBareShellMode, panoOnly],
   );
   const panoBases = useMemo(() => {
     const trailingSlash = (value: string) => value.endsWith("/") ? value : `${value}/`;
@@ -1280,6 +1373,15 @@ export default function InteriorPanoWalkthrough({
   }, [allNodes, availableNodeIds]);
 
   const graph = useMemo(() => buildExteriorTourGraph(nodes), [nodes]);
+  const blockedNavigationPairKeys = useMemo(
+    () =>
+      new Set(
+        blockedNavigationPairs.map(([firstNodeId, secondNodeId]) =>
+          getNavigationPairKey(firstNodeId, secondNodeId),
+        ),
+      ),
+    [blockedNavigationPairs],
+  );
   const fallbackNodeId = graph.nodes[0]?.id ?? "";
   const explicitNodeId = activeNodeId && graph.byId[activeNodeId] ? activeNodeId : undefined;
   const preferredNodeId = preferredFrame
@@ -1307,8 +1409,25 @@ export default function InteriorPanoWalkthrough({
     };
   }, [activeNode, availablePanoFolders, isBareShellMode, panoBases]);
   const navigationTargets = useMemo(
-    () => getViewRelativeNavigationTargets(graph, activeNode, viewYaw),
-    [activeNode, graph, viewYaw],
+    () =>
+      getViewRelativeNavigationTargets(
+        graph,
+        activeNode,
+        viewYaw,
+        panoOnly,
+        blockedNavigationPairKeys,
+        additionalNavigationPairs,
+        navigationYawOverrides,
+      ),
+    [
+      activeNode,
+      additionalNavigationPairs,
+      blockedNavigationPairKeys,
+      graph,
+      navigationYawOverrides,
+      panoOnly,
+      viewYaw,
+    ],
   );
   const menuRooms = useMemo<MenuRoomItem[]>(() => {
     const seenLabels = new Set<string>();
@@ -1546,16 +1665,34 @@ export default function InteriorPanoWalkthrough({
         thumbnail: resolved.previewUrl,
         name: getRoomLabel(node.imageFilename),
         caption: `${getRoomLabel(node.imageFilename)} | ${buildNodeModeLabel(isBareShellMode)}`,
-        links: node.neighbors
-          .map((neighbor) => graph.byId[neighbor.id])
-          .filter((target): target is ExteriorTourNode => Boolean(target))
+        links: getConnectedNavigationCandidates(
+          graph,
+          node,
+          blockedNavigationPairKeys,
+          additionalNavigationPairs,
+        )
           .map((target) => ({
             nodeId: target.id,
-            position: buildLinkPosition(node, target),
+            position: buildLinkPosition(
+              node,
+              target,
+              getNavigationYawOverride(
+                navigationYawOverrides,
+                node.id,
+                target.id,
+              ),
+            ),
           })),
       };
     },
-    [graph.byId, isBareShellMode, resolvePano],
+    [
+      additionalNavigationPairs,
+      blockedNavigationPairKeys,
+      graph,
+      isBareShellMode,
+      navigationYawOverrides,
+      resolvePano,
+    ],
   );
 
   const syncNodeMarkers = useCallback(
@@ -1581,6 +1718,7 @@ export default function InteriorPanoWalkthrough({
   const goToNode = useCallback(async (targetId: string) => {
     const bindings = bindingsRef.current;
     const targetNode = graph.byId[targetId];
+    const sourceNode = graph.byId[activeNodeIdRef.current];
     const virtualTour = bindings?.viewer.getPlugin<VirtualTourPlugin>(VirtualTourPlugin);
 
     if (!bindings || !virtualTour || !targetNode || isTransitioning || targetId === activeNodeIdRef.current) {
@@ -1589,9 +1727,20 @@ export default function InteriorPanoWalkthrough({
 
     setIsTransitioning(true);
     setViewerError(null);
-    pendingNodeViewRef.current = isBalconyNode(targetId)
+    const currentPosition = bindings.viewer.getPosition();
+    const targetPosition = isBalconyNode(targetId)
       ? getBalconyOverrideView()
-      : null;
+      : preserveViewDirection && sourceNode
+        ? {
+            yaw: preserveViewYawBetweenNodes(
+              sourceNode,
+              targetNode,
+              currentPosition.yaw,
+            ),
+            pitch: currentPosition.pitch,
+          }
+        : null;
+    pendingNodeViewRef.current = targetPosition;
 
     try {
       const refreshedNode = await buildTourNode(targetNode, {
@@ -1603,7 +1752,9 @@ export default function InteriorPanoWalkthrough({
         effect: "fade",
         showLoader: false,
         speed: interiorNodeTransitionSpeed,
-        rotation: true,
+        rotation: !targetPosition,
+        rotateTo: targetPosition ?? undefined,
+        zoomTo: targetPosition ? bindings.viewer.getZoomLevel() : undefined,
       });
 
       if (completed === false) {
@@ -1616,7 +1767,13 @@ export default function InteriorPanoWalkthrough({
       setViewerError(`Failed to load ${getRoomLabel(targetNode.imageFilename)}.`);
       setIsTransitioning(false);
     }
-  }, [buildTourNode, graph.byId, interiorNodeTransitionSpeed, isTransitioning]);
+  }, [
+    buildTourNode,
+    graph.byId,
+    interiorNodeTransitionSpeed,
+    isTransitioning,
+    preserveViewDirection,
+  ]);
 
   useEffect(() => {
     goToNodeRef.current = goToNode;
@@ -2246,14 +2403,16 @@ export default function InteriorPanoWalkthrough({
       </div>
 
       <div className="pointer-events-none absolute left-0 top-0 z-30 flex flex-col gap-2 p-3 sm:p-6">
-        <button
-          type="button"
-          aria-label="Open room index"
-          onClick={() => setIsMenuOpen(true)}
-          className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-[1.2rem] border border-white/24 bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(189,202,211,0.06))] text-white shadow-[0_16px_34px_rgba(0,0,0,0.22)] backdrop-blur-2xl transition hover:border-white/34 hover:bg-white/12"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
+        {!panoOnly ? (
+          <button
+            type="button"
+            aria-label="Open room index"
+            onClick={() => setIsMenuOpen(true)}
+            className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-[1.2rem] border border-white/24 bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(189,202,211,0.06))] text-white shadow-[0_16px_34px_rgba(0,0,0,0.22)] backdrop-blur-2xl transition hover:border-white/34 hover:bg-white/12"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        ) : null}
         {INTERIOR_PANO_DEV_TOOL_ENABLED && activePanoDebugInfo ? (
           <div
             className={`${uiFont.className} pointer-events-auto max-w-[min(24rem,calc(100vw-1.5rem))] select-text rounded-[1rem] border border-emerald-200/18 bg-[rgba(6,14,15,0.74)] px-3 py-2 text-[11px] text-emerald-50/88 shadow-[0_16px_34px_rgba(0,0,0,0.24)] backdrop-blur-2xl`}
@@ -2283,7 +2442,8 @@ export default function InteriorPanoWalkthrough({
         ) : null}
       </div>
 
-      <div className="pointer-events-none absolute right-4 top-[1.5rem] z-30 hidden w-[220px] xl:block 2xl:right-6 2xl:top-[2rem] 2xl:w-[300px]">
+      {!panoOnly ? (
+        <div className="pointer-events-none absolute right-4 top-[1.5rem] z-30 hidden w-[220px] xl:block 2xl:right-6 2xl:top-[2rem] 2xl:w-[300px]">
         <div className="pointer-events-auto rounded-[1.6rem] p-3 ">
           <InteriorFloorPlanMinimap
             image={minimapImage}
@@ -2318,22 +2478,25 @@ export default function InteriorPanoWalkthrough({
           </button>
 
         </div>
-      </div>
+        </div>
+      ) : null}
 
-      <div className="pointer-events-none absolute right-3 top-3 z-20 xl:hidden">
-        <InteriorFloorPlanMinimap
-          image={minimapImage}
-          points={minimapPoints}
-          isTransitioning={isTransitioning}
-          onPointSelect={(nodeId) => {
-            setPreferredFrame(null);
-            void goToNode(nodeId);
-          }}
-          className="w-[10.5rem] sm:w-[13rem]"
-        />
-      </div>
+      {!panoOnly ? (
+        <div className="pointer-events-none absolute right-3 top-3 z-20 xl:hidden">
+          <InteriorFloorPlanMinimap
+            image={minimapImage}
+            points={minimapPoints}
+            isTransitioning={isTransitioning}
+            onPointSelect={(nodeId) => {
+              setPreferredFrame(null);
+              void goToNode(nodeId);
+            }}
+            className="w-[10.5rem] sm:w-[13rem]"
+          />
+        </div>
+      ) : null}
 
-      {isMenuOpen ? (
+      {!panoOnly && isMenuOpen ? (
         <div className="absolute inset-0 z-40 flex pointer-events-auto">
           <button
             type="button"
@@ -2451,8 +2614,8 @@ export default function InteriorPanoWalkthrough({
         </div>
       ) : null}
 
-      <div className="pointer-events-auto absolute right-2 z-20 bottom-[calc(env(safe-area-inset-bottom,0px)+6.5rem)] sm:right-4 sm:bottom-[calc(env(safe-area-inset-bottom,0px)+7rem)] xl:bottom-6 xl:right-6">
-        <div className="flex flex-col items-center gap-1.5 rounded-[1.15rem] border border-white/24 bg-[linear-gradient(180deg,rgba(255,255,255,0.18),rgba(214,224,230,0.08))] p-2 shadow-[0_18px_46px_rgba(0,0,0,0.24)] backdrop-blur-2xl sm:gap-2.5 sm:rounded-[1.45rem] sm:p-2.5 xl:gap-3 xl:rounded-[1.7rem] xl:p-3">
+      <div className="pointer-events-auto absolute right-3 top-1/2 z-20 -translate-y-1/2 sm:right-5">
+        <div className="interior-direction-rail flex flex-col items-center gap-1.5 rounded-full p-1.5 sm:gap-2 sm:p-2">
           <ArrowButton
             icon={ArrowUp}
             label="Move forward"
@@ -2497,6 +2660,27 @@ export default function InteriorPanoWalkthrough({
         .interior-pano-walkthrough .psv-navbar,
         .interior-pano-walkthrough .psv-virtual-tour-arrows {
           display: none !important;
+        }
+
+        .interior-direction-rail {
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(3, 5, 4, 0.62);
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.07),
+            0 16px 36px rgba(0, 0, 0, 0.34);
+          backdrop-filter: blur(20px) saturate(1.16);
+        }
+
+        .interior-direction-button {
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(4, 6, 5, 0.68);
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+          .interior-direction-button:hover:not(:disabled) {
+            border-color: rgba(255, 255, 255, 0.22);
+            background: rgba(8, 11, 9, 0.72);
+          }
         }
       `}</style>
     </section>

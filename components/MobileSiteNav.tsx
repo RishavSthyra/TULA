@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import {
+  Armchair,
   Building2,
   FileDown,
   Heart,
@@ -32,6 +33,7 @@ const navItemIcons: Record<SiteNavHref, typeof Home> = {
   "/amenities": Heart,
   "/master-plan": UserRound,
   "/exterior-walkthrough": Footprints,
+  "/interior-kitchen-foyer": Armchair,
 } as const;
 
 export default function MobileSiteNav() {

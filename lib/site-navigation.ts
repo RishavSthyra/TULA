@@ -4,7 +4,8 @@ export type SiteNavHref =
   | "/area-map"
   | "/amenities"
   | "/master-plan"
-  | "/exterior-walkthrough";
+  | "/exterior-walkthrough"
+  | "/interior-kitchen-foyer";
 
 export type SiteNavItem = {
   href: SiteNavHref;
@@ -25,8 +26,12 @@ export const siteNavItems: SiteNavItem[] = [
       "/exterios-walkthrough",
       "/exterior-tour",
       "/exterior-walkthrough",
-      "/walkthrough",
     ],
+  },
+  {
+    href: "/interior-kitchen-foyer",
+    label: "Interior Tour",
+    matches: ["/walkthrough", "/interior-kitchen-foyer"],
   },
 ] as const;
 
@@ -51,5 +56,9 @@ export function isExteriorWalkthroughPath(pathname: string) {
 }
 
 export function isAnyWalkthroughPath(pathname: string) {
-  return pathname === "/walkthrough" || isExteriorWalkthroughPath(pathname);
+  return (
+    pathname === "/walkthrough" ||
+    pathname === "/interior-kitchen-foyer" ||
+    isExteriorWalkthroughPath(pathname)
+  );
 }
