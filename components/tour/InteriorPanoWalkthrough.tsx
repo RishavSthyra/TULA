@@ -940,6 +940,29 @@ function InteriorFloorPlanMinimap({
 }
 
 const ROOM_LABELS: Record<string, string> = {
+  // TULA kitchen-and-foyer tour. These visitor-facing labels deliberately
+  // describe the room, rather than exposing the production pano frame number.
+  spline_pano_01_F0000: "Walk-in Wardrobe",
+  spline_pano_01_F0001: "Master Bedroom",
+  spline_pano_01_F0002: "Master Bedroom",
+  spline_pano_01_F0003: "Hallway",
+  spline_pano_01_F0004: "Hallway",
+  spline_pano_01_F0005: "Living",
+  spline_pano_01_F0006: "Living",
+  spline_pano_01_F0007: "Dining",
+  spline_pano_01_F0008: "Bedroom",
+  spline_pano_01_F0010: "Bedroom",
+  spline_pano_01_F0011: "Bedroom",
+  spline_pano_02_F0013: "Master Bedroom",
+  spline_pano_02_F0014: "Master Bedroom",
+  spline_pano_03_F0016: "Bedroom",
+  spline_pano_03_F0017: "Bedroom",
+  spline_pano_03_F0018: "Foyer",
+  spline_pano_04_F0021: "Living",
+  spline_pano_05_F0024: "Kitchen",
+  spline_pano_05_F0026: "Dining",
+  spline_pano_05_F0027: "Dining",
+
   LS_BP_panoPath_Interior_F0000: "Entrance",
   LS_BP_panoPath_Interior_F0001: "Drawing Room",
   LS_BP_panoPath_Interior_F0002: "Drawing Room Passage",
@@ -991,7 +1014,14 @@ const ROOM_LABELS: Record<string, string> = {
 
 function getRoomLabel(imageFilename: string) {
   const panoId = imageFilenameToPanoId(imageFilename);
-  const baseLabel = ROOM_LABELS[panoId] ?? panoId.match(/F(\d{4})$/i)?.[0] ?? panoId;
+  // TULA exports are named `LS_spline_pano…`, while the visitor-facing map
+  // intentionally uses the stable spline ID without the render prefix.
+  const tulaPanoId = panoId.replace(/^LS_(?=spline_pano_)/i, "");
+  const baseLabel =
+    ROOM_LABELS[panoId] ??
+    ROOM_LABELS[tulaPanoId] ??
+    panoId.match(/F(\d{4})$/i)?.[0] ??
+    panoId;
   return normalizeRoomLabelForDisplay(baseLabel, panoId);
 }
 
