@@ -81,7 +81,7 @@ function assertNoLegacyWebpTiles(tilesFolder: string): void {
 
   const legacyTiles = fs
     .readdirSync(tilesFolder)
-    .filter((file) => /\.webp$/i.test(file))
+    .filter((file) => /\.(?:webp|png)$/i.test(file))
 
   if (legacyTiles.length > 0) {
     throw new Error(
