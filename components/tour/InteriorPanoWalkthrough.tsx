@@ -1368,10 +1368,6 @@ export default function InteriorPanoWalkthrough({
   >({});
   const isMinimapCalibrationMode =
     INTERIOR_PANO_DEV_TOOL_ENABLED && searchParams.get("calibrate") === "1";
-  // Picker and alternate-dot views are local QA tools only; never expose them
-  // through the deployed walkthrough URL.
-  const isPanoPickerMode =
-    INTERIOR_PANO_DEV_TOOL_ENABLED && searchParams.get("picker") === "1";
   const showAllConfiguredMinimapPoints =
     INTERIOR_PANO_DEV_TOOL_ENABLED && searchParams.get("all-points") === "1";
   const [activeNodeId, setActiveNodeId] = useState(
@@ -1479,25 +1475,6 @@ export default function InteriorPanoWalkthrough({
     : undefined;
   const currentNodeId = explicitNodeId || preferredNodeId || fallbackNodeId;
   const activeNode = graph.byId[currentNodeId];
-  const activePanoDebugInfo = useMemo(() => {
-    if (!INTERIOR_PANO_DEV_TOOL_ENABLED || !activeNode) {
-      return null;
-    }
-
-    const { panoId } = getInteriorPanoSource(
-      activeNode.id,
-      activeNode.imageFilename,
-      availablePanoFolders,
-      isBareShellMode,
-      panoBases,
-    );
-
-    return {
-      imageFilename: activeNode.imageFilename,
-      nodeId: activeNode.id,
-      panoId,
-    };
-  }, [activeNode, availablePanoFolders, isBareShellMode, panoBases]);
   const navigationTargets = useMemo(
     () =>
       getViewRelativeNavigationTargets(
@@ -2627,28 +2604,6 @@ export default function InteriorPanoWalkthrough({
       </div>
 
       <div className="pointer-events-none absolute left-0 top-0 z-30 flex flex-col gap-2 p-3 sm:p-6">
-        {isPanoPickerMode ? (
-          <label
-            className={`${uiFont.className} pointer-events-auto flex w-[min(19rem,calc(100vw-1.5rem))] flex-col gap-1.5 rounded-[1rem] border border-emerald-200/20 bg-[rgba(6,14,15,0.78)] px-3 py-2.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-50 shadow-[0_16px_34px_rgba(0,0,0,0.26)] backdrop-blur-2xl`}
-          >
-            Jump to pano
-            <select
-              value={activeNodeId}
-              disabled={isTransitioning}
-              onChange={(event) => {
-                setPreferredFrame(null);
-                void goToNode(event.target.value);
-              }}
-              className="w-full cursor-pointer rounded-lg border border-white/18 bg-black/45 px-2.5 py-2 text-xs font-medium normal-case tracking-normal text-white outline-none transition focus:border-emerald-200/60 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {graph.nodes.map((node) => (
-                <option key={node.id} value={node.id} className="bg-[#0a1212] text-white">
-                  {node.id.match(/F(\d{4})$/)?.[1] ?? node.id} — {getRoomLabel(node.imageFilename)}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
         {!panoOnly ? (
           <button
             type="button"
@@ -2658,33 +2613,6 @@ export default function InteriorPanoWalkthrough({
           >
             <Menu className="h-5 w-5" />
           </button>
-        ) : null}
-        {INTERIOR_PANO_DEV_TOOL_ENABLED && activePanoDebugInfo ? (
-          <div
-            className={`${uiFont.className} pointer-events-auto max-w-[min(24rem,calc(100vw-1.5rem))] select-text rounded-[1rem] border border-emerald-200/18 bg-[rgba(6,14,15,0.74)] px-3 py-2 text-[11px] text-emerald-50/88 shadow-[0_16px_34px_rgba(0,0,0,0.24)] backdrop-blur-2xl`}
-          >
-            <div className="text-[9px] font-semibold uppercase tracking-[0.22em] text-emerald-200/60">
-              Interior pano debug
-            </div>
-            <div className="mt-1 text-[10px] uppercase tracking-[0.18em] text-white/42">
-              File
-            </div>
-            <div className="break-all font-semibold text-white/90">
-              {activePanoDebugInfo.imageFilename}
-            </div>
-            <div className="mt-2 text-[10px] uppercase tracking-[0.18em] text-white/42">
-              Pano Id
-            </div>
-            <div className="break-all text-white/74">
-              {activePanoDebugInfo.panoId}
-            </div>
-            <div className="mt-2 text-[10px] uppercase tracking-[0.18em] text-white/42">
-              Node
-            </div>
-            <div className="break-all text-white/74">
-              {activePanoDebugInfo.nodeId}
-            </div>
-          </div>
         ) : null}
       </div>
 
