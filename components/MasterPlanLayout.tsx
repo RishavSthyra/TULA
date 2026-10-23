@@ -946,7 +946,7 @@ export default function MasterPlanLayout({
     const compactViewportMedia = window.matchMedia("(max-width: 1279px)");
     const mobileViewportMedia = window.matchMedia("(max-width: 767px)");
     const desktopCompactViewportMedia = window.matchMedia(
-      "(min-width: 1280px) and (max-width: 1699px)",
+      "(min-width: 1280px) and (max-width: 1439px)",
     );
     const touchViewportMedia = window.matchMedia("(max-width: 1366px)");
     const syncCompactViewport = () => {
@@ -2097,7 +2097,7 @@ export default function MasterPlanLayout({
                   animate={{ opacity: 1, x: 0, y: 0 }}
                   exit={{ opacity: 0, x: 24, y: 12 }}
                   transition={{ duration: 0.26, ease: smoothEase }}
-                  className="pointer-events-none absolute right-4 top-1/2 z-40 w-full max-w-[18rem] -translate-y-1/2 overflow-visible xl:origin-right xl:scale-[0.8] 2xl:right-7 2xl:max-w-[20rem] 2xl:scale-[0.86]"
+                  className="pointer-events-none absolute right-4 top-1/2 z-40 w-full max-w-[22rem] -translate-y-1/2 overflow-visible xl:origin-right xl:scale-[0.9] 2xl:right-7 2xl:max-w-[24rem] 2xl:scale-[0.94]"
                 >
                   <SelectedFlatDetailsPanel
                     ref={selectedFlatPanelRef}
@@ -2185,7 +2185,7 @@ export default function MasterPlanLayout({
                             onClosePanel={() => setIsDesktopSidebarOpen(false)}
                             onReset={resetFilters}
                             onBack={handleBackToTowerSelect}
-                            compactDesktop
+                            compactDesktop={isDesktopCompactViewport}
                           />
 
                           <MasterPlanResultsCard
@@ -2194,12 +2194,12 @@ export default function MasterPlanLayout({
                             inventoryError={inventoryError}
                             onApartmentSelect={handleApartmentListSelect}
                             selectedApartmentId={selectedApartmentInventoryId}
-                            compactDesktop
+                            compactDesktop={isDesktopCompactViewport}
                           />
                         </>
                       ) : (
                         <TowerSelect
-                            compactDesktop
+                            compactDesktop={isDesktopCompactViewport}
                           embedded
                           isTopViewActive={isTopViewMode}
                           onClose={() => setIsDesktopSidebarOpen(false)}
@@ -2439,7 +2439,7 @@ export default function MasterPlanLayout({
                   animate={{ opacity: 1, x: 0, y: 0 }}
                   exit={{ opacity: 0, x: 24, y: 12 }}
                   transition={{ duration: 0.28, ease: smoothEase }}
-                  className="pointer-events-none absolute right-4 top-1/2 z-20 w-full max-w-[18rem] -translate-y-1/2 overflow-visible xl:origin-right xl:scale-[0.8] 2xl:right-7 2xl:max-w-[20rem] 2xl:scale-[0.86]"
+                  className="pointer-events-none absolute right-4 top-1/2 z-20 w-full max-w-[22rem] -translate-y-1/2 overflow-visible xl:origin-right xl:scale-[0.9] 2xl:right-7 2xl:max-w-[24rem] 2xl:scale-[0.94]"
                 >
                   <SelectedFlatDetailsPanel
                     apartment={specialVideoApartment}
@@ -2730,9 +2730,9 @@ function MasterPlanFiltersCard({
         className={`pointer-events-none absolute z-0 w-full opacity-45 mix-blend-multiply ${compactDesktop ? "-bottom-12 -right-8" : "-bottom-16 -right-10 sm:-bottom-16 sm:-right-12 sm:w-full"}`}
       />
       <div
-        className={`flex items-start justify-between gap-4 ${compactDesktop ? "mb-4" : "mb-5"}`}
+        className={`flex items-start justify-between gap-3 ${compactDesktop ? "mb-4" : "mb-5"}`}
       >
-        <div>
+        <div className="min-w-0 flex-1">
           <p
             className={`font-bold uppercase text-[#58715f] ${compactDesktop ? "text-[9px] tracking-[0.28em]" : "text-[10px] tracking-[0.32em]"}`}
           >
@@ -2753,31 +2753,31 @@ function MasterPlanFiltersCard({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="hidden sm:flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onBack}
-              className={`inline-flex items-center gap-1 rounded-full border border-[#ded8c9] bg-[#fbfaf4] font-semibold text-[#456859] shadow-[0_10px_24px_rgba(33,50,35,0.10)] transition hover:bg-white ${compactDesktop ? "px-2.5 py-1.5 text-[10px]" : "px-3 py-2 text-[11px]"}`}
-            >
-              <ArrowLeft
-                className={compactDesktop ? "h-3 w-3" : "h-3.5 w-3.5"}
-              />
-              Back
-            </button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onBack}
+            title="Back"
+            aria-label="Back"
+            className={`inline-flex items-center justify-center rounded-full border border-[#ded8c9] bg-[#fbfaf4] text-[#456859] shadow-[0_10px_24px_rgba(33,50,35,0.10)] transition hover:bg-white ${compactDesktop ? "h-8 w-8" : "h-9 w-9"}`}
+          >
+            <ArrowLeft className={compactDesktop ? "h-3.5 w-3.5" : "h-4 w-4"} />
+          </button>
 
-            <button
-              type="button"
-              onClick={onClosePanel ?? onReset}
-              className={`cursor-pointer rounded-full border border-[#ded8c9] bg-[#fbfaf4] font-semibold text-[#456859] shadow-[0_10px_24px_rgba(33,50,35,0.10)] transition hover:bg-white ${compactDesktop ? "px-2.5 py-1.5 text-[10px]" : "px-3 py-2 text-[11px]"}`}
-            >
-              {onClosePanel ? "Close" : "Reset"}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onClosePanel ?? onReset}
+            title={onClosePanel ? "Close filters" : "Reset filters"}
+            aria-label={onClosePanel ? "Close filters" : "Reset filters"}
+            className={`inline-flex cursor-pointer items-center justify-center rounded-full border border-[#ded8c9] bg-[#fbfaf4] text-[#456859] shadow-[0_10px_24px_rgba(33,50,35,0.10)] transition hover:bg-white ${compactDesktop ? "h-8 w-8" : "h-9 w-9"}`}
+          >
+            <X className={compactDesktop ? "h-3.5 w-3.5" : "h-4 w-4"} />
+          </button>
           <button
             type="button"
             onClick={() => setIsDesktopFilterOpen((value) => !value)}
-            className={`inline-flex items-center justify-center rounded-full border border-[#ded8c9] bg-[#fbfaf4] text-[#456859] shadow-[0_12px_24px_rgba(33,50,35,0.14)] transition hover:bg-white ${compactDesktop ? "h-9 w-9" : "h-11 w-11"}`}
+            title={isDesktopFilterOpen ? "Collapse filters" : "Expand filters"}
+            className={`inline-flex items-center justify-center rounded-full border border-[#ded8c9] bg-[#fbfaf4] text-[#456859] shadow-[0_12px_24px_rgba(33,50,35,0.14)] transition hover:bg-white ${compactDesktop ? "h-8 w-8" : "h-9 w-9"}`}
             aria-label={
               isDesktopFilterOpen ? "Collapse filters" : "Expand filters"
             }
@@ -3427,6 +3427,7 @@ function LiquidGlassFilterStyles() {
 
       .mp-liquid-switcher__label {
         display: inline-flex;
+        min-width: 0;
         align-items: center;
         justify-content: center;
         gap: 5px;
@@ -3441,6 +3442,13 @@ function LiquidGlassFilterStyles() {
         text-transform: uppercase;
         line-height: 1;
         transition: transform 200ms cubic-bezier(0.5, 0, 0, 1);
+      }
+
+      .mp-liquid-switcher__text {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .mp-liquid-switcher__icon {
@@ -3465,6 +3473,17 @@ function LiquidGlassFilterStyles() {
       .mp-liquid-switcher--desktop-compact .mp-liquid-switcher__icon {
         width: 11px;
         height: 11px;
+      }
+
+      .mp-liquid-switcher--dense .mp-liquid-switcher__label {
+        gap: 3px;
+        padding: 0 4px;
+        font-size: 9px;
+        letter-spacing: 0.08em;
+      }
+
+      .mp-liquid-switcher--dense .mp-liquid-switcher__icon {
+        display: none;
       }
 
       @keyframes mpLiquidToggle {
@@ -3578,7 +3597,7 @@ function FilterPillGroup<T extends string>({
 
   return (
     <fieldset
-      className={`mp-liquid-switcher ${compactDark ? "mp-liquid-switcher--compact" : ""} ${compactDesktop ? "mp-liquid-switcher--desktop-compact" : ""}`}
+      className={`mp-liquid-switcher ${compactDark ? "mp-liquid-switcher--compact" : ""} ${compactDesktop ? "mp-liquid-switcher--desktop-compact" : ""} ${options.length >= 4 ? "mp-liquid-switcher--dense" : ""}`}
       style={switcherStyle}
     >
       <legend className="mp-liquid-switcher__legend">Choose filter</legend>
@@ -3604,7 +3623,7 @@ function FilterPillGroup<T extends string>({
               {shouldShowTowerIcon ? (
                 <Building2 className="mp-liquid-switcher__icon" aria-hidden />
               ) : null}
-              {getLabel(item)}
+              <span className="mp-liquid-switcher__text">{getLabel(item)}</span>
             </span>
           </label>
         );
