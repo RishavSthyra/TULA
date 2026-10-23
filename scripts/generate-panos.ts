@@ -81,7 +81,7 @@ function assertNoLegacyWebpTiles(tilesFolder: string): void {
 
   const legacyTiles = fs
     .readdirSync(tilesFolder)
-    .filter((file) => /\.(?:webp|png)$/i.test(file))
+    .filter((file) => /\.webp$/i.test(file))
 
   if (legacyTiles.length > 0) {
     throw new Error(
@@ -291,7 +291,7 @@ async function run(): Promise<void> {
 
   const files = fs
     .readdirSync(INPUT)
-    .filter((file) => /\.webp$/i.test(file))
+    .filter((file) => /\.(?:webp|png)$/i.test(file))
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
 
   if (files.length === 0) {
