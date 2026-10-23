@@ -23,7 +23,7 @@ import {
   useRouter,
   useSearchParams,
 } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import pLimit from "p-limit";
 import {
   ArrowDown,
@@ -229,6 +229,8 @@ type InteriorPanoWalkthroughProps = {
   blockedNavigationPairs?: ReadonlyArray<readonly [string, string]>;
   additionalNavigationPairs?: ReadonlyArray<readonly [string, string]>;
   navigationYawOverrides?: ReadonlyArray<readonly [string, string, number]>;
+  minimap?: InteriorPanoMinimapConfig;
+  showMinimap?: boolean;
 };
 
 const EMPTY_BLOCKED_NAVIGATION_PAIRS: ReadonlyArray<readonly [string, string]> = [];
@@ -275,7 +277,7 @@ type FloorPlanMinimapWorldPoint = {
   z?: number;
 };
 
-type FloorPlanMinimapWorldBounds = {
+export type FloorPlanMinimapWorldBounds = {
   bottomLeft: FloorPlanMinimapWorldPoint;
   topRight: FloorPlanMinimapWorldPoint;
 };
@@ -285,6 +287,23 @@ type FloorPlanMinimapAdjustment = {
   offsetY: number;
   scaleX: number;
   scaleY: number;
+};
+
+type FloorPlanMinimapCoordinateProjection = {
+  left: { x: number; y: number; offset: number };
+  top: { x: number; y: number; offset: number };
+};
+
+export type InteriorPanoMinimapConfig = {
+  image: StaticImageData;
+  worldBounds: FloorPlanMinimapWorldBounds;
+  flipX?: boolean;
+  flipY?: boolean;
+  adjustment?: Partial<FloorPlanMinimapAdjustment>;
+  pointPositions?: Record<string, Pick<FloorPlanMinimapPoint, "left" | "top">>;
+  visibleNodeIds?: readonly string[];
+  hiddenNodeIds?: readonly string[];
+  coordinateProjection?: FloorPlanMinimapCoordinateProjection;
 };
 
 type ViewerBindings = {
@@ -810,20 +829,45 @@ function InteriorFloorPlanMinimap({
   points,
   isTransitioning,
   onPointSelect,
+  isCalibrationMode = false,
+  onPointMove,
   className = "",
 }: {
   image: StaticImageData;
   points: FloorPlanMinimapPoint[];
   isTransitioning: boolean;
   onPointSelect: (nodeId: string) => void;
+  isCalibrationMode?: boolean;
+  onPointMove?: (nodeId: string, position: Pick<FloorPlanMinimapPoint, "left" | "top">) => void;
   className?: string;
 }) {
+  const minimapRef = useRef<HTMLDivElement | null>(null);
+  const [draggingPointId, setDraggingPointId] = useState<string | null>(null);
+
   if (!points.length) {
     return null;
   }
 
+  const updateDraggedPoint = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!draggingPointId || !onPointMove || !minimapRef.current) {
+      return;
+    }
+
+    const bounds = minimapRef.current.getBoundingClientRect();
+    onPointMove(draggingPointId, {
+      left: clamp(((event.clientX - bounds.left) / bounds.width) * 100, 0, 100),
+      top: clamp(((event.clientY - bounds.top) / bounds.height) * 100, 0, 100),
+    });
+  };
+
   return (
-    <div className={`pointer-events-auto relative drop-shadow-[0_18px_32px_rgba(0,0,0,0.28)] ${className}`}>
+    <div
+      ref={minimapRef}
+      onPointerMove={updateDraggedPoint}
+      onPointerUp={() => setDraggingPointId(null)}
+      onPointerCancel={() => setDraggingPointId(null)}
+      className={`pointer-events-auto relative drop-shadow-[0_18px_32px_rgba(0,0,0,0.28)] ${className}`}
+    >
       <NextImage
         src={image}
         alt="Interior floor plan minimap"
@@ -839,12 +883,30 @@ function InteriorFloorPlanMinimap({
           aria-label={`Open ${point.label}`}
           title={point.label}
           disabled={isTransitioning}
-          onClick={() => onPointSelect(point.id)}
+          onClick={() => {
+            if (!isCalibrationMode) {
+              onPointSelect(point.id);
+            }
+          }}
+          onPointerDown={(event) => {
+            if (!isCalibrationMode || !onPointMove) {
+              return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.setPointerCapture(event.pointerId);
+            setDraggingPointId(point.id);
+          }}
           style={{
             left: `${point.left}%`,
             top: `${point.top}%`,
           }}
-          className={`group absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border cursor-pointer transition duration-200 hover:scale-150 disabled:cursor-not-allowed disabled:opacity-50 sm:h-2 sm:w-2 ${
+          className={`group absolute z-10 -translate-x-1/2 -translate-y-1/2 rounded-full border cursor-pointer transition duration-200 hover:scale-150 disabled:cursor-not-allowed disabled:opacity-50 ${
+            isCalibrationMode
+              ? "h-4 w-4 cursor-grab active:cursor-grabbing sm:h-4 sm:w-4"
+              : "h-2 w-2 sm:h-2 sm:w-2"
+          } ${
             point.tone === "blue"
               ? point.isActive
                 ? "border-white bg-[#7dd3fc] shadow-[0_0_0_4px_rgba(56,189,248,0.24),0_0_18px_rgba(56,189,248,0.84)]"
@@ -1286,6 +1348,8 @@ export default function InteriorPanoWalkthrough({
   blockedNavigationPairs = EMPTY_BLOCKED_NAVIGATION_PAIRS,
   additionalNavigationPairs = EMPTY_ADDITIONAL_NAVIGATION_PAIRS,
   navigationYawOverrides = EMPTY_NAVIGATION_YAW_OVERRIDES,
+  minimap,
+  showMinimap = !panoOnly,
 }: InteriorPanoWalkthroughProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -1299,6 +1363,17 @@ export default function InteriorPanoWalkthrough({
   const [viewerError, setViewerError] = useState<string | null>(null);
   const [viewYaw, setViewYaw] = useState(0);
   const [viewPitch, setViewPitch] = useState(0);
+  const [calibratedMinimapPointPositions, setCalibratedMinimapPointPositions] = useState<
+    Record<string, Pick<FloorPlanMinimapPoint, "left" | "top">>
+  >({});
+  const isMinimapCalibrationMode =
+    INTERIOR_PANO_DEV_TOOL_ENABLED && searchParams.get("calibrate") === "1";
+  // Picker and alternate-dot views are local QA tools only; never expose them
+  // through the deployed walkthrough URL.
+  const isPanoPickerMode =
+    INTERIOR_PANO_DEV_TOOL_ENABLED && searchParams.get("picker") === "1";
+  const showAllConfiguredMinimapPoints =
+    INTERIOR_PANO_DEV_TOOL_ENABLED && searchParams.get("all-points") === "1";
   const [activeNodeId, setActiveNodeId] = useState(
     initialNodeId ?? (requestedBareShellMode ? config?.bareShellInitialNodeId : config?.furnishedInitialNodeId) ?? "",
   );
@@ -1317,6 +1392,21 @@ export default function InteriorPanoWalkthrough({
   const pendingNodeViewRef = useRef<Position | null>(null);
   const warmupRunRef = useRef(0);
   const goToNodeRef = useRef<(targetId: string) => Promise<void>>(async () => {});
+  const panoTapRef = useRef<{
+    pointerId: number | null;
+    startX: number;
+    startY: number;
+    lastTapAt: number;
+    lastTapX: number;
+    lastTapY: number;
+  }>({
+    pointerId: null,
+    startX: 0,
+    startY: 0,
+    lastTapAt: 0,
+    lastTapX: 0,
+    lastTapY: 0,
+  });
 
   const allNodes = useMemo(
     () => {
@@ -1481,20 +1571,20 @@ export default function InteriorPanoWalkthrough({
     itemCount: menuRooms.length,
     targetVisibleCards: 4,
   });
-  const minimapImage = isBareShellMode
+  const minimapImage = minimap?.image ?? (isBareShellMode
     ? BareShellFloorPlanMinimap
-    : FurnishedFloorPlanMinimap;
+    : FurnishedFloorPlanMinimap);
   const minimapPoints = useMemo<FloorPlanMinimapPoint[]>(() => {
-    const worldBounds = isBareShellMode
+    const worldBounds = minimap?.worldBounds ?? (isBareShellMode
       ? BARE_SHELL_MINIMAP_WORLD_BOUNDS
-      : FURNISHED_MINIMAP_WORLD_BOUNDS;
-    const shouldFlipX = isBareShellMode
+      : FURNISHED_MINIMAP_WORLD_BOUNDS);
+    const shouldFlipX = minimap?.flipX ?? (isBareShellMode
       ? BARE_SHELL_MINIMAP_FLIP_X
-      : FURNISHED_MINIMAP_FLIP_X;
-    const shouldFlipY = isBareShellMode
+      : FURNISHED_MINIMAP_FLIP_X);
+    const shouldFlipY = minimap?.flipY ?? (isBareShellMode
       ? BARE_SHELL_MINIMAP_FLIP_Y
-      : FURNISHED_MINIMAP_FLIP_Y;
-    const minimapAdjustment = isBareShellMode
+      : FURNISHED_MINIMAP_FLIP_Y);
+    const defaultMinimapAdjustment = isBareShellMode
       ? {
           offsetX: BARE_SHELL_MINIMAP_OFFSET_X,
           offsetY: BARE_SHELL_MINIMAP_OFFSET_Y,
@@ -1507,8 +1597,23 @@ export default function InteriorPanoWalkthrough({
           scaleX: FURNISHED_MINIMAP_SCALE_X,
           scaleY: FURNISHED_MINIMAP_SCALE_Y,
         };
+    const minimapAdjustment: FloorPlanMinimapAdjustment = {
+      ...defaultMinimapAdjustment,
+      ...minimap?.adjustment,
+    };
 
     return graph.nodes.reduce<FloorPlanMinimapPoint[]>((points, node) => {
+      if (minimap?.visibleNodeIds && !minimap.visibleNodeIds.includes(node.id)) {
+        return points;
+      }
+
+      if (
+        !showAllConfiguredMinimapPoints &&
+        minimap?.hiddenNodeIds?.includes(node.id)
+      ) {
+        return points;
+      }
+
       if (isBalconyNode(node.id)) {
         points.push({
           id: node.id,
@@ -1521,14 +1626,38 @@ export default function InteriorPanoWalkthrough({
         return points;
       }
 
-      const projectedPosition = projectWorldPointToMinimap(node.rawPosition, worldBounds);
-      const adjustedPosition = adjustMinimapPosition(
+      // Dragged calibration values are a local, temporary preview. Once calibration
+      // mode is closed, render the saved minimap configuration again.
+      const manualPosition = isMinimapCalibrationMode
+        ? calibratedMinimapPointPositions[node.id] ?? minimap?.pointPositions?.[node.id]
+        : minimap?.pointPositions?.[node.id];
+      const projectedPosition = minimap?.coordinateProjection
+        ? {
+            left: clamp(
+              node.rawPosition.x * minimap.coordinateProjection.left.x +
+                node.rawPosition.y * minimap.coordinateProjection.left.y +
+                minimap.coordinateProjection.left.offset,
+              0,
+              100,
+            ),
+            top: clamp(
+              node.rawPosition.x * minimap.coordinateProjection.top.x +
+                node.rawPosition.y * minimap.coordinateProjection.top.y +
+                minimap.coordinateProjection.top.offset,
+              0,
+              100,
+            ),
+          }
+        : projectWorldPointToMinimap(node.rawPosition, worldBounds);
+      const adjustedPosition = manualPosition
+        ? manualPosition
+        : adjustMinimapPosition(
         {
           left: shouldFlipX ? 100 - projectedPosition.left : projectedPosition.left,
           top: shouldFlipY ? 100 - projectedPosition.top : projectedPosition.top,
         },
-        minimapAdjustment,
-      );
+          minimapAdjustment,
+        );
 
       points.push({
         id: node.id,
@@ -1541,7 +1670,26 @@ export default function InteriorPanoWalkthrough({
 
       return points;
     }, []);
-  }, [currentNodeId, graph.nodes, isBareShellMode]);
+  }, [calibratedMinimapPointPositions, currentNodeId, graph.nodes, isBareShellMode, isMinimapCalibrationMode, minimap, showAllConfiguredMinimapPoints]);
+
+  const handleMinimapPointMove = useCallback(
+    (nodeId: string, position: Pick<FloorPlanMinimapPoint, "left" | "top">) => {
+      setCalibratedMinimapPointPositions((current) => ({
+        ...current,
+        [nodeId]: {
+          left: Number(position.left.toFixed(2)),
+          top: Number(position.top.toFixed(2)),
+        },
+      }));
+    },
+    [],
+  );
+
+  const copyMinimapCalibration = useCallback(() => {
+    void navigator.clipboard.writeText(
+      JSON.stringify(calibratedMinimapPointPositions, null, 2),
+    );
+  }, [calibratedMinimapPointPositions]);
 
   const updateModeInUrl = useCallback(
     (nextMode: boolean) => {
@@ -1790,6 +1938,82 @@ export default function InteriorPanoWalkthrough({
     },
     [goToNode, navigationTargets],
   );
+
+  useEffect(() => {
+    const host = viewerHostRef.current;
+    if (!host) {
+      return;
+    }
+
+    const navigateForward = () => {
+      void navigateToDirection("forward");
+    };
+
+    const handleDoubleClick = (event: MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      navigateForward();
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.pointerType === "mouse") {
+        return;
+      }
+
+      panoTapRef.current.pointerId = event.pointerId;
+      panoTapRef.current.startX = event.clientX;
+      panoTapRef.current.startY = event.clientY;
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      const tapState = panoTapRef.current;
+
+      if (
+        event.pointerType === "mouse" ||
+        tapState.pointerId !== event.pointerId
+      ) {
+        return;
+      }
+
+      tapState.pointerId = null;
+
+      const travel = Math.hypot(
+        event.clientX - tapState.startX,
+        event.clientY - tapState.startY,
+      );
+
+      if (travel > 14) {
+        return;
+      }
+
+      const now = performance.now();
+      const isDoubleTap =
+        now - tapState.lastTapAt < 320 &&
+        Math.hypot(event.clientX - tapState.lastTapX, event.clientY - tapState.lastTapY) <
+          34;
+
+      tapState.lastTapAt = now;
+      tapState.lastTapX = event.clientX;
+      tapState.lastTapY = event.clientY;
+
+      if (isDoubleTap) {
+        event.preventDefault();
+        event.stopPropagation();
+        tapState.lastTapAt = 0;
+        navigateForward();
+      }
+    };
+
+    host.addEventListener("dblclick", handleDoubleClick);
+    host.addEventListener("pointerdown", handlePointerDown);
+    host.addEventListener("pointerup", handlePointerUp);
+
+    return () => {
+      host.removeEventListener("dblclick", handleDoubleClick);
+      host.removeEventListener("pointerdown", handlePointerDown);
+      host.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [navigateToDirection]);
 
   useEffect(() => {
     if (requestedBareShellMode !== isBareShellMode) {
@@ -2403,6 +2627,28 @@ export default function InteriorPanoWalkthrough({
       </div>
 
       <div className="pointer-events-none absolute left-0 top-0 z-30 flex flex-col gap-2 p-3 sm:p-6">
+        {isPanoPickerMode ? (
+          <label
+            className={`${uiFont.className} pointer-events-auto flex w-[min(19rem,calc(100vw-1.5rem))] flex-col gap-1.5 rounded-[1rem] border border-emerald-200/20 bg-[rgba(6,14,15,0.78)] px-3 py-2.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-50 shadow-[0_16px_34px_rgba(0,0,0,0.26)] backdrop-blur-2xl`}
+          >
+            Jump to pano
+            <select
+              value={activeNodeId}
+              disabled={isTransitioning}
+              onChange={(event) => {
+                setPreferredFrame(null);
+                void goToNode(event.target.value);
+              }}
+              className="w-full cursor-pointer rounded-lg border border-white/18 bg-black/45 px-2.5 py-2 text-xs font-medium normal-case tracking-normal text-white outline-none transition focus:border-emerald-200/60 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {graph.nodes.map((node) => (
+                <option key={node.id} value={node.id} className="bg-[#0a1212] text-white">
+                  {node.id.match(/F(\d{4})$/)?.[1] ?? node.id} — {getRoomLabel(node.imageFilename)}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         {!panoOnly ? (
           <button
             type="button"
@@ -2442,9 +2688,9 @@ export default function InteriorPanoWalkthrough({
         ) : null}
       </div>
 
-      {!panoOnly ? (
-        <div className="pointer-events-none absolute right-4 top-[1.5rem] z-30 hidden w-[220px] xl:block 2xl:right-6 2xl:top-[2rem] 2xl:w-[300px]">
-        <div className="pointer-events-auto rounded-[1.6rem] p-3 ">
+      {showMinimap ? (
+        <div className="pointer-events-none absolute right-4 top-[1.5rem] z-30 hidden w-[400px] xl:block 2xl:right-6 2xl:top-[2rem] 2xl:w-[460px]">
+        <div className={panoOnly ? "pointer-events-auto" : "pointer-events-auto rounded-[1.6rem] p-3"}>
           <InteriorFloorPlanMinimap
             image={minimapImage}
             points={minimapPoints}
@@ -2453,19 +2699,43 @@ export default function InteriorPanoWalkthrough({
               setPreferredFrame(null);
               void goToNode(nodeId);
             }}
-            className="mx-auto mb-3 w-[210px] 2xl:w-[280px]"
+            isCalibrationMode={isMinimapCalibrationMode}
+            onPointMove={handleMinimapPointMove}
+            className={panoOnly ? "ml-auto w-[320px] 2xl:w-[360px]" : "mx-auto mb-3 w-[210px] 2xl:w-[280px]"}
           />
 
-          <button
+          {isMinimapCalibrationMode ? (
+            <div className={`${uiFont.className} ml-auto mt-3 w-full rounded-xl border border-amber-100/30 bg-black/55 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-50 backdrop-blur-xl`}>
+              <div>Calibration mode: drag any dot.</div>
+              <div className="mt-2 flex gap-2 normal-case tracking-normal">
+                <button
+                  type="button"
+                  onClick={copyMinimapCalibration}
+                  className="rounded-lg border border-white/25 bg-white/10 px-2 py-1 text-white transition hover:bg-white/20"
+                >
+                  Copy placed dots
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCalibratedMinimapPointPositions({})}
+                  className="rounded-lg border border-white/18 px-2 py-1 text-white/78 transition hover:bg-white/10"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {!panoOnly ? <button
             type="button"
             onClick={handleModeToggle}
             className={`${uiFont.className} mt-3 flex w-full items-center justify-center gap-2 rounded-[1.25rem] border border-white/22 bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(171,188,196,0.06))] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-white shadow-[0_16px_32px_rgba(0,0,0,0.2)] backdrop-blur-2xl transition hover:border-white/34 hover:bg-white/12`}
           >
             {isBareShellMode ? <Sofa className="h-4 w-4" /> : <BedDouble className="h-4 w-4" />}
             {isBareShellMode ? "View Furnished" : "View Bare Shell"}
-          </button>
+          </button> : null}
 
-          <button
+          {!panoOnly ? <button
             type="button"
             onClick={handleDimensionsToggle}
             className={`${uiFont.className} mt-3 flex w-full items-center justify-center rounded-[1.25rem] border px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.24em] shadow-[0_16px_32px_rgba(0,0,0,0.2)] backdrop-blur-2xl transition ${
@@ -2475,13 +2745,13 @@ export default function InteriorPanoWalkthrough({
             }`}
           >
             {isDimensionsVisible ? "Hide Dimensions" : "Show Dimensions"}
-          </button>
+          </button> : null}
 
         </div>
         </div>
       ) : null}
 
-      {!panoOnly ? (
+      {showMinimap ? (
         <div className="pointer-events-none absolute right-3 top-3 z-20 xl:hidden">
           <InteriorFloorPlanMinimap
             image={minimapImage}
@@ -2491,8 +2761,31 @@ export default function InteriorPanoWalkthrough({
               setPreferredFrame(null);
               void goToNode(nodeId);
             }}
-            className="w-[10.5rem] sm:w-[13rem]"
+            isCalibrationMode={isMinimapCalibrationMode}
+            onPointMove={handleMinimapPointMove}
+            className={panoOnly ? "ml-auto w-[14rem] sm:w-[17rem]" : "w-[10.5rem] sm:w-[13rem]"}
           />
+          {isMinimapCalibrationMode ? (
+            <div className={`${uiFont.className} pointer-events-auto ml-auto mt-2 w-[14rem] rounded-lg border border-amber-100/30 bg-black/55 px-2 py-1.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-amber-50 backdrop-blur-xl sm:w-[17rem]`}>
+              <div>Drag dots, then copy.</div>
+              <div className="mt-1 flex gap-1.5 normal-case tracking-normal">
+                <button
+                  type="button"
+                  onClick={copyMinimapCalibration}
+                  className="rounded-md border border-white/25 bg-white/10 px-1.5 py-1 text-white"
+                >
+                  Copy placed dots
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCalibratedMinimapPointPositions({})}
+                  className="rounded-md border border-white/18 px-1.5 py-1 text-white/78"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
 

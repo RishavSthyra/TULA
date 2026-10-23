@@ -464,7 +464,7 @@ function SelectedFlatPlanPanel({
       <div className="relative">
         <div className="pointer-events-none absolute left-0 right-0 top-[16.5rem] z-0 hidden h-16 rounded-b-[4rem] bg-[#1f3f2b]/90 blur-[18px] 2xl:block" />
 
-        <div className="relative z-10 overflow-hidden rounded-[30px] rounded-tr-[56px] border border-[#d7bf80]/80 bg-[linear-gradient(145deg,rgba(250,248,239,0.96)_0%,rgba(238,242,231,0.92)_58%,rgba(250,247,236,0.98)_100%)] pt-5 pb-5 pl-5 pr-8 shadow-[0_26px_70px_rgba(21,47,30,0.24),inset_0_1px_0_rgba(255,255,255,0.94),inset_0_0_0_1px_rgba(255,255,255,0.36)] backdrop-blur-2xl 2xl:rounded-[36px] 2xl:rounded-tr-[68px]">
+        <div className="relative z-10 overflow-hidden rounded-[30px] rounded-tr-[56px] border border-[#d7bf80]/48 bg-[linear-gradient(145deg,rgba(250,248,239,0.56)_0%,rgba(238,242,231,0.48)_58%,rgba(250,247,236,0.60)_100%)] pt-5 pb-5 pl-5 pr-8 shadow-[0_14px_40px_rgba(21,47,30,0.10),inset_0_1px_0_rgba(255,255,255,0.64),inset_0_0_0_1px_rgba(255,255,255,0.13)] backdrop-blur-sm 2xl:rounded-[36px] 2xl:rounded-tr-[68px]">
           <div className="pointer-events-none absolute inset-[8px] rounded-[24px] rounded-tr-[48px] border border-[#ead8a4]/60 2xl:rounded-[28px] 2xl:rounded-tr-[58px]" />
           <div className="pointer-events-none absolute -left-10 bottom-4 h-40 w-20 rounded-[50%] border-r border-[#cfad63]/45 opacity-70" />
           <div className="pointer-events-none absolute -right-6 top-11 h-36 w-24 rounded-[50%] border-l border-[#cfad63]/45 opacity-60" />
@@ -515,7 +515,7 @@ function SelectedFlatPlanPanel({
           </div>
         </div>
 
-        <div className="relative z-0 mt-6 overflow-hidden rounded-[30px] rounded-bl-[42px] border border-[#d7bf80]/70 bg-[linear-gradient(180deg,rgba(35,65,42,0.97),rgba(29,55,37,0.99))] px-5 pb-5 pt-6 text-[#f7efd9] shadow-[0_26px_70px_rgba(21,47,30,0.28),inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-2xl 2xl:mt-7 2xl:rounded-[36px] 2xl:rounded-bl-[52px] 2xl:px-6 2xl:pb-6 2xl:pt-7">
+        <div className="relative z-0 mt-6 overflow-hidden rounded-[30px] rounded-bl-[42px] border border-[#d7bf80]/42 bg-[linear-gradient(180deg,rgba(35,65,42,0.62),rgba(29,55,37,0.68))] px-5 pb-5 pt-6 text-[#f7efd9] shadow-[0_14px_40px_rgba(21,47,30,0.12),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-sm 2xl:mt-7 2xl:rounded-[36px] 2xl:rounded-bl-[52px] 2xl:px-6 2xl:pb-6 2xl:pt-7">
           <div className="pointer-events-none absolute inset-[8px] rounded-[24px] rounded-bl-[34px] border border-[#ead8a4]/22 2xl:rounded-[28px] 2xl:rounded-bl-[42px]" />
           <div className="pointer-events-none absolute -bottom-10 -left-7 h-48 w-28 rounded-[50%] border-r border-[#cfad63]/45 opacity-70" />
 
@@ -1795,7 +1795,15 @@ export default function MasterPlanLayout({
                   : "ready"
             }
             onApartmentSelect={handleApartmentSelect}
-            onInteractionChange={setIsStageInteracting}
+            onInteractionChange={(isInteracting) => {
+              setIsStageInteracting(isInteracting);
+
+              // After the user begins rotating, keep the stage clear for selecting
+              // flats. The existing Filters dock remains available to restore this rail.
+              if (isInteracting) {
+                setIsDesktopSidebarOpen(false);
+              }
+            }}
             onSetFrame={setWrappedFrame}
             selectedApartmentId={selectedApartmentMeshId}
             selectedTower={selectedTower}
@@ -2050,11 +2058,11 @@ export default function MasterPlanLayout({
               shouldShowDesktopSidebar && isDesktopSidebarOpen
                 ? selectedTower
                   ? isDesktopCompactViewport
-                    ? "xl:grid-cols-[minmax(0,1fr)_330px]"
-                    : "xl:grid-cols-[minmax(0,1fr)_clamp(300px,26vw,360px)] 2xl:grid-cols-[minmax(0,1fr)_400px]"
+                    ? "xl:grid-cols-[minmax(0,1fr)_300px]"
+                    : "xl:grid-cols-[minmax(0,1fr)_clamp(280px,22vw,320px)] 2xl:grid-cols-[minmax(0,1fr)_340px]"
                   : isDesktopCompactViewport
-                    ? "xl:grid-cols-[minmax(0,1fr)_320px]"
-                    : "xl:grid-cols-[minmax(0,1fr)_clamp(290px,22vw,340px)] 2xl:grid-cols-[minmax(0,1fr)_360px]"
+                    ? "xl:grid-cols-[minmax(0,1fr)_290px]"
+                    : "xl:grid-cols-[minmax(0,1fr)_clamp(270px,20vw,300px)] 2xl:grid-cols-[minmax(0,1fr)_320px]"
                 : selectedTower
                   ? "xl:grid-cols-[minmax(0,1fr)]"
                   : "xl:grid-cols-[minmax(0,1fr)]"
@@ -2075,7 +2083,7 @@ export default function MasterPlanLayout({
                   animate={{ opacity: 1, x: 0, y: 0 }}
                   exit={{ opacity: 0, x: 24, y: 12 }}
                   transition={{ duration: 0.26, ease: smoothEase }}
-                  className="pointer-events-none absolute left-4 top-1/2 z-40 hidden -translate-y-1/2 xl:block 2xl:left-8"
+                  className="pointer-events-none absolute left-4 top-1/2 z-40 hidden -translate-y-1/2 xl:block xl:origin-left xl:scale-[0.86] 2xl:left-7 2xl:scale-[0.92]"
                 >
                   <SelectedFlatPlanPanel apartment={selectedApartment} />
                 </motion.div>
@@ -2089,14 +2097,13 @@ export default function MasterPlanLayout({
                   animate={{ opacity: 1, x: 0, y: 0 }}
                   exit={{ opacity: 0, x: 24, y: 12 }}
                   transition={{ duration: 0.26, ease: smoothEase }}
-                  className="pointer-events-none absolute right-6 top-1/2 z-40 w-full max-w-[23rem] -translate-y-1/2 overflow-visible xl:origin-right xl:scale-[0.92] 2xl:right-10 2xl:max-w-[26rem] 2xl:scale-100"
+                  className="pointer-events-none absolute right-4 top-1/2 z-40 w-full max-w-[18rem] -translate-y-1/2 overflow-visible xl:origin-right xl:scale-[0.8] 2xl:right-7 2xl:max-w-[20rem] 2xl:scale-[0.86]"
                 >
                   <SelectedFlatDetailsPanel
                     ref={selectedFlatPanelRef}
                     apartment={selectedApartment}
                     compact
                     desktopEnhancedCompact
-                    hideCloseButton
                     onClose={clearSelectedApartment}
                   />
                 </motion.div>
@@ -2113,10 +2120,11 @@ export default function MasterPlanLayout({
                   exit={{ opacity: 0, x: 16 }}
                   transition={{ duration: 0.24, ease: smoothEase }}
                   onClick={() => setIsDesktopSidebarOpen(true)}
-                  className="pointer-events-auto absolute right-0 top-12 z-40 hidden h-16 w-14 translate-x-[22%] items-center justify-center rounded-l-[1.45rem] rounded-r-[0.5rem] border border-white/40 bg-[linear-gradient(145deg,rgba(255,255,255,0.58),rgba(255,255,255,0.2))] text-zinc-900 shadow-[0_22px_48px_rgba(15,23,42,0.2)] backdrop-blur-2xl transition hover:bg-[linear-gradient(145deg,rgba(255,255,255,0.72),rgba(255,255,255,0.28))] xl:inline-flex"
-                  aria-label="Open master plan panel"
+                  className="pointer-events-auto absolute right-4 top-8 z-40 hidden h-10 items-center gap-2 rounded-full border border-white/50 bg-[linear-gradient(145deg,rgba(250,249,242,0.72),rgba(234,238,227,0.46))] px-3.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#31533b] shadow-[0_12px_28px_rgba(15,40,24,0.12),inset_0_1px_0_rgba(255,255,255,0.78)] backdrop-blur-md transition hover:bg-[linear-gradient(145deg,rgba(255,255,255,0.86),rgba(234,240,228,0.62))] xl:inline-flex"
+                  aria-label="Open filters"
                 >
-                  <ArrowLeft className="h-5 w-5" />
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  Filters
                 </motion.button>
               ) : null}
             </AnimatePresence>
@@ -2135,11 +2143,11 @@ export default function MasterPlanLayout({
                     className={`custom-scrollbar sticky ml-auto min-h-0 w-full overflow-hidden pr-1 [overflow-anchor:none] ${
                       selectedTower
                         ? isDesktopCompactViewport
-                          ? "max-w-[330px]"
-                          : "max-w-[clamp(300px,26vw,360px)] 2xl:max-w-[400px]"
+                          ? "max-w-[300px]"
+                          : "max-w-[clamp(280px,22vw,320px)] 2xl:max-w-[340px]"
                         : isDesktopCompactViewport
-                          ? "max-w-[320px]"
-                          : "max-w-[clamp(290px,22vw,340px)] 2xl:max-w-[360px]"
+                          ? "max-w-[290px]"
+                          : "max-w-[clamp(270px,20vw,300px)] 2xl:max-w-[320px]"
                     }`}
                     style={{
                       height:
@@ -2177,7 +2185,7 @@ export default function MasterPlanLayout({
                             onClosePanel={() => setIsDesktopSidebarOpen(false)}
                             onReset={resetFilters}
                             onBack={handleBackToTowerSelect}
-                            compactDesktop={isDesktopCompactViewport}
+                            compactDesktop
                           />
 
                           <MasterPlanResultsCard
@@ -2186,12 +2194,12 @@ export default function MasterPlanLayout({
                             inventoryError={inventoryError}
                             onApartmentSelect={handleApartmentListSelect}
                             selectedApartmentId={selectedApartmentInventoryId}
-                            compactDesktop={isDesktopCompactViewport}
+                            compactDesktop
                           />
                         </>
                       ) : (
                         <TowerSelect
-                          compactDesktop={isDesktopCompactViewport}
+                            compactDesktop
                           embedded
                           isTopViewActive={isTopViewMode}
                           onClose={() => setIsDesktopSidebarOpen(false)}
@@ -2415,7 +2423,7 @@ export default function MasterPlanLayout({
                   animate={{ opacity: 1, x: 0, y: 0 }}
                   exit={{ opacity: 0, x: -24, y: 12 }}
                   transition={{ duration: 0.28, ease: smoothEase }}
-                  className="pointer-events-none absolute left-4 top-1/2 z-20 hidden -translate-y-1/2 xl:block 2xl:left-8"
+                  className="pointer-events-none absolute left-4 top-1/2 z-20 hidden -translate-y-1/2 xl:block xl:origin-left xl:scale-[0.86] 2xl:left-7 2xl:scale-[0.92]"
                 >
                   <SelectedFlatPlanPanel apartment={specialVideoApartment} />
                 </motion.div>
@@ -2431,13 +2439,12 @@ export default function MasterPlanLayout({
                   animate={{ opacity: 1, x: 0, y: 0 }}
                   exit={{ opacity: 0, x: 24, y: 12 }}
                   transition={{ duration: 0.28, ease: smoothEase }}
-                  className="pointer-events-none absolute right-6 top-1/2 z-20 w-full max-w-[23rem] -translate-y-1/2 overflow-visible xl:origin-right xl:scale-[0.92] 2xl:right-10 2xl:max-w-[26rem] 2xl:scale-100"
+                  className="pointer-events-none absolute right-4 top-1/2 z-20 w-full max-w-[18rem] -translate-y-1/2 overflow-visible xl:origin-right xl:scale-[0.8] 2xl:right-7 2xl:max-w-[20rem] 2xl:scale-[0.86]"
                 >
                   <SelectedFlatDetailsPanel
                     apartment={specialVideoApartment}
                     compact
                     desktopEnhancedCompact
-                    hideCloseButton
                     onClose={handleSpecialVideoBack}
                   />
                 </motion.div>
@@ -2704,7 +2711,7 @@ function MasterPlanFiltersCard({
 
   return (
     <motion.div
-      className={`surface-contain relative shrink-0 overflow-hidden border border-[#ded8c9] bg-[#f3f2ea]/95 text-[#1f3f2b] shadow-[0_28px_80px_rgba(25,43,30,0.20),inset_0_1px_0_rgba(255,255,255,0.94)] backdrop-blur-xl dark:border-emerald-100/10 dark:bg-emerald-950/45 dark:text-white dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] ${
+      className={`surface-contain relative shrink-0 overflow-hidden border border-[#ded8c9]/82 bg-[#f3f2ea]/78 text-[#1f3f2b] shadow-[0_20px_56px_rgba(25,43,30,0.13),inset_0_1px_0_rgba(255,255,255,0.84)] backdrop-blur-md dark:border-emerald-100/10 dark:bg-emerald-950/45 dark:text-white dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] ${
         compactDesktop
           ? "rounded-[34px] rounded-tr-[64px] p-4"
           : "rounded-[42px] rounded-tr-[88px] p-5"
@@ -2937,7 +2944,7 @@ function MasterPlanResultsCard({
 
   return (
     <motion.div
-      className={`surface-contain flex min-h-0 flex-col rounded-[30px] border border-[#ded8c9] bg-[#f3f2ea]/95 text-[#1f3f2b] shadow-[0_28px_80px_rgba(25,43,30,0.20),inset_0_1px_0_rgba(255,255,255,0.94)] backdrop-blur-xl dark:border-emerald-100/10 dark:bg-emerald-950/45 dark:text-white dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] ${
+      className={`surface-contain flex min-h-0 flex-col rounded-[30px] border border-[#ded8c9]/82 bg-[#f3f2ea]/78 text-[#1f3f2b] shadow-[0_20px_56px_rgba(25,43,30,0.13),inset_0_1px_0_rgba(255,255,255,0.84)] backdrop-blur-md dark:border-emerald-100/10 dark:bg-emerald-950/45 dark:text-white dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] ${
         compact
           ? "min-h-0 flex-1 overflow-hidden p-3"
           : compactDesktop

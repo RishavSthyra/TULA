@@ -4,8 +4,7 @@ export type SiteNavHref =
   | "/area-map"
   | "/amenities"
   | "/master-plan"
-  | "/exterior-walkthrough"
-  | "/interior-kitchen-foyer";
+  | "/exterior-walkthrough";
 
 export type SiteNavItem = {
   href: SiteNavHref;
@@ -27,11 +26,6 @@ export const siteNavItems: SiteNavItem[] = [
       "/exterior-tour",
       "/exterior-walkthrough",
     ],
-  },
-  {
-    href: "/interior-kitchen-foyer",
-    label: "Interior Tour",
-    matches: ["/walkthrough", "/interior-kitchen-foyer"],
   },
 ] as const;
 

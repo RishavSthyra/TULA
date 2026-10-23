@@ -9,7 +9,7 @@ import { FiPhone, FiDownload, FiDollarSign, FiGrid, FiHome } from "react-icons/f
 import { BiHome } from "react-icons/bi";
 import { IoMapOutline } from "react-icons/io5";
 import { RiBuilding2Line } from "react-icons/ri";
-import { Armchair, Footprints, Menu, Sparkles, X } from "lucide-react";
+import { Footprints, Menu, Sparkles, X } from "lucide-react";
 
 interface CtaButtonType {
   name: string;
@@ -70,10 +70,6 @@ function isQuickRouteActive(pathname: string, href?: string) {
       pathname === "/exterior-tour" ||
       pathname === "/exterios-walkthrough"
     );
-  }
-
-  if (href === "/interior-kitchen-foyer") {
-    return pathname === "/interior-kitchen-foyer" || pathname === "/walkthrough";
   }
 
   return pathname === href;
@@ -292,15 +288,6 @@ export default function UpperLayoutCTA({
         isHighlight: isQuickRouteActive(pathname ?? "", "/exterior-walkthrough"),
         icon: (
           <Footprints className="h-[0.82rem] w-[0.82rem] xl:h-[0.9rem] xl:w-[0.9rem] 2xl:h-[0.98rem] 2xl:w-[0.98rem]" />
-        ),
-      },
-      {
-        name: "Interior Tour",
-        link: "/interior-kitchen-foyer",
-        action: "link",
-        isHighlight: isQuickRouteActive(pathname ?? "", "/interior-kitchen-foyer"),
-        icon: (
-          <Armchair className="h-[0.82rem] w-[0.82rem] xl:h-[0.9rem] xl:w-[0.9rem] 2xl:h-[0.98rem] 2xl:w-[0.98rem]" />
         ),
       },
     ];

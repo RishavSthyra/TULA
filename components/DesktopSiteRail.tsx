@@ -4,7 +4,6 @@ import Image from "next/image";
 import { Cormorant_Garamond } from "next/font/google";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Armchair,
   Building2,
   Footprints,
   Heart,
@@ -35,7 +34,6 @@ const railItemIcons: Record<SiteNavHref, typeof House> = {
   "/amenities": Heart,
   "/master-plan": UserRound,
   "/exterior-walkthrough": Footprints,
-  "/interior-kitchen-foyer": Armchair,
 } as const;
 
 type DesktopSiteRailProps = {

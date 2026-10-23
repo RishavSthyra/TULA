@@ -2,11 +2,13 @@
 
 import { forwardRef, useMemo } from "react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import {
   BedDouble,
   Building2,
   Compass,
   Expand,
+  Footprints,
   Layers,
   MapPin,
   Ruler,
@@ -83,7 +85,7 @@ const metaCardClassName =
   "min-w-0 rounded-[22px] border border-[#d9c99c]/70 bg-[#f8f4e8]/82 px-4 py-4 text-[#1f3f2b] shadow-[0_14px_32px_rgba(39,47,34,0.10),inset_0_1px_0_rgba(255,255,255,0.94)] backdrop-blur-md";
 
 const premiumPanelShellClassName =
-  "relative isolate overflow-hidden border border-[#d8bd78]/70 bg-[linear-gradient(145deg,rgba(250,248,238,0.96)_0%,rgba(240,237,224,0.94)_48%,rgba(249,246,234,0.98)_100%)] text-[#1f3f2b] shadow-[0_30px_80px_rgba(20,36,25,0.24),inset_0_1px_0_rgba(255,255,255,0.96),inset_0_0_0_1px_rgba(255,255,255,0.30)] backdrop-blur-2xl";
+  "relative isolate overflow-hidden border border-[#d8bd78]/42 bg-[linear-gradient(145deg,rgba(250,248,238,0.56)_0%,rgba(240,237,224,0.50)_48%,rgba(249,246,234,0.60)_100%)] text-[#1f3f2b] shadow-[0_14px_38px_rgba(20,36,25,0.10),inset_0_1px_0_rgba(255,255,255,0.62),inset_0_0_0_1px_rgba(255,255,255,0.13)] backdrop-blur-sm";
 
 const ornamentLineClassName =
   "pointer-events-none absolute border-[#cfad63]/45 opacity-70";
@@ -251,6 +253,21 @@ const SelectedFlatDetailsPanel = forwardRef<
               </div>
               <Layers className="h-6 w-6 text-[#a88a45]" />
             </div>
+
+            <Link
+              href="/interior-kitchen-foyer"
+              className="mt-4 flex items-center justify-between rounded-[22px] border border-[#69895e]/55 bg-[linear-gradient(135deg,#66895b_0%,#3e633f_100%)] px-5 py-4 text-white shadow-[0_14px_28px_rgba(31,66,35,0.22),inset_0_1px_0_rgba(255,255,255,0.22)] transition hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-[#c4a667] focus:ring-offset-2"
+            >
+              <span>
+                <span className="block text-[9px] font-bold uppercase tracking-[0.28em] text-white/70">
+                  Representative interior
+                </span>
+                <span className="mt-1 block text-sm font-bold">
+                  Open Walkthrough
+                </span>
+              </span>
+              <Footprints className="h-5 w-5 shrink-0" strokeWidth={1.9} />
+            </Link>
 
             {!desktopEnhancedCompact && dimensionItems.length > 0 ? (
               <div className="mt-5 overflow-hidden rounded-[26px] border border-[#d8bd78]/55 bg-[linear-gradient(180deg,rgba(35,65,42,0.96),rgba(28,54,36,0.98))] px-5 py-4 text-[#f5ecd7] shadow-[0_18px_38px_rgba(25,55,34,0.22),inset_0_1px_0_rgba(255,255,255,0.14)]">
