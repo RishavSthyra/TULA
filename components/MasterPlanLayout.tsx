@@ -2083,7 +2083,7 @@ export default function MasterPlanLayout({
                   animate={{ opacity: 1, x: 0, y: 0 }}
                   exit={{ opacity: 0, x: 24, y: 12 }}
                   transition={{ duration: 0.26, ease: smoothEase }}
-                  className="pointer-events-none absolute left-4 top-1/2 z-40 hidden -translate-y-1/2 xl:block xl:origin-left xl:scale-[0.86] 2xl:left-7 2xl:scale-[0.92]"
+                  className="pointer-events-none absolute left-4 top-[clamp(4.5rem,14vh,8.5rem)] z-40 hidden xl:block xl:origin-top-left xl:scale-[0.86] 2xl:left-7 2xl:scale-[0.92]"
                 >
                   <SelectedFlatPlanPanel apartment={selectedApartment} />
                 </motion.div>
@@ -2097,7 +2097,7 @@ export default function MasterPlanLayout({
                   animate={{ opacity: 1, x: 0, y: 0 }}
                   exit={{ opacity: 0, x: 24, y: 12 }}
                   transition={{ duration: 0.26, ease: smoothEase }}
-                  className="pointer-events-none absolute right-4 top-1/2 z-40 w-full max-w-[22rem] -translate-y-1/2 overflow-visible xl:origin-right xl:scale-[0.9] 2xl:right-7 2xl:max-w-[24rem] 2xl:scale-[0.94]"
+                  className="pointer-events-none absolute right-4 top-[clamp(4.5rem,14vh,8.5rem)] z-40 w-full max-w-[22rem] overflow-visible xl:origin-top-right xl:scale-[0.9] 2xl:right-7 2xl:max-w-[24rem] 2xl:scale-[0.94]"
                 >
                   <SelectedFlatDetailsPanel
                     ref={selectedFlatPanelRef}
@@ -2423,7 +2423,7 @@ export default function MasterPlanLayout({
                   animate={{ opacity: 1, x: 0, y: 0 }}
                   exit={{ opacity: 0, x: -24, y: 12 }}
                   transition={{ duration: 0.28, ease: smoothEase }}
-                  className="pointer-events-none absolute left-4 top-1/2 z-20 hidden -translate-y-1/2 xl:block xl:origin-left xl:scale-[0.86] 2xl:left-7 2xl:scale-[0.92]"
+                  className="pointer-events-none absolute left-4 top-[clamp(4.5rem,14vh,8.5rem)] z-20 hidden xl:block xl:origin-top-left xl:scale-[0.86] 2xl:left-7 2xl:scale-[0.92]"
                 >
                   <SelectedFlatPlanPanel apartment={specialVideoApartment} />
                 </motion.div>
@@ -2439,7 +2439,7 @@ export default function MasterPlanLayout({
                   animate={{ opacity: 1, x: 0, y: 0 }}
                   exit={{ opacity: 0, x: 24, y: 12 }}
                   transition={{ duration: 0.28, ease: smoothEase }}
-                  className="pointer-events-none absolute right-4 top-1/2 z-20 w-full max-w-[22rem] -translate-y-1/2 overflow-visible xl:origin-right xl:scale-[0.9] 2xl:right-7 2xl:max-w-[24rem] 2xl:scale-[0.94]"
+                  className="pointer-events-none absolute right-4 top-[clamp(4.5rem,14vh,8.5rem)] z-20 w-full max-w-[22rem] overflow-visible xl:origin-top-right xl:scale-[0.9] 2xl:right-7 2xl:max-w-[24rem] 2xl:scale-[0.94]"
                 >
                   <SelectedFlatDetailsPanel
                     apartment={specialVideoApartment}
@@ -2753,7 +2753,9 @@ function MasterPlanFiltersCard({
           </p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1.5">
+        <div
+          className={`flex shrink-0 items-center gap-1.5 ${compactDesktop ? "mr-2" : "mr-4"}`}
+        >
           <button
             type="button"
             onClick={onBack}
