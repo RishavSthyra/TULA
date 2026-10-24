@@ -322,6 +322,7 @@ function getInteriorPanoSource(
   imageFilename: string,
   availablePanoFolders: Record<string, string>,
   isBareShellMode: boolean,
+  usesBalconyBase: boolean,
   bases: { furnished: string; bareShell: string; balcony: string },
 ) {
   if (isBalconyNode(nodeId)) {
@@ -341,7 +342,11 @@ function getInteriorPanoSource(
 
   return {
     panoId,
-    baseUrl: isBareShellMode ? bases.bareShell : bases.furnished,
+    baseUrl: usesBalconyBase
+      ? bases.balcony
+      : isBareShellMode
+        ? bases.bareShell
+        : bases.furnished,
     previewLabel: getRoomLabel(imageFilename),
   };
 }
@@ -965,6 +970,8 @@ const ROOM_LABELS: Record<string, string> = {
   spline_pano_05_F0024: "Kitchen",
   spline_pano_05_F0026: "Dining",
   spline_pano_05_F0027: "Dining",
+  render2: "Balcony 01",
+  render3: "Balcony 02",
 
   LS_BP_panoPath_Interior_F0000: "Entrance",
   LS_BP_panoPath_Interior_F0001: "Drawing Room",
@@ -1455,12 +1462,22 @@ export default function InteriorPanoWalkthrough({
 
       const furnishedNodes =
         config?.furnishedNodes ?? (furnishedNavData as ExteriorPanoNodeSource[]);
+      const balconyNodes = config?.balconyNodes ??
+        (panoOnly ? [] : [FURNISHED_BALCONY_NODE]);
 
-      return panoOnly
-        ? furnishedNodes
-        : [...furnishedNodes, FURNISHED_BALCONY_NODE];
+      return [...furnishedNodes, ...balconyNodes];
     },
-    [config?.bareShellNodes, config?.furnishedNodes, isBareShellMode, panoOnly],
+    [
+      config?.balconyNodes,
+      config?.bareShellNodes,
+      config?.furnishedNodes,
+      isBareShellMode,
+      panoOnly,
+    ],
+  );
+  const configuredBalconyNodeIds = useMemo(
+    () => new Set((config?.balconyNodes ?? []).map((node) => node.id)),
+    [config?.balconyNodes],
   );
   const panoBases = useMemo(() => {
     const trailingSlash = (value: string) => value.endsWith("/") ? value : `${value}/`;
@@ -1556,6 +1573,7 @@ export default function InteriorPanoWalkthrough({
         node.imageFilename,
         availablePanoFolders,
         isBareShellMode,
+        configuredBalconyNodeIds.has(node.id),
         panoBases,
       );
 
@@ -1575,6 +1593,7 @@ export default function InteriorPanoWalkthrough({
   }, [
     availablePanoFolders,
     currentNodeId,
+    configuredBalconyNodeIds,
     graph.nodes,
     isBareShellMode,
     panoBases,
@@ -1685,12 +1704,12 @@ export default function InteriorPanoWalkthrough({
         label: getRoomLabel(node.imageFilename),
         left: adjustedPosition.left,
         top: adjustedPosition.top,
-        tone: "gold",
+        tone: configuredBalconyNodeIds.has(node.id) ? "blue" : "gold",
       });
 
       return points;
     }, []);
-  }, [calibratedMinimapPointPositions, currentNodeId, graph.nodes, isBareShellMode, isMinimapCalibrationMode, minimap, showAllConfiguredMinimapPoints]);
+  }, [calibratedMinimapPointPositions, configuredBalconyNodeIds, currentNodeId, graph.nodes, isBareShellMode, isMinimapCalibrationMode, minimap, showAllConfiguredMinimapPoints]);
 
   const handleMinimapPointMove = useCallback(
     (nodeId: string, position: Pick<FloorPlanMinimapPoint, "left" | "top">) => {
@@ -1770,6 +1789,7 @@ export default function InteriorPanoWalkthrough({
         node.imageFilename,
         availablePanoFolders,
         isBareShellMode,
+        configuredBalconyNodeIds.has(node.id),
         panoBases,
       );
       const panoAssetStore = getAssetStoreForBaseUrl(baseUrl);
@@ -1818,7 +1838,7 @@ export default function InteriorPanoWalkthrough({
       cacheRef.current.set(cacheKey, resolved);
       return resolved;
     },
-    [availablePanoFolders, getAssetStoreForBaseUrl, graph, isBareShellMode, panoBases],
+    [availablePanoFolders, configuredBalconyNodeIds, getAssetStoreForBaseUrl, graph, isBareShellMode, panoBases],
   );
 
   const buildTourNode = useCallback(
@@ -2103,7 +2123,7 @@ export default function InteriorPanoWalkthrough({
         return {
           item,
           candidateMetaKeys: candidatePanoFolderIds.map(
-            (candidate) => `${panoBaseUrl}${candidate}/meta.json`,
+            (candidate) => `${configuredBalconyNodeIds.has(item.id) ? panoBases.balcony : panoBaseUrl}${candidate}/meta.json`,
           ),
           candidatePanoFolderIds,
         };
@@ -2165,7 +2185,7 @@ export default function InteriorPanoWalkthrough({
     return () => {
       cancelled = true;
     };
-  }, [allNodes, isBareShellMode, isSlowNetwork, panoBaseUrl, panoBases.balcony]);
+  }, [allNodes, configuredBalconyNodeIds, isBareShellMode, isSlowNetwork, panoBaseUrl, panoBases.balcony]);
 
   useEffect(() => {
     activeNodeIdRef.current = activeNodeId;

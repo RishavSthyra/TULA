@@ -93,6 +93,7 @@ export type InteriorDeveloperConfig = {
   balconyPanoBasePath: string;
   furnishedNodes: ExteriorPanoNodeSource[];
   bareShellNodes: ExteriorPanoNodeSource[];
+  balconyNodes?: ExteriorPanoNodeSource[];
   furnishedInitialNodeId?: string;
   bareShellInitialNodeId?: string;
   furnishedMinimapKey?: R2AssetKey;

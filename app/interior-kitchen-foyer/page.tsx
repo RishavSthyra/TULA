@@ -12,6 +12,8 @@ const KITCHEN_FOYER_PANO_BASE_PATH =
   "TULA/Panos/interior-kitchen-foyer-v1/";
 const KITCHEN_FOYER_BARE_SHELL_PANO_BASE_PATH =
   "TULA/Panos/interior-kitchen-foyer-bare-shell-v1/";
+const KITCHEN_FOYER_BALCONY_PANO_BASE_PATH =
+  "TULA/Panos/interior-balcony-v1/";
 
 const KITCHEN_FOYER_BLOCKED_NAVIGATION_PAIRS = [
   ["spline_pano_01_F0006", "spline_pano_05_F0025"],
@@ -35,6 +37,41 @@ const KITCHEN_FOYER_EXCLUDED_NODE_IDS = new Set([
 const KITCHEN_FOYER_NODES = (
   kitchenFoyerNavData as ExteriorPanoNodeSource[]
 ).filter(({ id }) => !KITCHEN_FOYER_EXCLUDED_NODE_IDS.has(id));
+
+// Confirmed local placement for the two real balcony renders. The modelling
+// team confirmed X/Z; visual verification established that both use negative Y.
+const KITCHEN_FOYER_BALCONY_NODES: ExteriorPanoNodeSource[] = [
+  {
+    id: "tula_balcony_render2",
+    x: -725.467,
+    y: -271.595,
+    z: 150,
+    pitch: 0,
+    yaw: 0,
+    roll: 0,
+    frame: 9001,
+    image_filename: "render2.png",
+    facing_axis: "+X",
+    forward_vector: { x: 1, y: 0, z: 0 },
+    right_vector: { x: 0, y: -1, z: 0 },
+    left_vector: { x: 0, y: 1, z: 0 },
+  },
+  {
+    id: "tula_balcony_render3",
+    x: 139.376,
+    y: -271.595,
+    z: 150,
+    pitch: 0,
+    yaw: 0,
+    roll: 0,
+    frame: 9002,
+    image_filename: "render3.png",
+    facing_axis: "+X",
+    forward_vector: { x: 1, y: 0, z: 0 },
+    right_vector: { x: 0, y: -1, z: 0 },
+    left_vector: { x: 0, y: 1, z: 0 },
+  },
+];
 
 const KITCHEN_FOYER_NAVIGATION_YAW_OVERRIDES = [
   ["spline_pano_03_F0018", "spline_pano_04_F0019", 0],
@@ -69,6 +106,10 @@ const KITCHEN_FOYER_MINIMAP_POINTS = {
   spline_pano_05_F0024: { left: 65.61, top: 75.92 },
   spline_pano_05_F0026: { left: 60.22, top: 53.7 },
   spline_pano_05_F0027: { left: 60.13, top: 45.78 },
+  // Hand-placed balcony positions for the confirmed negative-Y nodes.
+  // They do not alter any of the existing hand-placed furnished-tour dots.
+  tula_balcony_render2: { left: 15.87, top: 23.43 },
+  tula_balcony_render3: { left: 60.09, top: 22.37 },
 } satisfies NonNullable<InteriorPanoMinimapConfig["pointPositions"]>;
 
 // Kept as data rather than removed, so the four dots can be previewed again
@@ -97,9 +138,10 @@ const KITCHEN_FOYER_MINIMAP = {
 const kitchenFoyerConfig: InteriorDeveloperConfig = {
   furnishedPanoBasePath: KITCHEN_FOYER_PANO_BASE_PATH,
   bareShellPanoBasePath: KITCHEN_FOYER_BARE_SHELL_PANO_BASE_PATH,
-  balconyPanoBasePath: KITCHEN_FOYER_PANO_BASE_PATH,
+  balconyPanoBasePath: KITCHEN_FOYER_BALCONY_PANO_BASE_PATH,
   furnishedNodes: KITCHEN_FOYER_NODES,
   bareShellNodes: KITCHEN_FOYER_NODES,
+  balconyNodes: KITCHEN_FOYER_BALCONY_NODES,
   furnishedInitialNodeId: "spline_pano_03_F0018",
   bareShellInitialNodeId: "spline_pano_03_F0018",
 };
