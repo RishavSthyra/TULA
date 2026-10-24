@@ -1,5 +1,6 @@
 import ExteriorPanoWalkthrough from "@/components/tour/ExteriorPanoWalkthrough";
 import { exteriorAmenities as canonicalExteriorAmenities } from "@/data/exteriorAmenities";
+import exteriorNodes from "@/data/TULA Landscape 2026-10-15_pano_walkthrough_data.json";
 import { buildPageMetadata } from "@/lib/metadata";
 import {
   getAssetWorkerDomain,
@@ -61,6 +62,7 @@ export default async function ExteriorTourPage() {
     ...runtimeConfig.exterior,
     panoBasePath: EXTERIOR_PANO_CDN_BASE_PATH,
     initialPreviewKey: EXTERIOR_INITIAL_PREVIEW_KEY,
+    nodes: exteriorNodes,
   };
   const exteriorTourNodes = exterior.nodes.filter((node) => !isIgnoredExteriorPano(node));
   const preferredInitialNodeId =
@@ -87,6 +89,7 @@ export default async function ExteriorTourPage() {
           className="h-full w-full rounded-none"
           title={exterior.title}
           subtitle={exterior.subtitle}
+          forceSequentialForwardBack
         />
       </div>
     </main>

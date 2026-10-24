@@ -191,6 +191,7 @@ type ExteriorPanoWalkthroughProps = {
   className?: string;
   title?: string;
   subtitle?: string;
+  forceSequentialForwardBack?: boolean;
 };
 
 type ResolvedPano = {
@@ -440,15 +441,63 @@ function getViewDirectionAxis(direction: NavigationDirection, viewForward: Vec3)
   }
 }
 
+/**
+ * Double-clicking follows the way the visitor is currently looking.  The tour
+ * path itself is deliberately sequential, but a visitor who turns around
+ * should be able to retrace it without first pressing the on-screen back
+ * arrow.
+ */
+function getSequentialDirectionForView(
+  graph: ExteriorTourGraph,
+  nodeId: string,
+  currentYaw: number,
+): Extract<NavigationDirection, "forward" | "backward"> {
+  const node = graph.byId[nodeId];
+  if (!node) {
+    return "forward";
+  }
+
+  const { nextId, previousId } = getSequentialNodeIds(graph, nodeId);
+  const viewForward = getViewForwardVector(node, currentYaw);
+  const getAlignment = (targetId: string | null) => {
+    const target = targetId ? graph.byId[targetId] : null;
+    if (!target) {
+      return Number.NEGATIVE_INFINITY;
+    }
+
+    return dotPlanar(
+      normalizePlanar(subVec3(target.rawPosition, node.rawPosition), node.forward),
+      viewForward,
+    );
+  };
+
+  return getAlignment(previousId) > getAlignment(nextId)
+    ? "backward"
+    : "forward";
+}
+
 function getViewDirectionalCandidates(
   graph: ExteriorTourGraph,
   nodeId: string,
   direction: NavigationDirection,
   currentYaw: number,
+  forceSequentialForwardBack = false,
 ) {
   const node = graph.byId[nodeId];
   if (!node) {
     return [] as Array<{ node: ExteriorTourNode; score: number }>;
+  }
+
+  if (
+    forceSequentialForwardBack &&
+    (direction === "forward" || direction === "backward")
+  ) {
+    const sequential = getSequentialNodeIds(graph, nodeId);
+    const targetId =
+      direction === "forward" ? sequential.nextId : sequential.previousId;
+    const target = targetId ? graph.byId[targetId] : null;
+
+    return target ? [{ node: target, score: 1 }] : [];
   }
 
   const viewForward = getViewForwardVector(node, currentYaw);
@@ -826,9 +875,8 @@ function ExteriorMinimapGraphic({
 
         <div className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle_at_center,transparent_48%,rgba(0,0,0,0.34)_82%,rgba(0,0,0,0.66)_100%)] shadow-[inset_0_0_0_5px_rgba(2,4,3,0.42)]" />
         <div className="pointer-events-none absolute left-1/2 top-1/2 z-20 h-8 w-8 -translate-x-1/2 -translate-y-1/2">
-          <span className="walkthrough-minimap-player-pulse absolute inset-0 rounded-full border border-[#78c995]/42 bg-[#78c995]/10 shadow-[0_0_16px_rgba(120,201,149,0.22)]" />
-          <span className="absolute left-1/2 top-1/2 h-0 w-0 -translate-x-1/2 -translate-y-[64%] border-x-[6px] border-b-[11px] border-x-transparent border-b-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" />
-          <span className="absolute left-1/2 top-[58%] h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-[#78c995]" />
+          <span className="walkthrough-minimap-player-pulse absolute inset-0 rounded-full border border-[#86f3a9]/70 bg-[#78e89a]/18 shadow-[0_0_20px_rgba(120,232,154,0.46)]" />
+          <span className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/90 bg-[#86f3a9] shadow-[0_0_0_3px_rgba(39,119,62,0.4),0_0_16px_rgba(134,243,169,0.95)]" />
         </div>
       </div>
     );
@@ -1009,6 +1057,7 @@ export default function ExteriorPanoWalkthrough({
   className,
   title = "Exterior Walkthrough",
   subtitle = "Fast sphere-based exterior navigation",
+  forceSequentialForwardBack = false,
 }: ExteriorPanoWalkthroughProps) {
   primeSignedAssetUrls(initialSignedAssetUrls);
   const graph = useMemo(() => buildExteriorTourGraph(nodes), [nodes]);
@@ -2102,6 +2151,7 @@ export default function ExteriorPanoWalkthrough({
                   activeNode.id,
                   direction,
                   viewRef.current.yaw,
+                  forceSequentialForwardBack,
                 )
                   .slice(0, 1)
                   .map((candidate) => candidate.node.id),
@@ -2154,6 +2204,7 @@ export default function ExteriorPanoWalkthrough({
     assetStore,
     cdnBaseUrl,
     graph,
+    forceSequentialForwardBack,
     isInitialPanoReady,
     isAppleTouchFallbackMode,
     preloadResolvedFocusTiles,
@@ -2557,6 +2608,7 @@ export default function ExteriorPanoWalkthrough({
             activeNodeIdRef.current,
             direction,
             viewRef.current.yaw,
+            forceSequentialForwardBack,
           );
 
           let navigated = false;
@@ -2630,6 +2682,7 @@ export default function ExteriorPanoWalkthrough({
           activeNodeIdRef.current,
           direction,
           currentPosition.yaw,
+          forceSequentialForwardBack,
         );
         const targetPitch = clamp(currentPosition.pitch, MIN_PITCH, MAX_PITCH);
         const targetZoom = DEFAULT_ZOOM;
@@ -2811,6 +2864,7 @@ export default function ExteriorPanoWalkthrough({
       beginFlythrough,
       cancelFlythrough,
       finishFlythrough,
+      forceSequentialForwardBack,
       graph,
       isAppleTouchFallbackMode,
       isTransitioning,
@@ -2829,11 +2883,18 @@ export default function ExteriorPanoWalkthrough({
       return;
     }
 
+    const getTapDirection = () =>
+      getSequentialDirectionForView(
+        graph,
+        activeNodeIdRef.current,
+        viewerRef.current?.getPosition().yaw ?? viewRef.current.yaw,
+      );
+
     const handleDoubleClick = (event: MouseEvent) => {
       event.preventDefault();
       event.stopPropagation();
 
-      void navigateTo("forward");
+      void navigateTo(getTapDirection());
     };
 
     const handlePointerDown = (event: PointerEvent) => {
@@ -2867,7 +2928,7 @@ export default function ExteriorPanoWalkthrough({
         return;
       }
 
-      const direction: NavigationDirection = "forward";
+      const direction = getTapDirection();
       const now = performance.now();
       const isDoubleTap =
         now - tapState.lastTapAt < 320 &&
@@ -2897,7 +2958,7 @@ export default function ExteriorPanoWalkthrough({
       host.removeEventListener("pointerdown", handlePointerDown);
       host.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [navigateTo]);
+  }, [graph, navigateTo]);
 
   useEffect(() => {
     const host = viewerHostRef.current;

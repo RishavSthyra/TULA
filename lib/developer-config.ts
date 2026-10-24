@@ -3,7 +3,7 @@ import "server-only";
 import { revalidateTag, unstable_cache } from "next/cache";
 import amenitiesPageData from "@/data/amenitiesPage.json";
 import { exteriorAmenities } from "@/data/exteriorAmenities";
-import exteriorNodes from "@/data/TULA Landscape 20082026 PANO_pano_walkthrough_data_2.json";
+import exteriorNodes from "@/data/TULA Landscape 2026-10-15_pano_walkthrough_data.json";
 import furnishedInteriorNodes from "@/data/trifecta_pano_walkthrough_data_Interior_final.json";
 import bareShellInteriorNodes from "@/data/trifecta_pano_walkthrough_data_BareShell.json";
 import trackingData from "@/data/trifecta_unreal_tracking_data.json";
