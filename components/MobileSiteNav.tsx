@@ -15,9 +15,9 @@ import {
   Menu,
   Phone,
   Send,
-  UserRound,
   X,
 } from "lucide-react";
+import { RiBuilding2Line } from "react-icons/ri";
 import {
   type SiteNavHref,
   isSiteNavItemActive,
@@ -30,7 +30,7 @@ const navItemIcons: Record<SiteNavHref, typeof Home> = {
   "/project-overview": Building2,
   "/area-map": MapPin,
   "/amenities": Heart,
-  "/master-plan": UserRound,
+  "/master-plan": Building2,
   "/exterior-walkthrough": Footprints,
 } as const;
 
@@ -374,7 +374,11 @@ export default function MobileSiteNav() {
                             : "border border-[#dfcfac]/80 bg-[#f7f1e5] text-[#40543f]"
                         }`}
                       >
-                        <Icon className="size-4.5" />
+                        {item.href === "/master-plan" ? (
+                          <RiBuilding2Line className="size-4.5" />
+                        ) : (
+                          <Icon className="size-4.5" />
+                        )}
                       </span>
                       <span className="truncate">{item.label}</span>
                     </span>

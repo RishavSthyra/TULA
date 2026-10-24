@@ -84,6 +84,7 @@ export default async function ExteriorTourPage() {
           nodes={exteriorTourNodes}
           cdnBaseUrl={exterior.panoBasePath}
           initialNodeId={preferredInitialNodeId}
+          initialYawOffsetDegrees={172}
           initialSignedAssetUrls={signedExteriorMenuAssets}
           amenities={canonicalExteriorAmenities}
           className="h-full w-full rounded-none"

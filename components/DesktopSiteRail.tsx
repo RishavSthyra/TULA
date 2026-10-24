@@ -11,8 +11,8 @@ import {
   Leaf,
   MapPin,
   SlidersHorizontal,
-  UserRound,
 } from "lucide-react";
+import { RiBuilding2Line } from "react-icons/ri";
 import {
   type SiteNavHref,
   isSiteNavItemActive,
@@ -32,7 +32,7 @@ const railItemIcons: Record<SiteNavHref, typeof House> = {
   "/project-overview": Building2,
   "/area-map": MapPin,
   "/amenities": Heart,
-  "/master-plan": UserRound,
+  "/master-plan": Building2,
   "/exterior-walkthrough": Footprints,
 } as const;
 
@@ -84,6 +84,9 @@ export default function DesktopSiteRail({
         {siteNavItems.map((item) => {
           const Icon = railItemIcons[item.href];
           const isActive = isSiteNavItemActive(pathname, item);
+          const iconClassName = isActive
+            ? "desktop-site-rail__nav-icon desktop-site-rail__nav-icon--active"
+            : "desktop-site-rail__nav-icon desktop-site-rail__nav-icon--inactive";
 
           return (
             <div key={item.label} className="group relative flex items-center">
@@ -97,14 +100,11 @@ export default function DesktopSiteRail({
                 }
                 aria-label={item.label}
               >
-                <Icon
-                  className={
-                    isActive
-                      ? "desktop-site-rail__nav-icon desktop-site-rail__nav-icon--active"
-                      : "desktop-site-rail__nav-icon desktop-site-rail__nav-icon--inactive"
-                  }
-                  strokeWidth={isActive ? 2 : 1.8}
-                />
+                {item.href === "/master-plan" ? (
+                  <RiBuilding2Line className={iconClassName} />
+                ) : (
+                  <Icon className={iconClassName} strokeWidth={isActive ? 2 : 1.8} />
+                )}
               </button>
               <div className="pointer-events-none absolute left-[calc(100%+0.8rem)] top-1/2 z-20 -translate-y-1/2 whitespace-nowrap rounded-full border border-[#dfcfaa]/75 bg-[linear-gradient(180deg,rgba(251,249,241,0.97),rgba(241,237,226,0.94))] px-3 py-1.5 text-[0.66rem] font-semibold tracking-[0.12em] text-[#4a5d47] opacity-0 shadow-[0_14px_28px_rgba(30,46,30,0.12),inset_0_1px_0_rgba(255,255,255,0.95)] transition duration-200 group-hover:translate-y-[-50%] group-hover:opacity-100">
                 {item.label}

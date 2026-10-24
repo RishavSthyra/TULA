@@ -186,6 +186,7 @@ type ExteriorPanoWalkthroughProps = {
   nodes: ExteriorPanoNodeSource[];
   cdnBaseUrl: string;
   initialNodeId?: string;
+  initialYawOffsetDegrees?: number;
   initialSignedAssetUrls?: Record<string, string>;
   amenities?: ExteriorAmenity[];
   className?: string;
@@ -1052,6 +1053,7 @@ export default function ExteriorPanoWalkthrough({
   nodes,
   cdnBaseUrl,
   initialNodeId,
+  initialYawOffsetDegrees = 0,
   initialSignedAssetUrls = {},
   amenities = exteriorAmenities,
   className,
@@ -1896,11 +1898,10 @@ export default function ExteriorPanoWalkthrough({
       const initialAmenity = amenities.find(
         (amenity) => amenity.startingPano.nodeId === initialResolved.nodeId,
       );
-      const initialYaw = initialAmenity
-        ? degToRad(initialAmenity.startingPano.viewYaw)
-        : initialNode
-          ? degToRad(initialNode.yaw)
-          : 0;
+      const initialYawDegrees = initialAmenity
+        ? initialAmenity.startingPano.viewYaw
+        : initialNode?.yaw ?? 0;
+      const initialYaw = degToRad(initialYawDegrees + initialYawOffsetDegrees);
       const initialPitch = initialAmenity
         ? clamp(degToRad(initialAmenity.startingPano.viewPitch), MIN_PITCH, MAX_PITCH)
         : initialNode
@@ -2073,6 +2074,7 @@ export default function ExteriorPanoWalkthrough({
     graph,
     hidePreviewOverlay,
     initialRequestedNodeId,
+    initialYawOffsetDegrees,
     isAppleTouchFallbackMode,
     resolvePano,
     updateMinimapHeading,
