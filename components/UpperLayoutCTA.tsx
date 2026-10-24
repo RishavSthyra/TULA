@@ -201,7 +201,7 @@ export default function UpperLayoutCTA({
     },
     {
       name: "Brochure",
-      link: "/Veranza Floorplan_ E-Brochure_V3_02-03-26 (2).pdf",
+      link: "/TULA-Whispers-of-Trees-Brochure.pdf",
       action: "link",
       isHighlight: false,
       icon: (

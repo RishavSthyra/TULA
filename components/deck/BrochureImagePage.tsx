@@ -13,6 +13,7 @@ type BrochureImagePageProps = {
   pageLabel: string;
   priority?: boolean;
   mode?: "flipbook" | "stacked";
+  imageFit?: "contain" | "cover";
 };
 
 const FALLBACK_CLASS_NAME =
@@ -26,6 +27,7 @@ const BrochureImagePage = forwardRef<HTMLDivElement, BrochureImagePageProps>(
       pageLabel,
       priority = false,
       mode = "flipbook",
+      imageFit = "contain",
     },
     ref,
   ) => {
@@ -70,7 +72,7 @@ const BrochureImagePage = forwardRef<HTMLDivElement, BrochureImagePageProps>(
                   ? "(max-width: 1279px) 100vw, 0px"
                   : "(min-width: 1280px) 46vw, 100vw"
               }
-              className="object-contain object-center"
+              className={`${imageFit === "cover" ? "object-cover" : "object-contain"} object-center`}
               onError={() => setHasFailed(true)}
             />
           </div>

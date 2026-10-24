@@ -59,6 +59,7 @@ export default function FlipBookDeck() {
         alt={page.alt}
         pageLabel={page.label}
         priority={index < 2}
+        imageFit={page.imageFit}
       />
     ));
   }, []);

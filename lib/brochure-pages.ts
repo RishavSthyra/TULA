@@ -9,6 +9,7 @@ export type BrochurePage = {
   src: string;
   alt: string;
   label: string;
+  imageFit?: "contain" | "cover";
   isClosingPage?: boolean;
 };
 
@@ -27,11 +28,26 @@ function createBrochurePage(src: string, index: number): BrochurePage {
     };
   }
 
+  const brochurePageNumber = Number(
+    src.match(/Tula_Page_(\d+)_/i)?.[1] ?? 0,
+  );
+  const usesSuppliedFloorPlanArtwork =
+    brochurePageNumber >= 15 && brochurePageNumber <= 38;
+
   return {
     id: `brochure-page-${index + 1}`,
     src,
     alt: `Brochure page ${index + 1}`,
     label: `Page ${index + 1}`,
+    // The supplied architectural and floor-plan artwork is a few pixels
+    // taller than the fixed brochure page ratio. Cover removes thin internal
+    // gutters without changing the flipbook's page dimensions.
+    imageFit:
+      src === "/brochure/Tula_Page_04_Left.jpg" ||
+      src === "/brochure/Tula_Page_04_Right.jpg" ||
+      usesSuppliedFloorPlanArtwork
+        ? "cover"
+        : "contain",
   };
 }
 

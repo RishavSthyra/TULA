@@ -46,6 +46,7 @@ export default function MobileDeckLanding() {
               pageLabel={page.label}
               priority={index < 2}
               mode="stacked"
+              imageFit={page.imageFit}
             />
           ))}
         </div>

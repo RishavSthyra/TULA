@@ -403,7 +403,7 @@ export default function MobileSiteNav() {
                 ref={(node) => {
                   actionRefs.current[1] = node;
                 }}
-                href="/Veranza Floorplan_ E-Brochure_V3_02-03-26 (2).pdf"
+                href="/TULA-Whispers-of-Trees-Brochure.pdf"
                 className={`flex items-center justify-center rounded-full border border-[#e1d5bf] bg-[#fffdf8]/82 text-[#40543f] shadow-[0_10px_22px_rgba(43,52,37,0.055)] ${isAreaMapRoute ? "h-11 sm:h-12" : "h-14"}`}
                 aria-label="Download brochure"
               >
