@@ -5,7 +5,7 @@ import { gsap } from "gsap";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, type Transition } from "framer-motion";
-import { FiPhone, FiDownload, FiDollarSign, FiGrid, FiHome } from "react-icons/fi";
+import { FiPhone, FiDownload, FiGrid, FiHome } from "react-icons/fi";
 import { BiHome } from "react-icons/bi";
 import { IoMapOutline } from "react-icons/io5";
 import { RiBuilding2Line } from "react-icons/ri";
@@ -206,14 +206,6 @@ export default function UpperLayoutCTA({
       isHighlight: false,
       icon: (
         <FiDownload className="h-[0.82rem] w-[0.82rem] xl:h-[0.9rem] xl:w-[0.9rem] 2xl:h-[0.98rem] 2xl:w-[0.98rem]" />
-      ),
-    },
-    {
-      name: "Get A Quote",
-      action: "quote-modal",
-      isHighlight: false,
-      icon: (
-        <FiDollarSign className="h-[0.82rem] w-[0.82rem] xl:h-[0.9rem] xl:w-[0.9rem] 2xl:h-[0.98rem] 2xl:w-[0.98rem]" />
       ),
     },
   ];
