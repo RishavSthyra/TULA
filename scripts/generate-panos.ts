@@ -3,8 +3,8 @@ import path from "path"
 import os from "os"
 import sharp from "sharp"
 
-const INPUT = "./raw-panos"
-const OUTPUT = "./public/exterior-pano-changed"
+const INPUT = process.env.PANO_INPUT ?? "./raw-panos"
+const OUTPUT = process.env.PANO_OUTPUT ?? "./public/exterior-pano-changed"
 
 const PREVIEW_WIDTH = 2000
 
@@ -49,9 +49,14 @@ type TileJob = {
 function getPanoId(file: string): string {
   const fileName = path.parse(file).name
   const frameMatch = fileName.match(/_F(\d+)$/i)
+  const numberedPanoMatch = fileName.match(/(?:^|\s)PANO\s+Bareshell\.(\d+)$/i)
 
   if (frameMatch) {
     return `PANO.${frameMatch[1].padStart(5, "0")}`
+  }
+
+  if (numberedPanoMatch) {
+    return `PANO.${numberedPanoMatch[1].padStart(5, "0")}`
   }
 
   return fileName

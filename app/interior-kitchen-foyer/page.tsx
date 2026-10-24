@@ -10,6 +10,8 @@ import type { InteriorDeveloperConfig } from "@/types/developer-config";
 
 const KITCHEN_FOYER_PANO_BASE_PATH =
   "TULA/Panos/interior-kitchen-foyer-v1/";
+const KITCHEN_FOYER_BARE_SHELL_PANO_BASE_PATH =
+  "TULA/Panos/interior-kitchen-foyer-bare-shell-v1/";
 
 const KITCHEN_FOYER_BLOCKED_NAVIGATION_PAIRS = [
   ["spline_pano_01_F0006", "spline_pano_05_F0025"],
@@ -29,6 +31,10 @@ const KITCHEN_FOYER_ADDITIONAL_NAVIGATION_PAIRS = [
 const KITCHEN_FOYER_EXCLUDED_NODE_IDS = new Set([
   "spline_pano_02_F0015",
 ]);
+
+const KITCHEN_FOYER_NODES = (
+  kitchenFoyerNavData as ExteriorPanoNodeSource[]
+).filter(({ id }) => !KITCHEN_FOYER_EXCLUDED_NODE_IDS.has(id));
 
 const KITCHEN_FOYER_NAVIGATION_YAW_OVERRIDES = [
   ["spline_pano_03_F0018", "spline_pano_04_F0019", 0],
@@ -90,13 +96,12 @@ const KITCHEN_FOYER_MINIMAP = {
 
 const kitchenFoyerConfig: InteriorDeveloperConfig = {
   furnishedPanoBasePath: KITCHEN_FOYER_PANO_BASE_PATH,
-  bareShellPanoBasePath: KITCHEN_FOYER_PANO_BASE_PATH,
+  bareShellPanoBasePath: KITCHEN_FOYER_BARE_SHELL_PANO_BASE_PATH,
   balconyPanoBasePath: KITCHEN_FOYER_PANO_BASE_PATH,
-  furnishedNodes: (kitchenFoyerNavData as ExteriorPanoNodeSource[]).filter(
-    ({ id }) => !KITCHEN_FOYER_EXCLUDED_NODE_IDS.has(id),
-  ),
-  bareShellNodes: [],
+  furnishedNodes: KITCHEN_FOYER_NODES,
+  bareShellNodes: KITCHEN_FOYER_NODES,
   furnishedInitialNodeId: "spline_pano_03_F0018",
+  bareShellInitialNodeId: "spline_pano_03_F0018",
 };
 
 export const metadata = buildPageMetadata({
@@ -123,6 +128,9 @@ export default function InteriorKitchenFoyerPage() {
           navigationYawOverrides={KITCHEN_FOYER_NAVIGATION_YAW_OVERRIDES}
           minimap={KITCHEN_FOYER_MINIMAP}
           showMinimap
+          showModeToggle
+          showDimensionsToggle={false}
+          preserveNodeOnModeToggle
           panoOnly
           preserveViewDirection
         />

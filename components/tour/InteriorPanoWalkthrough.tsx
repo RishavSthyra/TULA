@@ -231,6 +231,9 @@ type InteriorPanoWalkthroughProps = {
   navigationYawOverrides?: ReadonlyArray<readonly [string, string, number]>;
   minimap?: InteriorPanoMinimapConfig;
   showMinimap?: boolean;
+  showModeToggle?: boolean;
+  showDimensionsToggle?: boolean;
+  preserveNodeOnModeToggle?: boolean;
 };
 
 const EMPTY_BLOCKED_NAVIGATION_PAIRS: ReadonlyArray<readonly [string, string]> = [];
@@ -1131,9 +1134,16 @@ function getModeAwarePanoFolderCandidates(panoId: string, isBareShellMode: boole
     return panoId.endsWith("F0004") ? [`${panoId}.0000`, panoId] : [panoId];
   }
 
-  const frameMatch = panoId.match(/F\d{4}$/i)?.[0];
+  const frameMatch = panoId.match(/F(\d+)$/i)?.[1];
   const candidates = new Set<string>();
   const droppedInterior = panoId.replace(/_Interior/gi, "");
+
+  // TULA's furnished and bare-shell renders share the same camera frame
+  // numbers, while the bare-shell folders use the renderer-neutral PANO.00000
+  // convention. Prefer that exact match before trying legacy project names.
+  if (frameMatch) {
+    candidates.add(`PANO.${frameMatch.padStart(5, "0")}`);
+  }
 
   if (explicitOverride) {
     candidates.add(explicitOverride);
@@ -1144,9 +1154,10 @@ function getModeAwarePanoFolderCandidates(panoId: string, isBareShellMode: boole
   }
 
   if (frameMatch) {
-    candidates.add(`LS_BP_panoPath_${frameMatch}`);
+    const formattedFrame = `F${frameMatch.padStart(4, "0")}`;
+    candidates.add(`LS_BP_panoPath_${formattedFrame}`);
     for (let segment = 2; segment <= 8; segment += 1) {
-      candidates.add(`LS_BP_panoPath${segment}_${frameMatch}`);
+      candidates.add(`LS_BP_panoPath${segment}_${formattedFrame}`);
     }
   }
 
@@ -1380,12 +1391,14 @@ export default function InteriorPanoWalkthrough({
   navigationYawOverrides = EMPTY_NAVIGATION_YAW_OVERRIDES,
   minimap,
   showMinimap = !panoOnly,
+  showModeToggle = false,
+  showDimensionsToggle = true,
+  preserveNodeOnModeToggle = false,
 }: InteriorPanoWalkthroughProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const requestedBareShellMode =
-    !panoOnly && getWalkthroughMode(searchParams) === "bare-shell";
+  const requestedBareShellMode = getWalkthroughMode(searchParams) === "bare-shell";
   const [isBareShellMode, setIsBareShellMode] = useState(requestedBareShellMode);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDimensionsVisible, setIsDimensionsVisible] = useState(false);
@@ -1721,15 +1734,16 @@ export default function InteriorPanoWalkthrough({
       return;
     }
 
-    setPreferredFrame(ENTRANCE_FRAME_ID);
-    setActiveNodeId("");
+    const currentNodeId = currentNodeIdRef.current || activeNodeIdRef.current;
+    setPreferredFrame(preserveNodeOnModeToggle ? null : ENTRANCE_FRAME_ID);
+    setActiveNodeId(preserveNodeOnModeToggle ? currentNodeId : "");
     setViewYaw(0);
     setIsMenuOpen(false);
     setIsTransitioning(true);
     setAvailablePanoFolders({});
     setAvailableNodeIds(null);
     setIsBareShellMode(nextMode);
-  }, [isBareShellMode]);
+  }, [isBareShellMode, preserveNodeOnModeToggle]);
 
   const handleModeToggle = useCallback(() => {
     const nextMode = !isBareShellMode;
@@ -2648,7 +2662,7 @@ export default function InteriorPanoWalkthrough({
 
       {showMinimap ? (
         <div className="pointer-events-none absolute right-4 top-[1.5rem] z-30 hidden w-[400px] xl:block 2xl:right-6 2xl:top-[2rem] 2xl:w-[460px]">
-        <div className={panoOnly ? "pointer-events-auto" : "pointer-events-auto rounded-[1.6rem] p-3"}>
+        <div className={panoOnly ? "pointer-events-auto ml-auto w-[320px] 2xl:w-[360px]" : "pointer-events-auto rounded-[1.6rem] p-3"}>
           <InteriorFloorPlanMinimap
             image={minimapImage}
             points={minimapPoints}
@@ -2684,16 +2698,16 @@ export default function InteriorPanoWalkthrough({
             </div>
           ) : null}
 
-          {!panoOnly ? <button
+          {showModeToggle ? <button
             type="button"
             onClick={handleModeToggle}
-            className={`${uiFont.className} mt-3 flex w-full items-center justify-center gap-2 rounded-[1.25rem] border border-white/22 bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(171,188,196,0.06))] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-white shadow-[0_16px_32px_rgba(0,0,0,0.2)] backdrop-blur-2xl transition hover:border-white/34 hover:bg-white/12`}
+            className={`${uiFont.className} mt-3 flex w-full items-center justify-center gap-2 rounded-[1.1rem] border border-white/38 bg-white/[0.07] px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-white shadow-[0_12px_28px_rgba(0,0,0,0.14)] backdrop-blur-xl transition hover:border-white/58 hover:bg-white/[0.13]`}
           >
             {isBareShellMode ? <Sofa className="h-4 w-4" /> : <BedDouble className="h-4 w-4" />}
             {isBareShellMode ? "View Furnished" : "View Bare Shell"}
           </button> : null}
 
-          {!panoOnly ? <button
+          {showDimensionsToggle ? <button
             type="button"
             onClick={handleDimensionsToggle}
             className={`${uiFont.className} mt-3 flex w-full items-center justify-center rounded-[1.25rem] border px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.24em] shadow-[0_16px_32px_rgba(0,0,0,0.2)] backdrop-blur-2xl transition ${
@@ -2743,6 +2757,16 @@ export default function InteriorPanoWalkthrough({
                 </button>
               </div>
             </div>
+          ) : null}
+          {showModeToggle ? (
+            <button
+              type="button"
+              onClick={handleModeToggle}
+              className={`${uiFont.className} pointer-events-auto ml-auto mt-2 flex w-[14rem] items-center justify-center gap-2 rounded-[1rem] border border-white/38 bg-white/[0.07] px-3 py-2.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-white shadow-[0_10px_24px_rgba(0,0,0,0.16)] backdrop-blur-xl transition hover:border-white/58 hover:bg-white/[0.13] sm:w-[17rem]`}
+            >
+              {isBareShellMode ? <Sofa className="h-3.5 w-3.5" /> : <BedDouble className="h-3.5 w-3.5" />}
+              {isBareShellMode ? "View Furnished" : "View Bare Shell"}
+            </button>
           ) : null}
         </div>
       ) : null}
