@@ -4,8 +4,7 @@ import { revalidateTag, unstable_cache } from "next/cache";
 import amenitiesPageData from "@/data/amenitiesPage.json";
 import { exteriorAmenities } from "@/data/exteriorAmenities";
 import exteriorNodes from "@/data/TULA Landscape 2026-10-15_pano_walkthrough_data.json";
-import furnishedInteriorNodes from "@/data/trifecta_pano_walkthrough_data_Interior_final.json";
-import bareShellInteriorNodes from "@/data/trifecta_pano_walkthrough_data_BareShell.json";
+import { INTERIOR_PANO_CONFIG } from "@/components/tour/interior-pano-config";
 import trackingData from "@/data/trifecta_unreal_tracking_data.json";
 import precomputedSceneData from "@/data/precomputedSceneData.json";
 import {
@@ -161,18 +160,7 @@ export const DEFAULT_DEVELOPER_RUNTIME_CONFIG: DeveloperRuntimeConfig = {
   },
 
   masterPlan: defaultMasterPlanConfig,
-  interior: {
-    furnishedPanoBasePath: "interior-panos-trifecta-2/",
-    bareShellPanoBasePath: "bareshell-pano-trifecta-new/",
-    balconyPanoBasePath: "interior-balcony-pano/",
-    furnishedNodes: furnishedInteriorNodes as ExteriorPanoNodeSource[],
-    bareShellNodes: bareShellInteriorNodes as ExteriorPanoNodeSource[],
-    furnishedInitialNodeId: "BP_panoPath_Interior_F0000",
-    bareShellInitialNodeId: "BP_panoPath_F0000",
-    furnishedMinimapKey: "Tower_A_01_2D.webp",
-    bareShellMinimapKey: "Tower_A_06_2D.webp",
-    fallbackImageKey: "images/first_frame_again.png",
-  },
+  interior: INTERIOR_PANO_CONFIG,
   exterior: {
     panoBasePath: EXTERIOR_PANO_CDN_BASE_PATH,
     nodes: exteriorNodes as ExteriorPanoNodeSource[],

@@ -12,6 +12,11 @@ import type {
 } from "@/lib/exterior-tour/types";
 
 export type ExteriorPanoramaSource = string | EquirectangularTilesPanorama;
+type ResolvedPanoramaAssets = {
+  meta: PanoMeta;
+  panorama: ExteriorPanoramaSource;
+  previewUrl: string;
+};
 const joinedPanoPathCache = new Map<string, string>();
 
 function ensureTrailingSlash(value: string) {
@@ -135,6 +140,9 @@ export function buildPhotoSpherePanorama(
 
   const cols = meta.actualCols ?? meta.cols;
   const rows = meta.actualRows ?? meta.rows;
+  const explicitTiles = new Map(
+    meta.tiles?.map((tile) => [`${tile.col}:${tile.row}`, tile.file]),
+  );
 
   return {
     width: meta.width,
@@ -146,12 +154,10 @@ export function buildPhotoSpherePanorama(
         return null;
       }
 
-      const explicitTile = meta.tiles?.find(
-        (tile) => tile.col === col && tile.row === row,
-      );
+      const explicitTile = explicitTiles.get(`${col}:${row}`);
 
       if (explicitTile) {
-        const tilePath = getPanoTileUrl(panoId, `tiles/${explicitTile.file}`, baseUrl);
+        const tilePath = getPanoTileUrl(panoId, `tiles/${explicitTile}`, baseUrl);
         return signedTileUrls?.[tilePath] ?? tilePath;
       }
 
@@ -175,6 +181,9 @@ export function buildTileDescriptors(panoId: string, meta: PanoMeta, baseUrl: st
     meta.tileUrl ?? `tiles/tile_{col}_{row}.${meta.tileFormat ?? "jpg"}`;
 
   const tiles: PanoTileDescriptor[] = [];
+  const explicitTiles = new Map(
+    meta.tiles?.map((tile) => [`${tile.col}:${tile.row}`, tile.file]),
+  );
 
   for (let row = 0; row < rows; row += 1) {
     for (let col = 0; col < cols; col += 1) {
@@ -184,7 +193,9 @@ export function buildTileDescriptors(panoId: string, meta: PanoMeta, baseUrl: st
         row,
         url: getPanoTileUrl(
           panoId,
-          tileTemplate.replace("{col}", String(col)).replace("{row}", String(row)),
+          explicitTiles.has(`${col}:${row}`)
+            ? `tiles/${explicitTiles.get(`${col}:${row}`)}`
+            : tileTemplate.replace("{col}", String(col)).replace("{row}", String(row)),
           baseUrl,
         ),
         left: col / cols,
@@ -251,8 +262,46 @@ export class PanoAssetStore {
   private imagePromises = new Map<string, Promise<string>>();
   private signedUrlPromises = new Map<string, Promise<string>>();
   private signedTileUrlMaps = new Map<string, Promise<Record<string, string>>>();
+  private panoramaPromises = new Map<string, Promise<ResolvedPanoramaAssets>>();
 
   constructor(private readonly baseUrl: string) {}
+
+  getPanorama(panoId: string, preferTiles = true): Promise<ResolvedPanoramaAssets> {
+    const key = `${panoId}|${preferTiles ? "tiles" : "preview"}`;
+    const cached = this.panoramaPromises.get(key);
+    if (cached) {
+      return cached;
+    }
+
+    const promise = this.getMeta(panoId)
+      .then(async (meta) => {
+        const previewPath = getResolvedPreviewUrl(
+          panoId, this.baseUrl, meta.preview ?? "preview.jpg",
+        );
+        const useTiles = preferTiles && canUseTiledPanorama(meta);
+        // Sign the preview and tile URLs together, instead of serial API calls.
+        const tilePaths = useTiles
+          ? buildTileDescriptors(panoId, meta, this.baseUrl).map((tile) => tile.url)
+          : [];
+        const signedUrls = await this.getSignedUrls([previewPath, ...tilePaths]);
+        const previewUrl = signedUrls[previewPath];
+
+        return {
+          meta,
+          previewUrl,
+          panorama: buildPhotoSpherePanorama(
+            panoId, meta, this.baseUrl, useTiles, previewUrl, signedUrls,
+          ),
+        };
+      })
+      .catch((error) => {
+        this.panoramaPromises.delete(key);
+        throw error;
+      });
+
+    this.panoramaPromises.set(key, promise);
+    return promise;
+  }
 
   async getSignedUrl(assetPath: string) {
     const cachedPromise = this.signedUrlPromises.get(assetPath);

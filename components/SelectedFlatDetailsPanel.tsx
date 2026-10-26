@@ -4,13 +4,11 @@ import { forwardRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import {
+  ArrowUpRight,
   BedDouble,
   Building2,
   Compass,
   Expand,
-  Footprints,
-  Layers,
-  MapPin,
   Ruler,
   X,
 } from "lucide-react";
@@ -61,23 +59,26 @@ function getStatusStyles(status: InventoryApartment["status"]) {
   if (status === "Available") {
     return {
       badgeClassName:
-        "border-[#6f8f5a]/55 bg-[linear-gradient(135deg,#6d945a_0%,#4d7443_52%,#365834_100%)] text-white shadow-[0_12px_24px_rgba(31,66,35,0.28),inset_0_1px_0_rgba(255,255,255,0.24)]",
-      dotClassName: "bg-white",
+        "border-[#d7e2d4] bg-[#edf2ea] text-[#4b684c]",
+      textClassName: "text-[#4b684c]",
+      dotClassName: "bg-[#698565]",
     };
   }
 
   if (status === "Reserved") {
     return {
       badgeClassName:
-        "border-[#c4a667]/45 bg-[#b89043] text-white shadow-[0_8px_18px_rgba(118,83,22,0.18),inset_0_1px_0_rgba(255,255,255,0.24)]",
-      dotClassName: "bg-white",
+        "border-[#e8dcc6] bg-[#f4eee1] text-[#8b6c39]",
+      textClassName: "text-[#8b6c39]",
+      dotClassName: "bg-[#a88b54]",
     };
   }
 
   return {
     badgeClassName:
-      "border-[#b7776b]/45 bg-[#9d5d50] text-white shadow-[0_8px_18px_rgba(99,38,31,0.18),inset_0_1px_0_rgba(255,255,255,0.22)]",
-    dotClassName: "bg-white",
+      "border-[#dfddd6] bg-[#efeee9] text-[#77776e]",
+    textClassName: "text-[#77776e]",
+    dotClassName: "bg-[#92938a]",
   };
 }
 
@@ -108,218 +109,98 @@ const SelectedFlatDetailsPanel = forwardRef<
     [apartment.roomDimensions],
   );
   const statusStyles = getStatusStyles(apartment.status);
-  const formattedAreaSqft = `${Math.round(apartment.areaSqft)} sq ft`;
+  const formattedAreaSqft = `${Math.round(apartment.areaSqft).toLocaleString("en-IN")} sq ft`;
   const compactFacts = [
-    {
-      key: "tower",
-      label: "Block",
-      value: formatBlockLabel(apartment.tower),
-      icon: Building2,
-    },
-    {
-      key: "config",
-      label: "Config",
-      value: `${apartment.bhk} BHK`,
-      icon: BedDouble,
-    },
-    {
-      key: "area",
-      label: "Saleable Area",
-      value: formattedAreaSqft,
-      icon: Expand,
-    },
-    {
-      key: "facing",
-      label: "Orientation",
-      value: apartment.facing,
-      icon: MapPin,
-    },
+    { label: "Block", value: formatBlockLabel(apartment.tower) },
+    { label: "Floor", value: apartment.floorLabel || apartment.floor },
+    { label: "Facing", value: apartment.facing },
+    { label: "Saleable area", value: formattedAreaSqft },
   ];
 
   if (compact) {
-    const compactWrapperClassName = desktopEnhancedCompact
-      ? "pointer-events-auto w-full self-start"
-      : "pointer-events-auto w-full self-start";
-    const compactPanelClassName = desktopEnhancedCompact
-      ? `custom-scrollbar flex max-h-[68vh] min-h-0 flex-col overflow-y-auto overscroll-contain rounded-[34px] rounded-tr-[70px] rounded-bl-[26px] ${premiumPanelShellClassName} [-webkit-overflow-scrolling:touch] touch-pan-y 2xl:max-h-[72vh] 2xl:rounded-[38px] 2xl:rounded-tr-[80px]`
-      : `flex min-h-0 flex-col overflow-hidden rounded-[28px] rounded-tr-[56px] rounded-bl-[22px] ${premiumPanelShellClassName} sm:rounded-[32px] sm:rounded-tr-[64px] md:rounded-[36px] md:rounded-tr-[72px]`;
-    const compactContentClassName = desktopEnhancedCompact
-      ? "relative flex min-h-0 flex-col p-6 xl:p-6 2xl:p-7"
-      : "relative flex min-h-0 flex-col p-5 pb-[max(env(safe-area-inset-bottom),1.25rem)] sm:p-6 sm:pb-[max(env(safe-area-inset-bottom),1.5rem)] md:p-7 md:pb-[max(env(safe-area-inset-bottom),1.75rem)]";
-    const compactHeroTitleClassName = desktopEnhancedCompact
-      ? `${selectedFlatSerif.className} mt-1 truncate text-[3rem] font-medium leading-[0.88] text-[#21462d] xl:text-[3.2rem] 2xl:text-[3.65rem]`
-      : `${selectedFlatSerif.className} mt-1 truncate text-[3.05rem] font-medium leading-[0.88] text-[#21462d] sm:text-[3.45rem]`;
-    const compactPillClassName =
-      "inline-flex h-10 items-center justify-center rounded-full border border-[#d8bd78]/70 bg-[#f8f4e8]/88 px-4 text-xs font-bold text-[#58715f] shadow-[0_12px_28px_rgba(33,50,35,0.10),inset_0_1px_0_rgba(255,255,255,0.95)] transition hover:bg-white";
-
     return (
       <motion.div
         ref={ref}
-        initial={{ opacity: 0, x: 22, y: 10 }}
+        initial={{ opacity: 0, x: 12, y: 6 }}
         animate={{ opacity: 1, x: 0, y: 0 }}
-        exit={{ opacity: 0, x: 18, y: 8 }}
-        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-        className={compactWrapperClassName}
+        exit={{ opacity: 0, x: 12, y: 6 }}
+        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+        className="pointer-events-auto w-full self-start"
         data-scroll-area="flat-details-panel"
         data-flat-details-panel
-        onTouchMoveCapture={(event) => {
-          event.stopPropagation();
-        }}
-        onWheelCapture={(event) => {
-          event.stopPropagation();
-        }}
+        onTouchMoveCapture={(event) => event.stopPropagation()}
+        onWheelCapture={(event) => event.stopPropagation()}
       >
-        <div className={compactPanelClassName}>
-          <div className="pointer-events-none absolute inset-[9px] rounded-[22px] rounded-tr-[46px] rounded-bl-[18px] border border-[#ead8a4]/55 sm:rounded-[26px] sm:rounded-tr-[54px] md:rounded-[30px] md:rounded-tr-[62px]" />
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_6%,rgba(255,255,255,0.86),transparent_30%),radial-gradient(circle_at_92%_18%,rgba(236,218,169,0.30),transparent_31%),linear-gradient(180deg,rgba(255,255,255,0.28),rgba(232,236,222,0.20))]" />
-          <div
-            className={`${ornamentLineClassName} -right-5 top-12 h-36 w-24 rounded-[50%] border-l`}
-          />
-          <div
-            className={`${ornamentLineClassName} right-0 top-20 h-24 w-16 rounded-[50%] border-l`}
-          />
-          <div
-            className={`${ornamentLineClassName} -bottom-10 -left-7 h-48 w-28 rounded-[50%] border-r`}
-          />
-
-          <div className={`${compactContentClassName} relative z-10`}>
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-bold uppercase tracking-[0.38em] text-[#697560]">
-                  Selected Flat
-                </p>
-                <h2 className={compactHeroTitleClassName}>{apartment.title}</h2>
-                <div className="mt-4 h-px w-16 bg-[#c4a667]" />
-              </div>
-
-              <div className="flex shrink-0 flex-col items-end gap-2">
-                {!hideCloseButton ? (
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className={`${compactPillClassName} h-11 w-11 px-0`}
-                    aria-label="Close flat details"
-                  >
-                    <X className="h-5 w-5 stroke-[2.2]" />
-                  </button>
-                ) : null}
-
-                <span
-                  className={`inline-flex h-9 items-center gap-2 rounded-full border px-4 text-[10px] font-bold uppercase tracking-[0.2em] ${statusStyles.badgeClassName}`}
-                >
-                  <span
-                    className={`inline-flex h-1.5 w-1.5 rounded-full ${statusStyles.dotClassName}`}
-                  />
-                  {apartment.status}
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-8 grid grid-cols-2 gap-3">
-              {compactFacts.map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <div
-                    key={item.key}
-                    className="flex min-w-0 items-center gap-3 rounded-[22px] border border-[#d8bd78]/60 bg-[#f8f4e8]/78 px-3 py-3.5 shadow-[0_14px_30px_rgba(33,50,35,0.10),inset_0_1px_0_rgba(255,255,255,0.92)] backdrop-blur-md"
-                  >
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#d2b874]/65 bg-[#f0ead9]/82 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
-                      <Icon className="h-4 w-4 text-[#a88a45]" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[8px] font-bold uppercase tracking-[0.26em] text-[#9a8054]">
-                        {item.label}
-                      </p>
-                      <p className="mt-1 truncate text-xs font-bold text-[#1f3f2b]">
-                        {item.value}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-[22px] border border-[#d8bd78]/60 bg-[#f8f4e8]/78 px-5 py-4 shadow-[0_14px_30px_rgba(33,50,35,0.09),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-md">
+        <div
+          className={`rounded-[28px] ${premiumPanelShellClassName} ${
+            desktopEnhancedCompact
+              ? "custom-scrollbar max-h-[68dvh] overflow-y-auto overscroll-contain touch-pan-y 2xl:max-h-[72dvh]"
+              : "overflow-hidden"
+          }`}
+        >
+          <div className="pointer-events-none absolute inset-2 rounded-[21px] border border-[#ead8a4]/55" />
+          <div className="relative p-5 sm:p-6">
+            <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-[#9a8054]">
-                  Floor
-                </p>
-                <p
-                  className={`${selectedFlatSerif.className} mt-1 truncate text-3xl font-medium leading-none text-[#21462d]`}
-                >
-                  {apartment.floorLabel || apartment.floor}
-                </p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#58715f]">Selected flat</p>
+                <h2 className={`${selectedFlatSerif.className} mt-2 break-words text-[2.75rem] font-medium leading-none tracking-[-0.025em] text-[#21462d]`}>
+                  {apartment.title}
+                </h2>
               </div>
-              <Layers className="h-6 w-6 text-[#a88a45]" />
+              {!hideCloseButton ? (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="-mr-1 -mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#d8bd78]/50 bg-[#f8f4e8]/70 text-[#58715f] transition hover:bg-[#fbfaf4] hover:text-[#21462d] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#58715f]"
+                  aria-label="Close flat details"
+                >
+                  <X className="h-[18px] w-[18px]" strokeWidth={1.6} aria-hidden="true" />
+                </button>
+              ) : null}
             </div>
+
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+              <p className="rounded-full border border-[#d8bd78]/45 bg-[#fbfaf4]/80 px-3 py-1.5 text-xs font-semibold text-[#1f3f2b]">{apartment.bhk} BHK</p>
+              <span className={
+                "inline-flex items-center gap-1.5 rounded-full border border-[#d8bd78]/35 bg-[#fbfaf4]/65 px-3 py-1.5 text-xs font-medium " + statusStyles.textClassName
+              }>
+                <span className={"h-1.5 w-1.5 rounded-full " + statusStyles.dotClassName} aria-hidden="true" />
+                {apartment.status}
+              </span>
+            </div>
+
+            <dl className="mt-5 divide-y divide-[#d8bd78]/30 border-y border-[#d8bd78]/40">
+              {compactFacts.map((item) => (
+                <div key={item.label} className="flex items-baseline justify-between gap-4 py-3">
+                  <dt className="shrink-0 text-xs font-semibold text-[#fff6df] [text-shadow:0_1px_3px_rgba(20,40,26,0.55)]">{item.label}</dt>
+                  <dd className="min-w-0 break-words text-right text-sm font-semibold tabular-nums text-[#1f3f2b]">
+                    {item.value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
 
             <Link
               href="/interior-kitchen-foyer"
-              className="mt-4 flex items-center justify-between rounded-[22px] border border-[#69895e]/55 bg-[linear-gradient(135deg,#66895b_0%,#3e633f_100%)] px-5 py-4 text-white shadow-[0_14px_28px_rgba(31,66,35,0.22),inset_0_1px_0_rgba(255,255,255,0.22)] transition hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-[#c4a667] focus:ring-offset-2"
+              className="mt-5 flex min-h-12 items-center justify-between gap-3 rounded-full border border-[#d7bf80]/40 bg-[#23412a]/90 px-5 py-3 text-sm font-medium text-[#fff6df] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-sm transition hover:bg-[#2c5134] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#c4a667]"
             >
-              <span>
-                <span className="block text-[9px] font-bold uppercase tracking-[0.28em] text-white/70">
-                  Representative interior
-                </span>
-                <span className="mt-1 block text-sm font-bold">
-                  Open Walkthrough
-                </span>
-              </span>
-              <Footprints className="h-5 w-5 shrink-0" strokeWidth={1.9} />
+              View interior
+              <ArrowUpRight className="h-4 w-4 shrink-0 text-[#d9c28a]" strokeWidth={1.7} aria-hidden="true" />
             </Link>
+            <p className="mt-2.5 text-[11px] font-medium leading-4 text-[#fff6df] [text-shadow:0_1px_3px_rgba(20,40,26,0.55)]">Representative interior</p>
 
             {!desktopEnhancedCompact && dimensionItems.length > 0 ? (
-              <div className="mt-5 overflow-hidden rounded-[26px] border border-[#d8bd78]/55 bg-[linear-gradient(180deg,rgba(35,65,42,0.96),rgba(28,54,36,0.98))] px-5 py-4 text-[#f5ecd7] shadow-[0_18px_38px_rgba(25,55,34,0.22),inset_0_1px_0_rgba(255,255,255,0.14)]">
-                <div className="flex items-center justify-between gap-2 sm:gap-3">
-                  <div>
-                    <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-[#d9c28a] sm:text-[10px]">
-                      Spatial Composition
-                    </p>
-                    <p
-                      className={`${selectedFlatSerif.className} mt-1 text-xl font-semibold leading-none text-[#fff6df] sm:text-2xl`}
-                    >
-                      Room dimensions
-                    </p>
-                  </div>
-
-                  <div className="rounded-full border border-[#d9c28a]/35 bg-white/8 px-2 py-1 text-[10px] font-medium text-[#f5ecd7] sm:px-3 sm:py-1.5 sm:text-[11px]">
-                    {dimensionItems.length} rooms
-                  </div>
-                </div>
-
-                <div className="mt-3 pr-1 sm:mt-4">
-                  <div className="space-y-2.5 pb-1 sm:space-y-3 sm:pb-1">
-                    {dimensionItems.length > 0
-                      ? dimensionItems.map((item, index) => (
-                          <div
-                            key={item.key}
-                            className="flex items-start justify-between gap-2 border-b border-[#d9c28a]/18 pb-2.5 last:border-b-0 last:pb-0 sm:gap-3 sm:pb-3"
-                          >
-                            <div className="flex min-w-0 items-start gap-2 sm:gap-3">
-                              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#d9c28a]/30 bg-white/8 sm:h-9 sm:w-9">
-                                <Ruler className="h-3.5 w-3.5 text-[#d9c28a] sm:h-4 sm:w-4" />
-                              </div>
-
-                              <div className="min-w-0">
-                                <p className="text-[9px] uppercase tracking-[0.24em] text-[#d9c28a]/70 sm:text-[10px]">
-                                  {String(index + 1).padStart(2, "0")}
-                                </p>
-                                <p className="mt-0.5 truncate text-xs font-medium text-[#fff6df] sm:text-sm">
-                                  {item.label}
-                                </p>
-                              </div>
-                            </div>
-
-                            <p className="shrink-0 text-right text-xs font-semibold tracking-[0.01em] text-[#f5ecd7] sm:text-sm">
-                              {item.value}
-                            </p>
-                          </div>
-                        ))
-                      : null}
-                  </div>
-                </div>
-              </div>
+              <section className="mt-6 rounded-[22px] border border-[#d7bf80]/40 bg-[#23412a]/90 p-4 text-[#f7efd9]" aria-label="Room dimensions">
+                <h3 className={`${selectedFlatSerif.className} text-xl font-semibold text-[#fff6df]`}>Room dimensions</h3>
+                <dl className="mt-2 divide-y divide-[#d9c28a]/20">
+                  {dimensionItems.map((item) => (
+                    <div key={item.key} className="flex items-baseline justify-between gap-4 py-2.5">
+                      <dt className="min-w-0 text-xs text-[#f7efd9]/75">{item.label}</dt>
+                      <dd className="shrink-0 text-right text-xs font-medium tabular-nums">{item.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
             ) : null}
           </div>
         </div>

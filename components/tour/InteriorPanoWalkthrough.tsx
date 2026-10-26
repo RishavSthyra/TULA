@@ -35,16 +35,20 @@ import {
   Sofa,
   X,
 } from "lucide-react";
-import FurnishedFloorPlanMinimap from "@/assets/Tower_A_01_2D.webp";
-import BareShellFloorPlanMinimap from "@/assets/Tower_A_06_2D.webp";
-import furnishedNavData from "@/data/trifecta_pano_walkthrough_data_Interior_final.json"
-import bareShellNavData from "@/data/trifecta_pano_walkthrough_data_BareShell.json";
 import {
-  buildPhotoSpherePanorama,
+  INTERIOR_PANO_CONFIG,
+  INTERIOR_PANO_ROOM_LABELS,
+  KITCHEN_FOYER_ADDITIONAL_NAVIGATION_PAIRS,
+  KITCHEN_FOYER_BLOCKED_NAVIGATION_PAIRS,
+  KITCHEN_FOYER_MINIMAP,
+  KITCHEN_FOYER_NAVIGATION_YAW_OVERRIDES,
+} from "./interior-pano-config";
+import {
+  type ExteriorPanoramaSource,
   canUseTiledPanorama,
   getResolvedPreviewUrl,
   PanoAssetStore,
-  selectWarmupTiles,
+  selectPriorityTiles,
 } from "@/lib/exterior-tour/pano";
 import { getSignedAssetUrls } from "@/src/lib/signed-assets";
 import { useSignedAssetUrls } from "@/src/lib/use-signed-assets";
@@ -84,12 +88,6 @@ const wallLabelFont = DM_Sans({
   weight: ["500", "700"],
 });
 
-const FURNISHED_PANO_BASE_URL =
-  "interior-panos-trifecta-2/";
-const FURNISHED_BALCONY_PANO_BASE_URL =
-  "interior-balcony-pano/";
-const BARE_SHELL_PANO_BASE_URL =
-  "bareshell-pano-trifecta-new/";
 const DEFAULT_ZOOM = 10;
 const MIN_PITCH = -Math.PI / 2 + 0.08;
 const MAX_PITCH = Math.PI / 2 - 0.08;
@@ -99,46 +97,10 @@ const INTERIOR_MIN_FOV = 36;
 const INTERIOR_MAX_FOV = 74;
 const ENTRANCE_FRAME_ID = "F0000";
 const TRACKPAD_PANO_YAW_RADIANS_PER_PIXEL = 0.0032;
-const FURNISHED_MINIMAP_FLIP_X = false;
-const FURNISHED_MINIMAP_FLIP_Y = true;
-const BARE_SHELL_MINIMAP_FLIP_X = false;
-const BARE_SHELL_MINIMAP_FLIP_Y = true;
-const FURNISHED_MINIMAP_OFFSET_X = 0;
-const FURNISHED_MINIMAP_OFFSET_Y = 0;
-const FURNISHED_MINIMAP_SCALE_X = 1;
-const FURNISHED_MINIMAP_SCALE_Y = 1;
-const BARE_SHELL_MINIMAP_OFFSET_X = 0;
-const BARE_SHELL_MINIMAP_OFFSET_Y = 0;
-const BARE_SHELL_MINIMAP_SCALE_X = 1;
-const BARE_SHELL_MINIMAP_SCALE_Y = 1;
 const BALCONY_PANO_NODE_ID = "BP_panoPath_Interior_Balcony_F9000";
 const BALCONY_PANO_ID = "BAlconyUnit__View_pano";
 const BALCONY_MINIMAP_LEFT = 16;
 const BALCONY_MINIMAP_TOP =46;
-const FURNISHED_MINIMAP_WORLD_BOUNDS: FloorPlanMinimapWorldBounds = {
-  bottomLeft: {
-    x: 688.10828,
-    y: -9159.876,
-    z: 10980.549,
-  },
-  topRight: {
-    x: 1899.21672,
-    y: -7800.978,
-    z: 10980.549,
-  },
-};
-const BARE_SHELL_MINIMAP_WORLD_BOUNDS: FloorPlanMinimapWorldBounds = {
-  bottomLeft: {
-    x: 4651.149307,
-    y: -9052.57788,
-    z: 10800,
-  },
-  topRight: {
-    x: 5850.028969,
-    y: -7958.955825,
-    z: 11085,
-  },
-};
 
 function canUseDeviceOrientation() {
   return (
@@ -174,20 +136,6 @@ function formatDebugNumber(value: number) {
 
 const INTERIOR_PANO_DEV_TOOL_ENABLED = process.env.NODE_ENV === "development";
 
-const FURNISHED_PANO_FOLDER_OVERRIDES: Record<string, string> = {
-  LS_BP_panoPath_Interior_F0005: "LS_BP_panoPath_Interior_F0005",
-  LS_BP_panoPath_Interior2_F0007: "LS_BP_panoPath_Interior2_F0007",
-  LS_BP_panoPath_Interior2_F0008: "LS_BP_panoPath_Interior2_F0008",
-  LS_BP_panoPath_Interior5_F0014: "LS_BP_panoPath_Interior5_F0014",
-};
-
-const BARE_SHELL_PANO_FOLDER_OVERRIDES: Record<string, string> = {
-  LS_BP_panoPath_Interior_F0005: "LS_BP_panoPath_F0005",
-  LS_BP_panoPath_Interior2_F0007: "LS_BP_panoPath2_F0007",
-  LS_BP_panoPath_Interior2_F0008: "LS_BP_panoPath2_F0008",
-  LS_BP_panoPath_Interior5_F0014: "LS_BP_panoPath4_F0014",
-};
-
 type InteriorPanoViewOverride = {
   yaw?: number;
   pitch?: number;
@@ -203,22 +151,6 @@ const INTERIOR_PANO_VIEW_OVERRIDES = {
     viewPitch: 1.4155,
   },
 } satisfies Record<string, InteriorPanoViewOverride>;
-
-const FURNISHED_BALCONY_NODE: ExteriorPanoNodeSource = {
-  id: BALCONY_PANO_NODE_ID,
-  x: 50000,
-  y: -50000,
-  z: 10898,
-  pitch: 0,
-  yaw: 0,
-  roll: 0,
-  frame: 9000,
-  image_filename: `${BALCONY_PANO_ID}.jpeg`,
-  facing_axis: "-X",
-  forward_vector: { x: -1, y: 0, z: 0 },
-  right_vector: { x: 0, y: -1, z: 0 },
-  left_vector: { x: 0, y: 1, z: 0 },
-};
 
 type InteriorPanoWalkthroughProps = {
   initialNodeId?: string;
@@ -236,7 +168,6 @@ type InteriorPanoWalkthroughProps = {
   preserveNodeOnModeToggle?: boolean;
 };
 
-const EMPTY_BLOCKED_NAVIGATION_PAIRS: ReadonlyArray<readonly [string, string]> = [];
 const EMPTY_ADDITIONAL_NAVIGATION_PAIRS: ReadonlyArray<readonly [string, string]> = [];
 const EMPTY_NAVIGATION_YAW_OVERRIDES: ReadonlyArray<
   readonly [string, string, number]
@@ -247,7 +178,7 @@ type ResolvedPano = {
   panoId: string;
   baseUrl: string;
   meta: PanoMeta;
-  panorama: ReturnType<typeof buildPhotoSpherePanorama>;
+  panorama: ExteriorPanoramaSource;
   previewUrl: string;
 };
 
@@ -337,7 +268,6 @@ function getInteriorPanoSource(
     nodeId,
     imageFilename,
     availablePanoFolders,
-    isBareShellMode,
   );
 
   return {
@@ -347,7 +277,7 @@ function getInteriorPanoSource(
       : isBareShellMode
         ? bases.bareShell
         : bases.furnished,
-    previewLabel: getRoomLabel(imageFilename),
+    previewLabel: getRoomLabel(imageFilename, nodeId),
   };
 }
 
@@ -477,174 +407,224 @@ const SECONDARY_DIMENSION_ROOM_BY_ROOM: Record<
   "C.Toilet": "Bedroom 03",
 };
 
+// Temporary TULA pano mapping; existing measurements and placements await calibration.
 const INTERIOR_DIMENSION_MARKER_OVERRIDES: Record<
   string,
   InteriorDimensionMarkerOverride[]
 > = {
-  LS_BP_panoPath_Interior4_F0013: [
-    { yaw: 4.5, pitch: -0.08, roomNumber: "01", roomName: "Living", dimensions: `14'7" x 10'10"` },
-    { yaw: 4.72, pitch: -0.02, roomNumber: "02", roomName: "Dinning", dimensions: `11'3" x 9'0"` },
+  LS_spline_pano_02_F0013: [
+   { yaw: 4.75, pitch: 0.03, roomNumber: "02", rotation:{roll: 0, yaw :-10, pitch : 0}, roomName: "Master Bedroom", dimensions: `12'0" x 15'0"`, size : 1.2 },
   ],
-  LS_BP_panoPath_Interior_F0001: [
-    { yaw: 1.5, pitch: 0.01, roomNumber: "01", roomName: "Living and Dining", dimensions: `27'1" × 11'10"` },
+  LS_spline_pano_01_F0001: [
+   { yaw: 4, pitch: 0.03, roomNumber: "02", rotation:{roll: 0, yaw :-43, pitch : 0}, roomName: "Master Bedroom", dimensions: `12'0" x 15'0"`, size : 2.4 },
   ],
-  LS_BP_panoPath_Interior_F0002: [
-    { yaw: 1.75, pitch: 0, roomNumber: "01", rotation:{roll: 0, yaw :-30, pitch : 0}, roomName: "Living and Dining", dimensions: `27'1" × 11'10"`, size : 1 },
-    { yaw: 4.1, pitch: -0.3, rotation:{roll: -10, yaw :-60, pitch : 90}, roomNumber: "03",  size: 1.3, roomName: "Kitchen", dimensions: `11'3" x 9'0"` },
+  LS_spline_pano_01_F0002: [
+    // { yaw: 1.75, pitch: 0, roomNumber: "01", rotation:{roll: 0, yaw :-30, pitch : 0}, roomName: "Living and Dining", dimensions: `27'1" × 11'10"`, size : 1 },
+   { yaw: 3.75, pitch: 0.03, roomNumber: "02", rotation:{roll: 0, yaw :-35, pitch : 0}, roomName: "Master Bedroom", dimensions: `12'0" x 15'0"`, size : 1.2 },
   ],
-  LS_BP_panoPath_Interior3_F0010: [
-    { yaw: 4.1, pitch: 0, roomNumber: "01", rotation:{roll: 0, yaw :-55, pitch : 0}, roomName: "Living and Dining", size:0.7, dimensions: `27'1" × 11'10"` },
-    { yaw: 2.2, pitch: 0, roomNumber: "01", rotation:{roll: 0, yaw :-30, pitch : 0}, roomName: "Balcony View", size:0.9, dimensions: `Click to go to Balcony View` },
-    { yaw: 3.67, pitch: -0.24, rotation:{roll: -15, yaw :-10, pitch : 89}, roomNumber: "02",  size: 0.8, roomName: "C.Toilet", dimensions: `5'0" × 8'0"` },
+  LS_spline_pano_01_F0010: [
+      { yaw: 1, pitch: 0.15, roomNumber: "03", rotation:{roll: 0, yaw : 3, pitch : 0}, roomName: "Bedroom 01", size:1.5, dimensions: `11'10" x 13'0"` },
   ],
-  LS_BP_panoPath_Interior3_F0011: [
+  LS_spline_pano_01_F0011: [
     { yaw: 3.1, pitch: 0, roomNumber: "01", rotation:{roll: 0, yaw :5, pitch : 0}, roomName: "M.Bedroom", size:0.9, dimensions: `16'2"x11'0"` },
     { yaw: 6.3, pitch: 5.3, rotation:{roll: -12, yaw :12, pitch : 94}, roomNumber: "03",  size: 1.5, roomName: "M.Toilet", dimensions: `5'0"x8'0"` },
   ],
-  LS_BP_panoPath_Interior4_F0012: [
+  LS_spline_pano_01_F0012: [
     { yaw: 4.6, pitch: 0, roomNumber: "01", rotation:{roll: 0, yaw :0, pitch : 0}, roomName: "M.Bedroom", size:1.2, dimensions: `16'2"x11'0"` },
     // { yaw: 6.7, pitch: -0.08, rotation:{roll: 0, yaw :0, pitch : 0}, roomNumber: "02",  size:0.8, roomName: "Dining", dimensions: `` },
     { yaw: 7.7, pitch: 5.6, rotation:{roll: 20, yaw :-10, pitch : 90}, roomNumber: "03",  size: 1.3, roomName: "M.Toilet", dimensions: `5'0"x8'0"` },
   ],
-  LS_BP_panoPath_Interior_F0005 : [
-        { yaw: 2.1, pitch: 0.07, roomNumber: "01", rotation:{roll: 0, yaw :60, pitch : 0}, roomName: "Kitchen", dimensions: `11'3" x 9'0"`, size : 0.6 },     
-    { yaw: 3.14, pitch: 0.2, roomNumber: "01", rotation:{roll: 0, yaw :0, pitch : -4}, roomName: "Living and Dining", size:0.9, dimensions: `27'1" × 11'10"` },
+  LS_spline_pano_01_F0005 : [
+         { yaw: 2.35, pitch: 0.3, roomNumber: "01", rotation:{roll: 0, yaw :35, pitch : 0}, roomName: "Foyer", dimensions: `5'0" x 9'0"`, size : 1.5 },   
+       { yaw: 4, pitch: 0.5,rotation:{roll: 0, yaw :-48, pitch : 0}, roomNumber: "02", roomName: "Living / Dining", dimensions: `21'0" x 15'0"`, size: 1.4 },
   ],
-  LS_BP_panoPath_Interior_F0006 :[
-      { yaw: 6.3, pitch: 5.2, rotation:{roll: 12, yaw :-16, pitch : 94}, roomNumber: "03",  size: 1.7, roomName: "A.Toilet", dimensions: `5'0"x8'0"` },
-    { yaw: 4, pitch: 0, roomNumber: "01", rotation:{roll: 0, yaw :30, pitch : 0}, roomName: "Bedroom 03", size:0.9, dimensions: `11'0" × 11'4"` },
+  LS_spline_pano_01_F0006 :[
+      { yaw: 6.3, pitch: 5.7, rotation:{roll: 15, yaw :-17, pitch : 86}, roomNumber: "03",  size: 1.7, roomName: "Kitchen", dimensions: `11'0" x 9'0"` },
+{ yaw: -2.6, pitch: 0.3,rotation:{roll: 0, yaw :-32, pitch : 0}, roomNumber: "02", roomName: "Living / Dining", dimensions: `21'0" x 15'0"`, size: 1.2 },
   ],
-  LS_BP_panoPath_Interior2_F0007 :[
-      { yaw: 2.95, pitch: 5.55, rotation:{roll: 4, yaw :0, pitch : 94}, roomNumber: "03",  size: 1.4, roomName: "AToilet", dimensions: `5'0"x8'0"` },
-    { yaw: -4.9, pitch: 0.1, roomNumber: "01", rotation:{roll: 0, yaw :0, pitch : 0}, roomName: "Bedroom 03", size:1.1, dimensions: `11'0" × 11'4"` },
-    { yaw: 6.4, pitch: 0, roomNumber: "01", rotation:{roll: 0, yaw :-10, pitch : 0}, roomName: "Balcony View", size:1.1, dimensions: `Click to go to Balcony View` },
+  LS_spline_pano_01_F0007 :[
+      { yaw: -2.7, pitch: 0.2,rotation:{roll: 0, yaw :-23, pitch : 0}, roomNumber: "02", roomName: "Living / Dining", dimensions: `21'0" x 15'0"`, size: 0.9 },
+    { yaw: -4.7, pitch: -0.2, roomNumber: "01", rotation:{roll: 0, yaw :0, pitch : 0}, roomName: "Kitchen", size:1.1, dimensions: `11'0" x 9'0"` },
+    // { yaw: 6.4, pitch: 0, roomNumber: "01", rotation:{roll: 0, yaw :-10, pitch : 0}, roomName: "Balcony View", size:1.1, dimensions: `Click to go to Balcony View` },
   ],
-  LS_BP_panoPath_Interior2_F0008 : [
-    { yaw: -5, pitch: 0.1, roomNumber: "01", rotation:{roll: 0, yaw : 10, pitch : 0}, roomName: "Bedroom 03", size:1.1, dimensions: `11'0" × 11'4"` },
-    { yaw: 4.3, pitch: -0.6, roomNumber: "01", rotation:{roll: 10, yaw :12, pitch : 90}, roomName: "Balcony View", size:1.1, dimensions: `Click to go to Balcony View` },
+  LS_spline_pano_01_F0008 : [
+    { yaw: -1.52, pitch: -0.6, roomNumber: "03", rotation:{roll: -15, yaw : 10, pitch : 90}, roomName: "Bedroom 01", size:1.2, dimensions: `11'10" x 13'0"` },
+    // { yaw: 4.3, pitch: -0.6, roomNumber: "01", rotation:{roll: 10, yaw :12, pitch : 90}, roomName: "Balcony View", size:1.1, dimensions: `Click to go to Balcony View` },
+          { yaw: -2.8, pitch: 0.15,rotation:{roll: 0, yaw :-15, pitch : 0}, roomNumber: "02", roomName: "Living / Dining", dimensions: `21'0" x 15'0"`, size: 0.6 },
   ],
-  LS_BP_panoPath_Interior_F0004 :[
-            { yaw: 3.65, pitch: 0.07, roomNumber: "01", rotation:{roll: 0, yaw :60, pitch : 0}, roomName: "Kitchen", dimensions: `11'3" x 9'0"`, size : 0.9 },   
-              { yaw: 5.14, pitch: 0.2, roomNumber: "02", rotation:{roll: 0, yaw :-24, pitch : -4}, roomName: "Living and Dining", size:0.9, dimensions: `27'1" × 11'10"` },
+  LS_spline_pano_01_F0004 :[
+            { yaw: 3.55, pitch: 0.07, roomNumber: "04", rotation:{roll: 0, yaw :57, pitch : 0}, roomName: "Bedroom 1", dimensions: `11'0" x 11'0"`, size : 1.3 },   
+              // { yaw: 5.14, pitch: 0.2, roomNumber: "02", rotation:{roll: 0, yaw :-24, pitch : -4}, roomName: "Living and Dining", size:0.9, dimensions: `27'1" × 11'10"` },
   ],
 
- LS_BP_panoPath_Interior5_F0016 :[
-      { yaw: 6.2, pitch: 5.3, rotation:{roll: -12, yaw :12, pitch : 94}, roomNumber: "03",  size: 1.5, roomName: "C.Toilet", dimensions: `5'0"x8'0"` },
+ LS_spline_pano_03_F0016 :[
+{ yaw: -0.40, pitch: 0.12, roomNumber: "04", rotation:{roll: 0, yaw :16, pitch : 0}, roomName: "Bedroom 1", dimensions: `11'0" x 11'0"`, size : 1.1 },  
   ],
-  LS_BP_panoPath_Interior5_F0015 :[
+  LS_spline_pano_02_F0015 :[
         { yaw: 4, pitch: 0.1, roomNumber: "01", rotation:{roll: 0, yaw : 10, pitch : 0}, roomName: "Bedroom 02", size:1.1, dimensions: `10'9" × 11'4"` },
   ],
-  LS_BP_panoPath_Interior5_F0014 :[
-     { yaw: 5, pitch: 0.1, roomNumber: "01", rotation:{roll: 0, yaw : -30, pitch : 0}, roomName: "Bedroom 02", size:1.1, dimensions: `10'9" × 11'4"` },
+  LS_spline_pano_02_F0014 :[
+   { yaw: 4.75, pitch: 0.03, roomNumber: "05", rotation:{roll: 0, yaw :60, pitch : 0}, roomName: "Master Bedroom", dimensions: `12'0" x 15'0"`, size : 1.4 },
   ],
-  LS_BP_panoPath_Interior_F0003 :[
-     { yaw: 2.14, pitch: 0.2, roomNumber: "01", rotation:{roll: 0, yaw :0, pitch : 0}, roomName: "Living and Dining", dimensions: `27'1" × 11'10"`, size : 0.8 },
-   { yaw: 2.79, pitch: 0.07, roomNumber: "02", rotation:{roll: 0, yaw :50, pitch : 0}, roomName: "Kitchen", dimensions: `11'3" x 9'0"`, size : 0.9 },
-     { yaw: 6.7, pitch: 5.8, rotation:{roll: -8, yaw :12, pitch : 90}, roomNumber: "03",  size: 1.3, roomName: "C.Toilet", dimensions: `5'0"x8'0"` },
+  LS_spline_pano_01_F0003 :[
+    //  { yaw: 2.14, pitch: 0.2, roomNumber: "01", rotation:{roll: 0, yaw :0, pitch : 0}, roomName: "Living and Dining", dimensions: `27'1" × 11'10"`, size : 0.8 },
+   { yaw: 2.75, pitch: 0.07, roomNumber: "02", rotation:{roll: 0, yaw :-65, pitch : 0}, roomName: "Master Bedroom", dimensions: `12'0" x 15'0"`, size : 1.5 },
+    //  { yaw: 6.7, pitch: 5.8, rotation:{roll: -8, yaw :12, pitch : 90}, roomNumber: "03",  size: 1.3, roomName: "C.Toilet", dimensions: `5'0"x8'0"` },
   ],
-  LS_BP_panoPath_Interior6_F0017 :[
-     { yaw: 6.4, pitch: -0.6, rotation:{roll: -10, yaw :-60, pitch : 90}, roomNumber: "03",  size: 1.8, roomName: "Kitchen", dimensions: `11'3" x 9'0"` },
-         { yaw: 3.85, pitch: 0, roomNumber: "02", rotation:{roll: 0, yaw :0, pitch : 0}, roomName: "Living and Dining", dimensions: `27'1" × 11'10"`, size : 0.7 },
-         { yaw: 2.93, pitch: 0, roomNumber: "01", rotation:{roll: 0, yaw :30, pitch : 0}, roomName: "Bedroom 03", size:0.6, dimensions: `11'0" × 11'4"` },
+  LS_spline_pano_03_F0017 :[
+{ yaw: -1.73, pitch: 0.25, roomNumber: "04", rotation:{roll: 0, yaw :10, pitch : 0}, roomName: "Bedroom 1", dimensions: `11'0" x 11'0"`, size : 1.6 },  
   ],
-  LS_BP_panoPath_Interior6_F0018 :[
-         { yaw: 3.55, pitch: 0.4, roomNumber: "02", rotation:{roll: 0, yaw :-20, pitch : 0}, roomName: "Kitchen", dimensions: `11'3" x 9'0"`, size : 1.3 },
+  LS_spline_pano_03_F0018 :[
+         { yaw: 5.55, pitch: 0.3, roomNumber: "01", rotation:{roll: 0, yaw :-48, pitch : 0}, roomName: "Foyer", dimensions: `5'0" x 9'0"`, size : 2 },
   ],
-  LS_BP_panoPath_Interior3_F0009 :[ 
-              { yaw: 4, pitch: 0.1, roomNumber: "", rotation:{roll: 0, yaw :-50, pitch : 0}, roomName: "Balcony View", size:1.3, dimensions: `Click to go to Balcony View` },
-  ]
+  LS_spline_pano_01_F0009 :[
+                  { yaw: 0.8, pitch: 0.2, roomNumber: "03", rotation:{roll: 0, yaw : 30, pitch : 0}, roomName: "Bedroom 01", size:1.2, dimensions: `11'10" x 13'0"` },
+  ],
+  // Temporary placeholders for the additional TULA cameras; calibrate later.
+  LS_spline_pano_01_F0000: [
+    { yaw: 0, pitch: 0, roomNumber: "01", roomName: "Walk-in Wardrobe", dimensions: INTERIOR_ROOM_DIMENSIONS.Living.dimensions, size: 0.8 },
+  ],
+  LS_spline_pano_04_F0019: [
+    { yaw: 0.1, pitch: 0, roomNumber: "02", roomName: "Living / Dining", dimensions: `21'0" x 15'0"`, size: 0.8 },
+     { yaw: 4.35, pitch: 0.1, roomNumber: "01", rotation:{roll: 0, yaw :20, pitch : 0}, roomName: "Foyer", dimensions: `5'0" x 9'0"`, size : 2.5 },
+  ],
+  LS_spline_pano_04_F0020: [
+   { yaw: 0.1, pitch: 0, roomNumber: "02", roomName: "Living / Dining", dimensions: `21'0" x 15'0"`, size: 1.2 },
+  ],
+  LS_spline_pano_04_F0021: [
+           { yaw: 2.5, pitch: 0.4,rotation:{roll: 0, yaw :35, pitch : 0}, roomNumber: "02", roomName: "Living / Dining", dimensions: `21'0" x 15'0"`, size: 1.1 },
+  ],
+  LS_spline_pano_04_F0022: [
+       { yaw: 2.8, pitch: 0.5,rotation:{roll: 0, yaw :28, pitch : 0}, roomNumber: "02", roomName: "Living / Dining", dimensions: `21'0" x 15'0"`, size: 1.4 },
+  ],
+  LS_spline_pano_04_F0023: [
+    { yaw: 0, pitch: 0, roomNumber: "01", roomName: "Interior", dimensions: INTERIOR_ROOM_DIMENSIONS.Living.dimensions, size: 0.8 },
+  ],
+  LS_spline_pano_05_F0024: [
+             { yaw: -0.1, pitch: 0.2, roomNumber: "02", rotation:{roll: 0, yaw :-35, pitch : 0}, roomName: "Living and Dining", dimensions: `27'1" × 11'10"`, size : 0.6 },
+    { yaw: -2.4, pitch: -0.3, roomNumber: "01", rotation:{roll: 0, yaw :0, pitch : 0}, roomName: "Kitchen", size:1.5, dimensions: `11'0" x 9'0"` },
+  ],
+  LS_spline_pano_05_F0025: [
+    { yaw: 0, pitch: 0, roomNumber: "01", roomName: "Interior", dimensions: INTERIOR_ROOM_DIMENSIONS.Living.dimensions, size: 0.8 },
+  ],
+  LS_spline_pano_05_F0026: [
+    { yaw: -1.3, pitch: 0.27,rotation:{roll: 0, yaw :-13, pitch : 0}, roomNumber: "02", roomName: "Living / Dining", dimensions: `21'0" x 15'0"`, size: 0.9 },
+        { yaw: -3.5, pitch: -0.15, roomNumber: "01", rotation:{roll: 0, yaw :15, pitch : 0}, roomName: "Kitchen", size:1, dimensions: `11'0" x 9'0"` },
+  ],
+  LS_spline_pano_05_F0027: [
+      { yaw: -1.5, pitch: 0.27,rotation:{roll: 0, yaw :0, pitch : 0}, roomNumber: "02", roomName: "Living / Dining", dimensions: `21'0" x 15'0"`, size: 0.9 },
+  ],
 };
 
-const ROOM_NAME_OVERRIDES: Record<string, string> = {
-  LS_BP_panoPath_Interior_F0001: "Living",
-  LS_BP_panoPath_Interior_F0005: "Living",
-  LS_BP_panoPath_Interior_F0006: "A.Toilet",
-  LS_BP_panoPath_Interior2_F0007: "Living",
-  LS_BP_panoPath_Interior2_F0008: "Living",
-  LS_BP_panoPath_Interior3_F0009: "Dinning",
-  LS_BP_panoPath_Interior3_F0010: "Dinning",
-  LS_BP_panoPath_Interior3_F0011: "Living",
-  LS_BP_panoPath_Interior4_F0012: "Living",
-  LS_BP_panoPath_Interior4_F0013: "Living",
-  LS_BP_panoPath_Interior5_F0014: "Bedroom 03",    
-  LS_BP_panoPath_Interior5_F0015: "Bedroom 03",
-  LS_BP_panoPath_Interior5_F0016: "C.Toilet",
-  LS_BP_panoPath_Interior6_F0017: "Living",
-  LS_BP_panoPath_Interior6_F0018: "Kitchen",
-  LS_BP_panoPath_F0001: "Living",
-  LS_BP_panoPath_F0005: "Living",
-  LS_BP_panoPath_F0006: "C.Toilet",
-  LS_BP_panoPath_F0007: "Kitchen",
-  LS_BP_panoPath_F0008: "Utility",
-  LS_BP_panoPath_F0009: "M.Bedroom",
-  LS_BP_panoPath_F0010: "Dinning",
-  LS_BP_panoPath6_F0018: "Living",
-  LS_BP_panoPath6_F0019: "M.Toilet",
-  LS_BP_panoPath7_F0022: "Kitchen",
-  LS_BP_panoPath7_F0021: "Kitchen",
-  LS_BP_panoPath7_F0020: "Dinning",
-  LS_BP_panoPath2_F0008: "Dinning",
-  LS_BP_panoPath2_F0007: "Living",
-  LS_BP_panoPath4_F0014: "Living",
-  LS_BP_panoPath4_F0015: "Living",
-  LS_BP_panoPath3_F0013: "C.Toilet",
-  LS_BP_panoPath2_F0009: "Living",
-  LS_BP_panoPath2_F0010: "Living",
-  LS_BP_panoPath2_F0011: "Living",
-  LS_BP_panoPath5_F0017: "M.Toilet",
-  LS_BP_panoPath5_F0016: "Living",
+// Independent bare-shell placements, initially copied from the furnished markers.
+// Keys match the bare-shell R2 pano folders; edits here affect bare shell only.
+const BARE_SHELL_DIMENSION_MARKER_OVERRIDES: Record<
+  string,
+  InteriorDimensionMarkerOverride[]
+> = {
+  "PANO.00013": [
+   { yaw: 4.75, pitch: 0.03, roomNumber: "02", rotation:{roll: 0, yaw :-10, pitch : 0}, roomName: "Master Bedroom", dimensions: `12'0" x 15'0"`, size : 1.2 },
+  ],
+  "PANO.00001": [
+   { yaw: 4, pitch: 0.03, roomNumber: "02", rotation:{roll: 0, yaw :-43, pitch : 0}, roomName: "Master Bedroom", dimensions: `12'0" x 15'0"`, size : 2.4 },
+  ],
+  "PANO.00002": [
+    // { yaw: 1.75, pitch: 0, roomNumber: "01", rotation:{roll: 0, yaw :-30, pitch : 0}, roomName: "Living and Dining", dimensions: `27'1" × 11'10"`, size : 1 },
+   { yaw: 3.75, pitch: 0.03, roomNumber: "02", rotation:{roll: 0, yaw :-35, pitch : 0}, roomName: "Master Bedroom", dimensions: `12'0" x 15'0"`, size : 1.2 },
+  ],
+  "PANO.00010": [
+      { yaw: 1, pitch: 0.15, roomNumber: "03", rotation:{roll: 0, yaw : 3, pitch : 0}, roomName: "Bedroom 01", size:1.5, dimensions: `11'10" x 13'0"` },
+  ],
+  "PANO.00011": [
+    { yaw: 3.1, pitch: 0, roomNumber: "01", rotation:{roll: 0, yaw :5, pitch : 0}, roomName: "M.Bedroom", size:0.9, dimensions: `16'2"x11'0"` },
+    { yaw: 6.3, pitch: 5.3, rotation:{roll: -12, yaw :12, pitch : 94}, roomNumber: "03",  size: 1.5, roomName: "M.Toilet", dimensions: `5'0"x8'0"` },
+  ],
+  "PANO.00012": [
+    { yaw: 4.6, pitch: 0, roomNumber: "01", rotation:{roll: 0, yaw :0, pitch : 0}, roomName: "M.Bedroom", size:1.2, dimensions: `16'2"x11'0"` },
+    // { yaw: 6.7, pitch: -0.08, rotation:{roll: 0, yaw :0, pitch : 0}, roomNumber: "02",  size:0.8, roomName: "Dining", dimensions: `` },
+    { yaw: 7.7, pitch: 5.6, rotation:{roll: 20, yaw :-10, pitch : 90}, roomNumber: "03",  size: 1.3, roomName: "M.Toilet", dimensions: `5'0"x8'0"` },
+  ],
+  "PANO.00005" : [
+         { yaw: 2.35, pitch: 0.3, roomNumber: "01", rotation:{roll: 0, yaw :35, pitch : 0}, roomName: "Foyer", dimensions: `5'0" x 9'0"`, size : 1.5 },   
+       { yaw: 4, pitch: 0.5,rotation:{roll: 0, yaw :-48, pitch : 0}, roomNumber: "02", roomName: "Living / Dining", dimensions: `21'0" x 15'0"`, size: 1.4 },
+  ],
+  "PANO.00006" :[
+      { yaw: 6.3, pitch: 5.7, rotation:{roll: 15, yaw :-17, pitch : 86}, roomNumber: "03",  size: 1.7, roomName: "Kitchen", dimensions: `11'0" x 9'0"` },
+{ yaw: -2.6, pitch: 0.3,rotation:{roll: 0, yaw :-32, pitch : 0}, roomNumber: "02", roomName: "Living / Dining", dimensions: `21'0" x 15'0"`, size: 1.2 },
+  ],
+  "PANO.00007" :[
+      { yaw: -2.7, pitch: 0.2,rotation:{roll: 0, yaw :-23, pitch : 0}, roomNumber: "02", roomName: "Living / Dining", dimensions: `21'0" x 15'0"`, size: 0.9 },
+    { yaw: -4.7, pitch: -0.2, roomNumber: "01", rotation:{roll: 0, yaw :0, pitch : 0}, roomName: "Kitchen", size:1.1, dimensions: `11'0" x 9'0"` },
+    // { yaw: 6.4, pitch: 0, roomNumber: "01", rotation:{roll: 0, yaw :-10, pitch : 0}, roomName: "Balcony View", size:1.1, dimensions: `Click to go to Balcony View` },
+  ],
+  "PANO.00008" : [
+    { yaw: -1.52, pitch: -0.6, roomNumber: "03", rotation:{roll: -15, yaw : 10, pitch : 90}, roomName: "Bedroom 01", size:1.2, dimensions: `11'10" x 13'0"` },
+    // { yaw: 4.3, pitch: -0.6, roomNumber: "01", rotation:{roll: 10, yaw :12, pitch : 90}, roomName: "Balcony View", size:1.1, dimensions: `Click to go to Balcony View` },
+          { yaw: -2.8, pitch: 0.15,rotation:{roll: 0, yaw :-15, pitch : 0}, roomNumber: "02", roomName: "Living / Dining", dimensions: `21'0" x 15'0"`, size: 0.6 },
+  ],
+  "PANO.00004" :[
+            { yaw: 3.55, pitch: 0.07, roomNumber: "04", rotation:{roll: 0, yaw :57, pitch : 0}, roomName: "Bedroom 1", dimensions: `11'0" x 11'0"`, size : 1.3 },   
+              // { yaw: 5.14, pitch: 0.2, roomNumber: "02", rotation:{roll: 0, yaw :-24, pitch : -4}, roomName: "Living and Dining", size:0.9, dimensions: `27'1" × 11'10"` },
+  ],
+
+ "PANO.00016" :[
+{ yaw: -0.40, pitch: 0.12, roomNumber: "04", rotation:{roll: 0, yaw :16, pitch : 0}, roomName: "Bedroom 1", dimensions: `11'0" x 11'0"`, size : 1.1 },  
+  ],
+  "PANO.00015" :[
+        { yaw: 4, pitch: 0.1, roomNumber: "01", rotation:{roll: 0, yaw : 10, pitch : 0}, roomName: "Bedroom 02", size:1.1, dimensions: `10'9" × 11'4"` },
+  ],
+  "PANO.00014" :[
+   { yaw: 4.75, pitch: 0.03, roomNumber: "05", rotation:{roll: 0, yaw :60, pitch : 0}, roomName: "Master Bedroom", dimensions: `12'0" x 15'0"`, size : 1.4 },
+  ],
+  "PANO.00003" :[
+    //  { yaw: 2.14, pitch: 0.2, roomNumber: "01", rotation:{roll: 0, yaw :0, pitch : 0}, roomName: "Living and Dining", dimensions: `27'1" × 11'10"`, size : 0.8 },
+   { yaw: 2.75, pitch: 0.07, roomNumber: "02", rotation:{roll: 0, yaw :-65, pitch : 0}, roomName: "Master Bedroom", dimensions: `12'0" x 15'0"`, size : 1.5 },
+    //  { yaw: 6.7, pitch: 5.8, rotation:{roll: -8, yaw :12, pitch : 90}, roomNumber: "03",  size: 1.3, roomName: "C.Toilet", dimensions: `5'0"x8'0"` },
+  ],
+  "PANO.00017" :[
+{ yaw: -1.73, pitch: 0.25, roomNumber: "04", rotation:{roll: 0, yaw :10, pitch : 0}, roomName: "Bedroom 1", dimensions: `11'0" x 11'0"`, size : 1.6 },  
+  ],
+  "PANO.00018" :[
+         { yaw: 5.55, pitch: 0.3, roomNumber: "01", rotation:{roll: 0, yaw :-48, pitch : 0}, roomName: "Foyer", dimensions: `5'0" x 9'0"`, size : 2 },
+  ],
+  "PANO.00009" :[
+                  { yaw: 0.8, pitch: 0.2, roomNumber: "03", rotation:{roll: 0, yaw : 30, pitch : 0}, roomName: "Bedroom 01", size:1.2, dimensions: `11'10" x 13'0"` },
+  ],
+  // Temporary placeholders for the additional TULA cameras; calibrate later.
+  "PANO.00000": [
+    { yaw: 0, pitch: 0, roomNumber: "01", roomName: "Walk-in Wardrobe", dimensions: "14'7\" x 10'10\"", size: 0.8 },
+  ],
+  "PANO.00019": [
+    { yaw: 0.1, pitch: 0, roomNumber: "02", roomName: "Living / Dining", dimensions: `21'0" x 15'0"`, size: 0.8 },
+     { yaw: 4.35, pitch: 0.1, roomNumber: "01", rotation:{roll: 0, yaw :20, pitch : 0}, roomName: "Foyer", dimensions: `5'0" x 9'0"`, size : 2.5 },
+  ],
+  "PANO.00020": [
+   { yaw: 0.1, pitch: 0, roomNumber: "02", roomName: "Living / Dining", dimensions: `21'0" x 15'0"`, size: 1.2 },
+  ],
+  "PANO.00021": [
+           { yaw: 2.5, pitch: 0.4,rotation:{roll: 0, yaw :35, pitch : 0}, roomNumber: "02", roomName: "Living / Dining", dimensions: `21'0" x 15'0"`, size: 1.1 },
+  ],
+  "PANO.00022": [
+       { yaw: 2.8, pitch: 0.5,rotation:{roll: 0, yaw :28, pitch : 0}, roomNumber: "02", roomName: "Living / Dining", dimensions: `21'0" x 15'0"`, size: 1.4 },
+  ],
+  "PANO.00023": [
+    { yaw: 0, pitch: 0, roomNumber: "01", roomName: "Interior", dimensions: "14'7\" x 10'10\"", size: 0.8 },
+  ],
+  "PANO.00024": [
+             { yaw: -0.1, pitch: 0.2, roomNumber: "02", rotation:{roll: 0, yaw :-35, pitch : 0}, roomName: "Living and Dining", dimensions: `27'1" × 11'10"`, size : 0.6 },
+    { yaw: -2.4, pitch: -0.3, roomNumber: "01", rotation:{roll: 0, yaw :0, pitch : 0}, roomName: "Kitchen", size:1.5, dimensions: `11'0" x 9'0"` },
+  ],
+  "PANO.00025": [
+    { yaw: 0, pitch: 0, roomNumber: "01", roomName: "Interior", dimensions: "14'7\" x 10'10\"", size: 0.8 },
+  ],
+  "PANO.00026": [
+    { yaw: -1.3, pitch: 0.27,rotation:{roll: 0, yaw :-13, pitch : 0}, roomNumber: "02", roomName: "Living / Dining", dimensions: `21'0" x 15'0"`, size: 0.9 },
+        { yaw: -3.5, pitch: -0.15, roomNumber: "01", rotation:{roll: 0, yaw :15, pitch : 0}, roomName: "Kitchen", size:1, dimensions: `11'0" x 9'0"` },
+  ],
+  "PANO.00027": [
+      { yaw: -1.5, pitch: 0.27,rotation:{roll: 0, yaw :0, pitch : 0}, roomNumber: "02", roomName: "Living / Dining", dimensions: `21'0" x 15'0"`, size: 0.9 },
+  ],
 };
-
-function normalizeRoomLabelForDisplay(label: string, panoId: string) {
-  const explicitLabel = ROOM_NAME_OVERRIDES[panoId];
-  if (explicitLabel) {
-    return explicitLabel;
-  }
-
-  const normalizedLabel = label.trim().toLowerCase();
-
-  if (!normalizedLabel) {
-    return label;
-  }
-
-  if (normalizedLabel.includes("drawing room") || normalizedLabel.includes("living room")) {
-    return "Living";
-  }
-
-  if (normalizedLabel.includes("dining room")) {
-    return "Dinning";
-  }
-
-  if (normalizedLabel.includes("kitchen")) {
-    return "Kitchen";
-  }
-
-  if (normalizedLabel.includes("maid room") || normalizedLabel.includes("utility")) {
-    return "Utility";
-  }
-
-  if (normalizedLabel.includes("master bedroom")) {
-    return "M.Bedroom";
-  }
-
-  if (normalizedLabel.includes("childrens room")) {
-    return "Bedroom 03";
-  }
-
-  if (normalizedLabel.includes("bedroom 02")) {
-    return "Bedroom 02";
-  }
-
-  if (normalizedLabel.includes("bedroom 03")) {
-    return "Bedroom 03";
-  }
-
-  if (normalizedLabel.includes("bathroom") || normalizedLabel.includes("washroom")) {
-    return "C.Toilet";
-  }
-
-  return label;
-}
 
 function getDimensionRoomName(label: string): InteriorDimensionRoomName | null {
   return INTERIOR_DIMENSION_ROOM_NAMES.includes(label as InteriorDimensionRoomName)
@@ -654,10 +634,9 @@ function getDimensionRoomName(label: string): InteriorDimensionRoomName | null {
 
 function getInteriorDimensionMarkerDefinitions(
   node: ExteriorTourNode | undefined,
-  isBareShellMode: boolean,
   markerOverrides?: InteriorDimensionMarkerOverride[],
 ) {
-  if (!node || isBareShellMode || !markerOverrides?.length) {
+  if (!node || !markerOverrides?.length) {
     return [] as InteriorDimensionMarkerDefinition[];
   }
 
@@ -743,26 +722,31 @@ function getInteriorDimensionMarkers(
   node: ExteriorTourNode | undefined,
   isBareShellMode: boolean,
   isDimensionsVisible: boolean,
-  anchorYaw: number,
+  nodesById: ExteriorTourGraph["byId"],
 ): MarkerConfig[] {
-  if (!node || isBareShellMode) {
+  if (!node) {
     return [];
   }
 
   const panoId = imageFilenameToPanoId(node.imageFilename);
-  const markerOverrides = INTERIOR_DIMENSION_MARKER_OVERRIDES[panoId];
+  const markerOverrides = isBareShellMode
+    ? BARE_SHELL_DIMENSION_MARKER_OVERRIDES[panoId]
+    : INTERIOR_DIMENSION_MARKER_OVERRIDES[panoId] ??
+      INTERIOR_DIMENSION_MARKER_OVERRIDES[`LS_${node.id}`];
   if (!markerOverrides?.length) {
     return [];
   }
   const markers = getInteriorDimensionMarkerDefinitions(
     node,
-    isBareShellMode,
     markerOverrides,
   );
 
   return markers.flatMap((marker, index) => {
       const rotation = normalizeMarkerRotation(markerOverrides?.[index]?.rotation);
-      const targetNodeId = getInteriorDimensionMarkerTargetNodeId(marker);
+      const requestedTargetNodeId = getInteriorDimensionMarkerTargetNodeId(marker);
+      const targetNodeId = requestedTargetNodeId && nodesById[requestedTargetNodeId]
+        ? requestedTargetNodeId
+        : undefined;
       const shouldRender = isDimensionsVisible || Boolean(targetNodeId);
 
       if (!shouldRender) {
@@ -825,7 +809,7 @@ function ArrowButton({
       aria-label={label}
       onClick={onClick}
       disabled={disabled}
-      className="interior-direction-button group flex h-10 w-10 touch-manipulation items-center justify-center rounded-full text-white/84 transition duration-200 active:scale-95 sm:h-11 sm:w-11 disabled:cursor-not-allowed disabled:opacity-28"
+      className="interior-direction-button group flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full text-white/84 transition duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-28"
     >
       <Icon className="h-4 w-4 stroke-[1.65] transition duration-200 group-hover:text-[#8bd3a7] sm:h-4.5 sm:w-4.5" />
     </button>
@@ -874,7 +858,7 @@ function InteriorFloorPlanMinimap({
       onPointerMove={updateDraggedPoint}
       onPointerUp={() => setDraggingPointId(null)}
       onPointerCancel={() => setDraggingPointId(null)}
-      className={`pointer-events-auto relative drop-shadow-[0_18px_32px_rgba(0,0,0,0.28)] ${className}`}
+      className={`pointer-events-auto relative ${className}`}
     >
       <NextImage
         src={image}
@@ -937,9 +921,6 @@ function InteriorFloorPlanMinimap({
             }`}
             style={{ animation: "walkthroughMinimapPulse 1.75s ease-in-out infinite" }}
           />
-          <span className="pointer-events-none absolute left-1/2 top-0 hidden -translate-x-1/2 -translate-y-[calc(100%+0.4rem)] whitespace-nowrap rounded-full border border-white/14 bg-[rgba(14,20,27,0.88)] px-2 py-1 text-[10px] font-semibold tracking-[0.08em] text-white shadow-[0_10px_24px_rgba(0,0,0,0.28)] backdrop-blur-xl group-hover:block group-focus-visible:block">
-            {point.label}
-          </span>
           <span className="sr-only">{point.label}</span>
         </button>
       ))}
@@ -947,92 +928,10 @@ function InteriorFloorPlanMinimap({
   );
 }
 
-const ROOM_LABELS: Record<string, string> = {
-  // TULA kitchen-and-foyer tour. These visitor-facing labels deliberately
-  // describe the room, rather than exposing the production pano frame number.
-  spline_pano_01_F0000: "Walk-in Wardrobe",
-  spline_pano_01_F0001: "Master Bedroom",
-  spline_pano_01_F0002: "Master Bedroom",
-  spline_pano_01_F0003: "Hallway",
-  spline_pano_01_F0004: "Hallway",
-  spline_pano_01_F0005: "Living",
-  spline_pano_01_F0006: "Living",
-  spline_pano_01_F0007: "Dining",
-  spline_pano_01_F0008: "Bedroom",
-  spline_pano_01_F0010: "Bedroom",
-  spline_pano_01_F0011: "Bedroom",
-  spline_pano_02_F0013: "Master Bedroom",
-  spline_pano_02_F0014: "Master Bedroom",
-  spline_pano_03_F0016: "Bedroom",
-  spline_pano_03_F0017: "Bedroom",
-  spline_pano_03_F0018: "Foyer",
-  spline_pano_04_F0021: "Living",
-  spline_pano_05_F0024: "Kitchen",
-  spline_pano_05_F0026: "Dining",
-  spline_pano_05_F0027: "Dining",
-  render2: "Balcony 01",
-  render3: "Balcony 02",
-
-  LS_BP_panoPath_Interior_F0000: "Entrance",
-  LS_BP_panoPath_Interior_F0001: "Drawing Room",
-  LS_BP_panoPath_Interior_F0002: "Drawing Room Passage",
-  LS_BP_panoPath_Interior_F0003: "Drawing Room Passage View 2",
-  LS_BP_panoPath_Interior_F0004: "Dining Room Passage",
-  LS_BP_panoPath_Interior_F0005: "Living Room 2",
-  LS_BP_panoPath_Interior_F0006: "Attached Washroom 2",
-  LS_BP_panoPath_Interior2_F0007: "Living Room 2",
-  LS_BP_panoPath_Interior2_F0008: "Living Room 2",
-  LS_BP_panoPath_Interior3_F0009: "Dining Room",
-  LS_BP_panoPath_Interior3_F0010: "Dining Room",
-  LS_BP_panoPath_Interior3_F0011: "Attached Washroom",
-  LS_BP_panoPath_Interior4_F0012: "Living Room",
-  LS_BP_panoPath_Interior4_F0013: "Living Room 1",
-  LS_BP_panoPath_Interior5_F0014: "Childrens Room View 2",
-  LS_BP_panoPath_Interior5_F0015: "Childrens Room",
-  LS_BP_panoPath_Interior5_F0016: "Bathroom",
-  LS_BP_panoPath_Interior6_F0017: "Drawing Room View 2",
-  LS_BP_panoPath_Interior6_F0018: "Kitchen",
-  LS_BP_panoPath_F0000: "Entrance",
-  LS_BP_panoPath_F0001: "Drawing Room",
-  LS_BP_panoPath_F0002: "Drawing Room Passage",
-  LS_BP_panoPath_F0003: "Hall Passage",
-  LS_BP_panoPath_F0004: "Living Room 1 Entrance",
-  LS_BP_panoPath_F0005: "Living Room 1",
-  LS_BP_panoPath_F0006: "Bathroom 4",
-  LS_BP_panoPath_F0007: "Kitchen",
-  LS_BP_panoPath_F0008: "Maid Room",
-  LS_BP_panoPath_F0009: "Master Bedroom",
-  LS_BP_panoPath_F0010: "Dining Room",
-  LS_BP_panoPath_F0011: "Hall 1",
-  LS_BP_panoPath_F0012: "Hall 2",
-  LS_BP_panoPath6_F0018: "Living Room 1 View 2",
-  LS_BP_panoPath6_F0019: "Living Room 1 Washroom",
-  LS_BP_panoPath7_F0022: "Kitchen",
-  LS_BP_panoPath7_F0021: "Kitchen Entrance",
-  LS_BP_panoPath7_F0020: "Dining Room View 2",
-  LS_BP_panoPath2_F0008: "Dining Room",
-  LS_BP_panoPath2_F0007: "Living Room View 2",
-  LS_BP_panoPath4_F0014: "Living Room 2 Entrance",
-  LS_BP_panoPath4_F0015: "Living Room 2",
-  LS_BP_panoPath3_F0013: "Bathroom",
-  LS_BP_panoPath2_F0009: "Living Room 3 Entrance",
-  LS_BP_panoPath2_F0010: "Living Room 3",
-  LS_BP_panoPath2_F0011: "Living Room 3",
-  LS_BP_panoPath5_F0017: "Living Room 3 Washroom",
-  LS_BP_panoPath5_F0016: "Living Room 3",
-};
-
-function getRoomLabel(imageFilename: string) {
+function getRoomLabel(imageFilename: string, nodeId?: string) {
   const panoId = imageFilenameToPanoId(imageFilename);
-  // TULA exports are named `LS_spline_pano…`, while the visitor-facing map
-  // intentionally uses the stable spline ID without the render prefix.
-  const tulaPanoId = panoId.replace(/^LS_(?=spline_pano_)/i, "");
-  const baseLabel =
-    ROOM_LABELS[panoId] ??
-    ROOM_LABELS[tulaPanoId] ??
-    panoId.match(/F(\d{4})$/i)?.[0] ??
-    panoId;
-  return normalizeRoomLabelForDisplay(baseLabel, panoId);
+  const sourceNodeId = nodeId ?? panoId.replace(/^LS_(?=spline_pano_)/i, "");
+  return INTERIOR_PANO_ROOM_LABELS[sourceNodeId] ?? sourceNodeId;
 }
 
 function getImportantRoomLabel(label: string) {
@@ -1128,61 +1027,12 @@ function getImportantRoomLabel(label: string) {
   return null;
 }
 
-function getModeAwarePanoFolderCandidates(panoId: string, isBareShellMode: boolean) {
-  const explicitOverride = isBareShellMode
-    ? BARE_SHELL_PANO_FOLDER_OVERRIDES[panoId]
-    : FURNISHED_PANO_FOLDER_OVERRIDES[panoId];
-
-  if (!isBareShellMode) {
-    if (explicitOverride) {
-      return [explicitOverride];
-    }
-
-    return panoId.endsWith("F0004") ? [`${panoId}.0000`, panoId] : [panoId];
-  }
-
-  const frameMatch = panoId.match(/F(\d+)$/i)?.[1];
-  const candidates = new Set<string>();
-  const droppedInterior = panoId.replace(/_Interior/gi, "");
-
-  // TULA's furnished and bare-shell renders share the same camera frame
-  // numbers, while the bare-shell folders use the renderer-neutral PANO.00000
-  // convention. Prefer that exact match before trying legacy project names.
-  if (frameMatch) {
-    candidates.add(`PANO.${frameMatch.padStart(5, "0")}`);
-  }
-
-  if (explicitOverride) {
-    candidates.add(explicitOverride);
-  }
-
-  if (droppedInterior !== panoId) {
-    candidates.add(droppedInterior);
-  }
-
-  if (frameMatch) {
-    const formattedFrame = `F${frameMatch.padStart(4, "0")}`;
-    candidates.add(`LS_BP_panoPath_${formattedFrame}`);
-    for (let segment = 2; segment <= 8; segment += 1) {
-      candidates.add(`LS_BP_panoPath${segment}_${formattedFrame}`);
-    }
-  }
-
-  return [...candidates];
-}
-
 function getResolvedPanoFolderId(
   nodeId: string,
   imageFilename: string,
   availablePanoFolders: Record<string, string>,
-  isBareShellMode: boolean,
 ) {
-  const sourcePanoId = imageFilenameToPanoId(imageFilename);
-  return (
-    availablePanoFolders[nodeId] ??
-    getModeAwarePanoFolderCandidates(sourcePanoId, isBareShellMode)[0] ??
-    sourcePanoId
-  );
+  return availablePanoFolders[nodeId] ?? imageFilenameToPanoId(imageFilename);
 }
 
 function getDefaultPreviewFile() {
@@ -1390,17 +1240,17 @@ function buildLinkPosition(
 export default function InteriorPanoWalkthrough({
   initialNodeId,
   className,
-  config,
-  panoOnly = false,
-  preserveViewDirection = false,
-  blockedNavigationPairs = EMPTY_BLOCKED_NAVIGATION_PAIRS,
-  additionalNavigationPairs = EMPTY_ADDITIONAL_NAVIGATION_PAIRS,
-  navigationYawOverrides = EMPTY_NAVIGATION_YAW_OVERRIDES,
-  minimap,
-  showMinimap = !panoOnly,
-  showModeToggle = false,
+  config = INTERIOR_PANO_CONFIG,
+  panoOnly = true,
+  preserveViewDirection = true,
+  blockedNavigationPairs = KITCHEN_FOYER_BLOCKED_NAVIGATION_PAIRS,
+  additionalNavigationPairs = KITCHEN_FOYER_ADDITIONAL_NAVIGATION_PAIRS,
+  navigationYawOverrides = KITCHEN_FOYER_NAVIGATION_YAW_OVERRIDES,
+  minimap = KITCHEN_FOYER_MINIMAP,
+  showMinimap = true,
+  showModeToggle = true,
   showDimensionsToggle = true,
-  preserveNodeOnModeToggle = false,
+  preserveNodeOnModeToggle = true,
 }: InteriorPanoWalkthroughProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -1409,10 +1259,10 @@ export default function InteriorPanoWalkthrough({
   const [isBareShellMode, setIsBareShellMode] = useState(requestedBareShellMode);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDimensionsVisible, setIsDimensionsVisible] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(true);
   const [viewerError, setViewerError] = useState<string | null>(null);
   const [viewYaw, setViewYaw] = useState(0);
-  const [viewPitch, setViewPitch] = useState(0);
+  const [readyPanoramaVersion, setReadyPanoramaVersion] = useState(0);
   const [calibratedMinimapPointPositions, setCalibratedMinimapPointPositions] = useState<
     Record<string, Pick<FloorPlanMinimapPoint, "left" | "top">>
   >({});
@@ -1437,6 +1287,7 @@ export default function InteriorPanoWalkthrough({
   const assetStoreMapRef = useRef(new Map<string, PanoAssetStore>());
   const pendingNodeViewRef = useRef<Position | null>(null);
   const warmupRunRef = useRef(0);
+  const navigationInFlightRef = useRef(true);
   const goToNodeRef = useRef<(targetId: string) => Promise<void>>(async () => {});
   const panoTapRef = useRef<{
     pointerId: number | null;
@@ -1455,57 +1306,32 @@ export default function InteriorPanoWalkthrough({
   });
 
   const allNodes = useMemo(
-    () => {
-      if (isBareShellMode) {
-        return config?.bareShellNodes ?? (bareShellNavData as ExteriorPanoNodeSource[]);
-      }
-
-      const furnishedNodes =
-        config?.furnishedNodes ?? (furnishedNavData as ExteriorPanoNodeSource[]);
-      const balconyNodes = config?.balconyNodes ??
-        (panoOnly ? [] : [FURNISHED_BALCONY_NODE]);
-
-      return [...furnishedNodes, ...balconyNodes];
-    },
-    [
-      config?.balconyNodes,
-      config?.bareShellNodes,
-      config?.furnishedNodes,
-      isBareShellMode,
-      panoOnly,
-    ],
+    () => isBareShellMode
+      ? config.bareShellNodes
+      : [...config.furnishedNodes, ...(config.balconyNodes ?? [])],
+    [config.balconyNodes, config.bareShellNodes, config.furnishedNodes, isBareShellMode],
   );
   const configuredBalconyNodeIds = useMemo(
-    () => new Set((config?.balconyNodes ?? []).map((node) => node.id)),
-    [config?.balconyNodes],
+    () => new Set((config.balconyNodes ?? []).map((node) => node.id)),
+    [config.balconyNodes],
   );
   const panoBases = useMemo(() => {
     const trailingSlash = (value: string) => value.endsWith("/") ? value : `${value}/`;
     return {
-      furnished: trailingSlash(config?.furnishedPanoBasePath ?? FURNISHED_PANO_BASE_URL),
-      bareShell: trailingSlash(config?.bareShellPanoBasePath ?? BARE_SHELL_PANO_BASE_URL),
-      balcony: trailingSlash(config?.balconyPanoBasePath ?? FURNISHED_BALCONY_PANO_BASE_URL),
+      furnished: trailingSlash(config.furnishedPanoBasePath),
+      bareShell: trailingSlash(config.bareShellPanoBasePath),
+      balcony: trailingSlash(config.balconyPanoBasePath),
     };
-  }, [config?.balconyPanoBasePath, config?.bareShellPanoBasePath, config?.furnishedPanoBasePath]);
-  const panoBaseUrl = isBareShellMode ? panoBases.bareShell : panoBases.furnished;
-  const assetStore = useMemo(() => new PanoAssetStore(panoBaseUrl), [panoBaseUrl]);
-  const getAssetStoreForBaseUrl = useCallback(
-    (baseUrl: string) => {
-      if (baseUrl === panoBaseUrl) {
-        return assetStore;
-      }
-
-      const cachedStore = assetStoreMapRef.current.get(baseUrl);
-      if (cachedStore) {
-        return cachedStore;
-      }
-
-      const nextStore = new PanoAssetStore(baseUrl);
-      assetStoreMapRef.current.set(baseUrl, nextStore);
-      return nextStore;
-    },
-    [assetStore, panoBaseUrl],
-  );
+  }, [config.balconyPanoBasePath, config.bareShellPanoBasePath, config.furnishedPanoBasePath]);
+  // Retain each render set's metadata and signed assets when switching modes.
+  const getAssetStoreForBaseUrl = useCallback((baseUrl: string) => {
+    let store = assetStoreMapRef.current.get(baseUrl);
+    if (!store) {
+      store = new PanoAssetStore(baseUrl);
+      assetStoreMapRef.current.set(baseUrl, store);
+    }
+    return store;
+  }, []);
   const interiorViewerMoveSpeed = isMobileTouchViewport ? 3.6 : 2;
   const interiorViewerMoveInertia = isMobileTouchViewport ? 0.82 : 0.92;
   const interiorNodeTransitionSpeed = isMobileTouchViewport ? 560 : 650;
@@ -1557,10 +1383,13 @@ export default function InteriorPanoWalkthrough({
     ],
   );
   const menuRooms = useMemo<MenuRoomItem[]>(() => {
+    if (panoOnly || !isMenuOpen) {
+      return [];
+    }
     const seenLabels = new Set<string>();
 
     return graph.nodes.reduce<MenuRoomItem[]>((items, node) => {
-      const importantLabel = getImportantRoomLabel(getRoomLabel(node.imageFilename));
+      const importantLabel = getImportantRoomLabel(getRoomLabel(node.imageFilename, node.id));
 
       if (!importantLabel || seenLabels.has(importantLabel)) {
         return items;
@@ -1596,7 +1425,9 @@ export default function InteriorPanoWalkthrough({
     configuredBalconyNodeIds,
     graph.nodes,
     isBareShellMode,
+    isMenuOpen,
     panoBases,
+    panoOnly,
   ]);
   const signedMenuRoomImages = useSignedAssetUrls(
     menuRooms.map((room) => room.image),
@@ -1610,35 +1441,17 @@ export default function InteriorPanoWalkthrough({
     itemCount: menuRooms.length,
     targetVisibleCards: 4,
   });
-  const minimapImage = minimap?.image ?? (isBareShellMode
-    ? BareShellFloorPlanMinimap
-    : FurnishedFloorPlanMinimap);
+  const minimapImage = minimap.image;
   const minimapPoints = useMemo<FloorPlanMinimapPoint[]>(() => {
-    const worldBounds = minimap?.worldBounds ?? (isBareShellMode
-      ? BARE_SHELL_MINIMAP_WORLD_BOUNDS
-      : FURNISHED_MINIMAP_WORLD_BOUNDS);
-    const shouldFlipX = minimap?.flipX ?? (isBareShellMode
-      ? BARE_SHELL_MINIMAP_FLIP_X
-      : FURNISHED_MINIMAP_FLIP_X);
-    const shouldFlipY = minimap?.flipY ?? (isBareShellMode
-      ? BARE_SHELL_MINIMAP_FLIP_Y
-      : FURNISHED_MINIMAP_FLIP_Y);
-    const defaultMinimapAdjustment = isBareShellMode
-      ? {
-          offsetX: BARE_SHELL_MINIMAP_OFFSET_X,
-          offsetY: BARE_SHELL_MINIMAP_OFFSET_Y,
-          scaleX: BARE_SHELL_MINIMAP_SCALE_X,
-          scaleY: BARE_SHELL_MINIMAP_SCALE_Y,
-        }
-      : {
-          offsetX: FURNISHED_MINIMAP_OFFSET_X,
-          offsetY: FURNISHED_MINIMAP_OFFSET_Y,
-          scaleX: FURNISHED_MINIMAP_SCALE_X,
-          scaleY: FURNISHED_MINIMAP_SCALE_Y,
-        };
+    const worldBounds = minimap.worldBounds;
+    const shouldFlipX = minimap.flipX ?? false;
+    const shouldFlipY = minimap.flipY ?? false;
     const minimapAdjustment: FloorPlanMinimapAdjustment = {
-      ...defaultMinimapAdjustment,
-      ...minimap?.adjustment,
+      offsetX: 0,
+      offsetY: 0,
+      scaleX: 1,
+      scaleY: 1,
+      ...minimap.adjustment,
     };
 
     return graph.nodes.reduce<FloorPlanMinimapPoint[]>((points, node) => {
@@ -1701,7 +1514,7 @@ export default function InteriorPanoWalkthrough({
       points.push({
         id: node.id,
         isActive: node.id === currentNodeId,
-        label: getRoomLabel(node.imageFilename),
+        label: getRoomLabel(node.imageFilename, node.id),
         left: adjustedPosition.left,
         top: adjustedPosition.top,
         tone: configuredBalconyNodeIds.has(node.id) ? "blue" : "gold",
@@ -1709,7 +1522,7 @@ export default function InteriorPanoWalkthrough({
 
       return points;
     }, []);
-  }, [calibratedMinimapPointPositions, configuredBalconyNodeIds, currentNodeId, graph.nodes, isBareShellMode, isMinimapCalibrationMode, minimap, showAllConfiguredMinimapPoints]);
+  }, [calibratedMinimapPointPositions, configuredBalconyNodeIds, currentNodeId, graph.nodes, isMinimapCalibrationMode, minimap, showAllConfiguredMinimapPoints]);
 
   const handleMinimapPointMove = useCallback(
     (nodeId: string, position: Pick<FloorPlanMinimapPoint, "left" | "top">) => {
@@ -1754,6 +1567,8 @@ export default function InteriorPanoWalkthrough({
     }
 
     const currentNodeId = currentNodeIdRef.current || activeNodeIdRef.current;
+    navigationInFlightRef.current = true;
+    warmupRunRef.current += 1;
     setPreferredFrame(preserveNodeOnModeToggle ? null : ENTRANCE_FRAME_ID);
     setActiveNodeId(preserveNodeOnModeToggle ? currentNodeId : "");
     setViewYaw(0);
@@ -1765,10 +1580,11 @@ export default function InteriorPanoWalkthrough({
   }, [isBareShellMode, preserveNodeOnModeToggle]);
 
   const handleModeToggle = useCallback(() => {
+    if (navigationInFlightRef.current || isTransitioning) return;
     const nextMode = !isBareShellMode;
     applyModeChange(nextMode);
     updateModeInUrl(nextMode);
-  }, [applyModeChange, isBareShellMode, updateModeInUrl]);
+  }, [applyModeChange, isBareShellMode, isTransitioning, updateModeInUrl]);
 
   const handleDimensionsToggle = useCallback(() => {
     setIsDimensionsVisible((current) => !current);
@@ -1799,41 +1615,12 @@ export default function InteriorPanoWalkthrough({
         return cached;
       }
 
-      const meta = await panoAssetStore.getMeta(panoId);
-      if (!canUseTiledPanorama(meta)) {
+      const assets = await panoAssetStore.getPanorama(panoId, preferTiles);
+      if (!canUseTiledPanorama(assets.meta)) {
         throw new Error(`Incompatible pano tiles for ${panoId}`);
       }
 
-      const previewUrl = getResolvedPreviewUrl(
-        panoId,
-        baseUrl,
-        meta.preview ?? getDefaultPreviewFile(),
-      );
-      const signedPreviewUrl = await panoAssetStore.getSignedUrl(previewUrl);
-      const signedTileUrls = preferTiles
-        ? await panoAssetStore.getSignedTileUrlMap(
-            panoId,
-            meta,
-          )
-        : undefined;
-
-      const resolved: ResolvedPano = {
-        nodeId,
-        panoId,
-        baseUrl,
-        meta,
-        panorama: preferTiles
-          ? buildPhotoSpherePanorama(
-              panoId,
-              meta,
-              baseUrl,
-              true,
-              signedPreviewUrl,
-              signedTileUrls,
-            )
-          : signedPreviewUrl,
-        previewUrl: signedPreviewUrl,
-      };
+      const resolved: ResolvedPano = { nodeId, panoId, baseUrl, ...assets };
 
       cacheRef.current.set(cacheKey, resolved);
       return resolved;
@@ -1852,8 +1639,8 @@ export default function InteriorPanoWalkthrough({
         id: node.id,
         panorama: resolved.panorama,
         thumbnail: resolved.previewUrl,
-        name: getRoomLabel(node.imageFilename),
-        caption: `${getRoomLabel(node.imageFilename)} | ${buildNodeModeLabel(isBareShellMode)}`,
+        name: getRoomLabel(node.imageFilename, node.id),
+        caption: `${getRoomLabel(node.imageFilename, node.id)} | ${buildNodeModeLabel(isBareShellMode)}`,
         links: getConnectedNavigationCandidates(
           graph,
           node,
@@ -1885,7 +1672,7 @@ export default function InteriorPanoWalkthrough({
   );
 
   const syncNodeMarkers = useCallback(
-    (viewer: Viewer, nodeId: string, anchorYaw = viewer.getPosition().yaw) => {
+    (viewer: Viewer, nodeId: string) => {
       const markersPlugin = viewer.getPlugin<MarkersPlugin>(MarkersPlugin);
 
       if (!markersPlugin) {
@@ -1897,7 +1684,7 @@ export default function InteriorPanoWalkthrough({
           graph.byId[nodeId],
           isBareShellMode,
           isDimensionsVisibleRef.current,
-          anchorYaw,
+          graph.byId,
         ),
       );
     },
@@ -1910,10 +1697,12 @@ export default function InteriorPanoWalkthrough({
     const sourceNode = graph.byId[activeNodeIdRef.current];
     const virtualTour = bindings?.viewer.getPlugin<VirtualTourPlugin>(VirtualTourPlugin);
 
-    if (!bindings || !virtualTour || !targetNode || isTransitioning || targetId === activeNodeIdRef.current) {
+    if (!bindings || !virtualTour || !targetNode || navigationInFlightRef.current || isTransitioning || targetId === activeNodeIdRef.current) {
       return;
     }
 
+    navigationInFlightRef.current = true;
+    warmupRunRef.current += 1;
     setIsTransitioning(true);
     setViewerError(null);
     const currentPosition = bindings.viewer.getPosition();
@@ -1932,11 +1721,6 @@ export default function InteriorPanoWalkthrough({
     pendingNodeViewRef.current = targetPosition;
 
     try {
-      const refreshedNode = await buildTourNode(targetNode, {
-        preferTiles: true,
-      });
-      virtualTour.updateNode(refreshedNode);
-
       const completed = await virtualTour.setCurrentNode(targetId, {
         effect: "fade",
         showLoader: false,
@@ -1953,11 +1737,12 @@ export default function InteriorPanoWalkthrough({
     } catch (error) {
       console.error("Failed to change interior pano node:", error);
       pendingNodeViewRef.current = null;
-      setViewerError(`Failed to load ${getRoomLabel(targetNode.imageFilename)}.`);
+      setViewerError(`Failed to load ${getRoomLabel(targetNode.imageFilename, targetNode.id)}.`);
       setIsTransitioning(false);
+    } finally {
+      navigationInFlightRef.current = false;
     }
   }, [
-    buildTourNode,
     graph.byId,
     interiorNodeTransitionSpeed,
     isTransitioning,
@@ -1970,14 +1755,22 @@ export default function InteriorPanoWalkthrough({
 
   const navigateToDirection = useCallback(
     async (direction: NavigationDirection) => {
-      const target = navigationTargets[direction].node;
+      const viewer = bindingsRef.current?.viewer;
+      const source = graph.byId[activeNodeIdRef.current];
+      if (!viewer || !source) return;
+      // Clicks use the live camera direction, independently of the throttled UI.
+      const targets = getViewRelativeNavigationTargets(
+        graph, source, viewer.getPosition().yaw, panoOnly,
+        blockedNavigationPairKeys, additionalNavigationPairs, navigationYawOverrides,
+      );
+      const target = targets[direction].node;
       if (!target) {
         return;
       }
 
       await goToNode(target.id);
     },
-    [goToNode, navigationTargets],
+    [additionalNavigationPairs, blockedNavigationPairKeys, goToNode, graph, navigationYawOverrides, panoOnly],
   );
 
   useEffect(() => {
@@ -2103,64 +1896,24 @@ export default function InteriorPanoWalkthrough({
     let cancelled = false;
 
     const hydrateAvailableNodes = async () => {
-      const nodeMetaCandidates = allNodes.map((item) => {
-        if (isBalconyNode(item.id)) {
-          return {
-            item,
-            candidateMetaKeys: [
-              `${panoBases.balcony}${BALCONY_PANO_ID}/meta.json`,
-            ],
-            candidatePanoFolderIds: [BALCONY_PANO_ID],
-          };
-        }
-
-        const panoId = imageFilenameToPanoId(item.image_filename);
-        const candidatePanoFolderIds = getModeAwarePanoFolderCandidates(
-          panoId,
-          isBareShellMode,
+      const candidates = allNodes.map((item) => {
+        const { panoId, baseUrl } = getInteriorPanoSource(
+          item.id, item.image_filename, {}, isBareShellMode,
+          configuredBalconyNodeIds.has(item.id), panoBases,
         );
-
-        return {
-          item,
-          candidateMetaKeys: candidatePanoFolderIds.map(
-            (candidate) => `${configuredBalconyNodeIds.has(item.id) ? panoBases.balcony : panoBaseUrl}${candidate}/meta.json`,
-          ),
-          candidatePanoFolderIds,
-        };
+        return { item, panoId, baseUrl };
       });
-
-      const signedCandidateMetaUrls = await getSignedAssetUrls(
-        nodeMetaCandidates.flatMap((entry) => entry.candidateMetaKeys),
-      );
-      const availabilityLimit = pLimit(isSlowNetwork ? 2 : 6);
-      const availability = await Promise.allSettled(
-        nodeMetaCandidates.map(
-          ({ item, candidateMetaKeys, candidatePanoFolderIds }) =>
-            availabilityLimit(async () => {
-              for (let index = 0; index < candidateMetaKeys.length; index += 1) {
-                const candidateMetaKey = candidateMetaKeys[index];
-                const signedMetaUrl = signedCandidateMetaUrls[candidateMetaKey];
-
-                if (!signedMetaUrl) {
-                  continue;
-                }
-
-                const response = await fetch(signedMetaUrl, {
-                  cache: "force-cache",
-                });
-
-                if (response.ok) {
-                  return {
-                    id: item.id,
-                    panoFolderId: candidatePanoFolderIds[index],
-                  };
-                }
-              }
-
-              return null;
-            }),
-        ),
-      );
+      // Batch authorization once, then let the asset store retain parsed metadata.
+      await getSignedAssetUrls(candidates.map(({ panoId, baseUrl }) => `${baseUrl}${panoId}/meta.json`));
+      if (cancelled) return;
+      const limit = pLimit(isSlowNetwork ? 2 : 6);
+      const availability = await Promise.allSettled(candidates.map(({ item, panoId, baseUrl }) =>
+        limit(async () => {
+          if (cancelled) return null;
+          const meta = await getAssetStoreForBaseUrl(baseUrl).getMeta(panoId);
+          return canUseTiledPanorama(meta) ? { id: item.id, panoFolderId: panoId } : null;
+        }),
+      ));
 
       if (cancelled) {
         return;
@@ -2176,16 +1929,27 @@ export default function InteriorPanoWalkthrough({
         }
       });
 
-      setAvailablePanoFolders(nextFolders);
-      setAvailableNodeIds(nextIds);
+      setAvailablePanoFolders((previous) =>
+        Object.keys(previous).length === Object.keys(nextFolders).length &&
+        Object.entries(nextFolders).every(([id, folder]) => previous[id] === folder)
+          ? previous : nextFolders,
+      );
+      setAvailableNodeIds((previous) => previous?.size === nextIds.size &&
+        [...nextIds].every((id) => previous.has(id)) ? previous : nextIds);
+
     };
 
-    void hydrateAvailableNodes();
+    void hydrateAvailableNodes().catch((error) => {
+      if (!cancelled) {
+        console.error("Failed to load interior panorama metadata:", error);
+        setViewerError("Unable to load walkthrough. Please refresh to try again.");
+      }
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [allNodes, configuredBalconyNodeIds, isBareShellMode, isSlowNetwork, panoBaseUrl, panoBases.balcony]);
+  }, [allNodes, configuredBalconyNodeIds, getAssetStoreForBaseUrl, isBareShellMode, isSlowNetwork, panoBases]);
 
   useEffect(() => {
     activeNodeIdRef.current = activeNodeId;
@@ -2232,7 +1996,6 @@ export default function InteriorPanoWalkthrough({
         yaw: nextYaw,
         pitch: position.pitch,
       });
-      setViewYaw(nextYaw);
     };
 
     host.addEventListener("wheel", handleWheel, { passive: false });
@@ -2249,10 +2012,6 @@ export default function InteriorPanoWalkthrough({
   useEffect(() => {
     isDimensionsVisibleRef.current = isDimensionsVisible;
   }, [isDimensionsVisible]);
-
-  useEffect(() => {
-    cacheRef.current.clear();
-  }, [availablePanoFolders, isBareShellMode, panoBaseUrl]);
 
   useEffect(() => {
     const bindings = bindingsRef.current;
@@ -2299,98 +2058,50 @@ export default function InteriorPanoWalkthrough({
   }, []);
 
   useEffect(() => {
+    const viewer = bindingsRef.current?.viewer;
+    const node = graph.byId[currentNodeId];
+    if (!viewer || !node || isTransitioning || !readyPanoramaVersion) return;
     let cancelled = false;
-    const runId = warmupRunRef.current + 1;
-    warmupRunRef.current = runId;
+    const runId = ++warmupRunRef.current;
+    const shouldContinue = () => !cancelled && warmupRunRef.current === runId && bindingsRef.current?.viewer === viewer;
 
-    const warmCurrentPanorama = async () => {
-      const node = graph.byId[currentNodeId];
-      if (!node) {
-        return;
-      }
-
-      try {
-        const resolved = await resolvePano(node.id);
-        if (cancelled || warmupRunRef.current !== runId) {
-          return;
-        }
-
-        const previewFile = resolved.meta.preview ?? getDefaultPreviewFile();
-        const resolvedAssetStore = getAssetStoreForBaseUrl(resolved.baseUrl);
-
-        await resolvedAssetStore.preloadPreview(
-          resolved.panoId,
-          previewFile,
-          "high",
-        );
-        if (cancelled || warmupRunRef.current !== runId) {
-          return;
-        }
-
-        const warmupTiles = selectWarmupTiles(
-          resolved.panoId,
-          resolved.meta,
-          resolved.baseUrl,
-          isSlowNetwork ? 6 : 12,
-        );
-        const signedWarmupTiles =
-          await resolvedAssetStore.resolveSignedTiles(warmupTiles);
-        const tileLimit = pLimit(isSlowNetwork ? 2 : 4);
-
-        await Promise.allSettled(
-          signedWarmupTiles
-            .slice(0, isSlowNetwork ? 6 : 12)
-            .map((tile, index) =>
-              tileLimit(() =>
-                resolvedAssetStore.preloadImage(
-                  tile.url,
-                  index < 2 ? "high" : "low",
-                ),
-              ),
-            ),
-        );
-        if (cancelled || warmupRunRef.current !== runId) {
-          return;
-        }
-
-        const neighborIds = node.neighbors
-          .slice(0, isSlowNetwork ? 1 : 2)
-          .map((neighbor) => neighbor.id);
-        const neighborLimit = pLimit(1);
-
-        await Promise.allSettled(
-          neighborIds.map((neighborId) =>
-            neighborLimit(async () => {
-              if (cancelled || warmupRunRef.current !== runId) {
-                return;
-              }
-
-              const neighbor = await resolvePano(neighborId);
-              if (cancelled || warmupRunRef.current !== runId) {
-                return;
-              }
-
-              return getAssetStoreForBaseUrl(neighbor.baseUrl).preloadPreview(
-                neighbor.panoId,
-                neighbor.meta.preview ?? getDefaultPreviewFile(),
-                "low",
-              );
-            }),
-          ),
-        );
-      } catch (error) {
-        if (!cancelled) {
-          console.debug("Warmup skipped for interior pano:", error);
+    const warmNeighbors = async () => {
+      const position = viewer.getPosition();
+      const targets = getViewRelativeNavigationTargets(graph, node, position.yaw, panoOnly,
+        blockedNavigationPairKeys, additionalNavigationPairs, navigationYawOverrides);
+      const connected = getConnectedNavigationCandidates(graph, node, blockedNavigationPairKeys, additionalNavigationPairs);
+      const ids = [...new Set([targets.forward.node?.id, ...connected.map((neighbor) => neighbor.id)]
+        .filter((id): id is string => Boolean(id)))].slice(0, isSlowNetwork ? 1 : 2);
+      for (const id of ids) {
+        if (!shouldContinue()) return;
+        try {
+          const resolved = await resolvePano(id, { preferTiles: !isSlowNetwork });
+          if (!shouldContinue()) return;
+          // Use PSV's decoded-image cache, including the same panorama cache key.
+          await viewer.textureLoader.loadImage(resolved.previewUrl, undefined, resolved.previewUrl);
+          if (!shouldContinue() || isSlowNetwork) continue;
+          const target = graph.byId[id];
+          const yaw = preserveViewDirection
+            ? preserveViewYawBetweenNodes(node, target, position.yaw) : 0;
+          const tiles = selectPriorityTiles(resolved.panoId, resolved.meta, resolved.baseUrl,
+            { yaw, pitch: preserveViewDirection ? position.pitch : 0, zoom: viewer.getZoomLevel() }, 4);
+          const panorama = resolved.panorama;
+          const tileLimit = pLimit(2);
+          await Promise.allSettled(tiles.map((tile) => tileLimit(async () => {
+            if (!shouldContinue() || typeof panorama === "string") return;
+            const url = panorama.tileUrl(tile.col, tile.row);
+            if (url) await viewer.textureLoader.loadImage(url, undefined, resolved.previewUrl);
+          })));
+        } catch (error) {
+          if (shouldContinue()) console.debug("Interior neighbor prefetch skipped:", error);
         }
       }
     };
-
-    void warmCurrentPanorama();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [currentNodeId, getAssetStoreForBaseUrl, graph.byId, isSlowNetwork, resolvePano]);
+    // Let the active panorama's visible tiles take priority over speculative work.
+    const timer = globalThis.setTimeout(() => { void warmNeighbors(); }, isSlowNetwork ? 700 : 350);
+    return () => { cancelled = true; globalThis.clearTimeout(timer); };
+  }, [additionalNavigationPairs, blockedNavigationPairKeys, currentNodeId, graph, isSlowNetwork,
+    isTransitioning, navigationYawOverrides, panoOnly, preserveViewDirection, readyPanoramaVersion, resolvePano]);
 
   useEffect(() => {
     if (!viewerHostRef.current || !graph.nodes.length) {
@@ -2400,56 +2111,13 @@ export default function InteriorPanoWalkthrough({
     let disposed = false;
     let initTimer: ReturnType<typeof globalThis.setTimeout> | null = null;
     let detachMarkerSelectListener: (() => void) | null = null;
+    let detachViewerListeners: (() => void) | null = null;
+    let positionUpdateTimer: ReturnType<typeof globalThis.setTimeout> | null = null;
+    let latestYaw = 0;
 
     const initializeViewer = async () => {
       const startNodeId = currentNodeIdRef.current;
-      const startResolved = await resolvePano(startNodeId, {
-        preferTiles: true,
-      }).catch(() => null);
-      if (startResolved) {
-        const startAssetStore = getAssetStoreForBaseUrl(startResolved.baseUrl);
-        const warmupTiles = selectWarmupTiles(
-          startResolved.panoId,
-          startResolved.meta,
-          startResolved.baseUrl,
-          isSlowNetwork ? 6 : 10,
-        );
-        const signedWarmupTiles =
-          await startAssetStore.resolveSignedTiles(warmupTiles);
-
-        await startAssetStore.preloadPreview(
-          startResolved.panoId,
-          startResolved.meta.preview ?? getDefaultPreviewFile(),
-          "high",
-        );
-        const startupTileLimit = pLimit(isSlowNetwork ? 2 : 4);
-        await Promise.allSettled(
-          signedWarmupTiles
-            .slice(0, isSlowNetwork ? 6 : 10)
-            .map((tile, index) =>
-              startupTileLimit(() =>
-                startAssetStore.preloadImage(
-                  tile.url,
-                  index < 2 ? "high" : "low",
-                ),
-              ),
-            ),
-        );
-      }
-
-      const nodeLimit = pLimit(isSlowNetwork ? 4 : 8);
-      const tourNodes = await Promise.all(
-        graph.nodes.map((node) =>
-          nodeLimit(() =>
-            buildTourNode(node, {
-              preferTiles: node.id === startNodeId,
-            }),
-          ),
-        ),
-      );
-      if (disposed || !viewerHostRef.current) {
-        return;
-      }
+      if (disposed || !viewerHostRef.current) return;
 
       setViewerError(null);
       viewerHostRef.current.replaceChildren();
@@ -2457,7 +2125,7 @@ export default function InteriorPanoWalkthrough({
       const viewer = new Viewer({
         container: viewerHostRef.current,
         adapter: EquirectangularTilesAdapter.withConfig({
-          resolution: isSlowNetwork
+          resolution: isSlowNetwork || isMobileTouchViewport
             ? INTERIOR_SLOW_SPHERE_RESOLUTION
             : INTERIOR_SPHERE_RESOLUTION,
           showErrorTile: false,
@@ -2487,8 +2155,12 @@ export default function InteriorPanoWalkthrough({
           VirtualTourPlugin.withConfig({
             positionMode: "manual",
             renderMode: "3d",
-            nodes: tourNodes,
-            startNodeId,
+            dataMode: "server",
+            getNode: async (nodeId: string) => {
+              const node = graph.byId[nodeId];
+              if (!node) throw new Error(`Unknown interior node: ${nodeId}`);
+              return buildTourNode(node, { preferTiles: true });
+            },
             preload: false,
             transitionOptions: {
               effect: "fade",
@@ -2509,21 +2181,35 @@ export default function InteriorPanoWalkthrough({
           pendingNodeViewRef.current = null;
         }
         syncNodeMarkers(viewer, node.id);
+        activeNodeIdRef.current = node.id;
+        currentNodeIdRef.current = node.id;
+        latestYaw = viewer.getPosition().yaw;
+        if (positionUpdateTimer !== null) {
+          globalThis.clearTimeout(positionUpdateTimer);
+          positionUpdateTimer = null;
+        }
         setActiveNodeId(node.id);
-        setViewYaw(viewer.getPosition().yaw);
-        setViewPitch(viewer.getPosition().pitch);
+        setViewYaw(latestYaw);
+        navigationInFlightRef.current = false;
+        setReadyPanoramaVersion((version) => version + 1);
         setViewerError(null);
         setIsTransitioning(false);
       };
       const handlePanoramaError = () => {
+        navigationInFlightRef.current = false;
         setViewerError("Panorama failed to load.");
         setIsTransitioning(false);
       };
       const handlePositionUpdated = (event: Event) => {
-        const nextPosition = (event as Event & { position?: Position }).position;
-        if (nextPosition) {
-          setViewYaw(nextPosition.yaw);
-          setViewPitch(nextPosition.pitch);
+        const position = (event as Event & { position?: Position }).position;
+        if (!position) return;
+        latestYaw = position.yaw;
+        // Rendering remains at the viewer's frame rate; only React controls are throttled.
+        if (positionUpdateTimer === null) {
+          positionUpdateTimer = globalThis.setTimeout(() => {
+            positionUpdateTimer = null;
+            if (!disposed) setViewYaw(latestYaw);
+          }, 80);
         }
       };
       const handleMarkerSelect = (event: Event) => {
@@ -2539,6 +2225,11 @@ export default function InteriorPanoWalkthrough({
       virtualTour.addEventListener(virtualTourEvents.NodeChangedEvent.type, handleNodeChanged);
       viewer.addEventListener(viewerEvents.PanoramaErrorEvent.type, handlePanoramaError);
       viewer.addEventListener(viewerEvents.PositionUpdatedEvent.type, handlePositionUpdated);
+      detachViewerListeners = () => {
+        virtualTour.removeEventListener(virtualTourEvents.NodeChangedEvent.type, handleNodeChanged);
+        viewer.removeEventListener(viewerEvents.PanoramaErrorEvent.type, handlePanoramaError);
+        viewer.removeEventListener(viewerEvents.PositionUpdatedEvent.type, handlePositionUpdated);
+      };
       const markersPlugin = viewer.getPlugin<MarkersPlugin>(MarkersPlugin);
       markersPlugin?.addEventListener(
         markerEvents.SelectMarkerEvent.type,
@@ -2552,28 +2243,13 @@ export default function InteriorPanoWalkthrough({
       };
 
       bindingsRef.current = { viewer };
-      syncNodeMarkers(viewer, startNodeId);
-      setActiveNodeId(startNodeId);
-      setViewYaw(viewer.getPosition().yaw);
-      setViewPitch(viewer.getPosition().pitch);
-      setViewerError(null);
-      setIsTransitioning(false);
-
-      if (disposed) {
-        virtualTour.removeEventListener(virtualTourEvents.NodeChangedEvent.type, handleNodeChanged);
-        viewer.removeEventListener(viewerEvents.PanoramaErrorEvent.type, handlePanoramaError);
-        viewer.removeEventListener(viewerEvents.PositionUpdatedEvent.type, handlePositionUpdated);
-        detachMarkerSelectListener?.();
-        viewer.destroy();
-        if (bindingsRef.current?.viewer === viewer) {
-          bindingsRef.current = null;
-        }
-        return;
-      }
+      await virtualTour.setCurrentNode(startNodeId, { effect: "none", rotation: false });
     };
 
     initTimer = globalThis.setTimeout(() => {
       void initializeViewer().catch((error) => {
+        if (disposed) return;
+        navigationInFlightRef.current = false;
         console.error("Failed to initialize interior pano viewer:", error);
         setViewerError("Viewer failed to initialize.");
         setIsTransitioning(false);
@@ -2586,6 +2262,8 @@ export default function InteriorPanoWalkthrough({
         globalThis.clearTimeout(initTimer);
       }
 
+      if (positionUpdateTimer !== null) globalThis.clearTimeout(positionUpdateTimer);
+      detachViewerListeners?.();
       const bindings = bindingsRef.current;
       if (bindings) {
         detachMarkerSelectListener?.();
@@ -2594,22 +2272,20 @@ export default function InteriorPanoWalkthrough({
       }
     };
   }, [
-    assetStore,
     buildTourNode,
-    graph.nodes,
+    graph,
     interiorNodeTransitionSpeed,
     interiorViewerMoveInertia,
     interiorViewerMoveSpeed,
+    isMobileTouchViewport,
     isSlowNetwork,
-    getAssetStoreForBaseUrl,
-    resolvePano,
     syncNodeMarkers,
   ]);
 
   if (availableNodeIds === null) {
     return (
       <div className="flex h-full items-center justify-center rounded-[2rem] border border-white/10 bg-black/30 text-white/70">
-        Loading Walkthrough. Please Wait
+        {viewerError ?? "Loading Walkthrough. Please Wait"}
       </div>
     );
   }
@@ -2626,6 +2302,19 @@ export default function InteriorPanoWalkthrough({
     <section
       className={`interior-pano-walkthrough relative isolate h-full w-full overflow-hidden rounded-[2.25rem] border border-white/10 bg-black text-white  ${className ?? ""}`}
     >
+      {INTERIOR_PANO_DEV_TOOL_ENABLED && activeNode ? (
+        <aside
+          aria-label="Current panorama developer information"
+          className="interior-pano-dev-overlay absolute bottom-4 left-4 z-30 max-w-[calc(100%-2rem)] select-text rounded-xl border border-white/20 bg-black/70 px-3 py-2 font-mono text-[11px] leading-5 text-white backdrop-blur-md"
+        >
+          <div className="text-[10px] uppercase tracking-wider text-amber-200">
+            Pano dev · {buildNodeModeLabel(isBareShellMode)}
+          </div>
+          <div className="break-all">Pano: {activeNode.imageFilename}</div>
+          <div className="break-all text-white/65">Node: {activeNode.id}</div>
+        </aside>
+      ) : null}
+
       {/* {walkthroughContext.flatNumber ? (
         <div className="pointer-events-none absolute inset-x-4 top-4 z-30 flex justify-center sm:top-5">
           <div className={`${uiFont.className} rounded-[1.35rem] border border-white/16 bg-[rgba(14,20,27,0.58)] px-4 py-3 text-center text-white shadow-[0_18px_40px_rgba(0,0,0,0.22)] backdrop-blur-2xl`}>
@@ -2681,7 +2370,7 @@ export default function InteriorPanoWalkthrough({
       </div>
 
       {showMinimap ? (
-        <div className="pointer-events-none absolute right-4 top-[1.5rem] z-30 hidden w-[400px] xl:block 2xl:right-6 2xl:top-[2rem] 2xl:w-[460px]">
+        <div className="interior-minimap-desktop pointer-events-none absolute right-4 top-[1.5rem] z-30 hidden w-[400px] xl:block 2xl:right-6 2xl:top-[2rem] 2xl:w-[460px]">
         <div className={panoOnly ? "pointer-events-auto ml-auto w-[320px] 2xl:w-[360px]" : "pointer-events-auto rounded-[1.6rem] p-3"}>
           <InteriorFloorPlanMinimap
             image={minimapImage}
@@ -2744,7 +2433,7 @@ export default function InteriorPanoWalkthrough({
       ) : null}
 
       {showMinimap ? (
-        <div className="pointer-events-none absolute right-3 top-3 z-20 xl:hidden">
+        <div className="interior-minimap-compact pointer-events-auto absolute right-3 top-3 z-30 w-[min(12rem,calc(100%-1.5rem))] overflow-y-auto overscroll-contain sm:w-60 xl:hidden">
           <InteriorFloorPlanMinimap
             image={minimapImage}
             points={minimapPoints}
@@ -2755,10 +2444,10 @@ export default function InteriorPanoWalkthrough({
             }}
             isCalibrationMode={isMinimapCalibrationMode}
             onPointMove={handleMinimapPointMove}
-            className={panoOnly ? "ml-auto w-[14rem] sm:w-[17rem]" : "w-[10.5rem] sm:w-[13rem]"}
+            className="w-full"
           />
           {isMinimapCalibrationMode ? (
-            <div className={`${uiFont.className} pointer-events-auto ml-auto mt-2 w-[14rem] rounded-lg border border-amber-100/30 bg-black/55 px-2 py-1.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-amber-50 backdrop-blur-xl sm:w-[17rem]`}>
+            <div className={`${uiFont.className} pointer-events-auto mt-2 w-full rounded-lg border border-amber-100/30 bg-black/55 px-2 py-1.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-amber-50 backdrop-blur-xl`}>
               <div>Drag dots, then copy.</div>
               <div className="mt-1 flex gap-1.5 normal-case tracking-normal">
                 <button
@@ -2782,10 +2471,24 @@ export default function InteriorPanoWalkthrough({
             <button
               type="button"
               onClick={handleModeToggle}
-              className={`${uiFont.className} pointer-events-auto ml-auto mt-2 flex w-[14rem] items-center justify-center gap-2 rounded-[1rem] border border-white/38 bg-white/[0.07] px-3 py-2.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-white shadow-[0_10px_24px_rgba(0,0,0,0.16)] backdrop-blur-xl transition hover:border-white/58 hover:bg-white/[0.13] sm:w-[17rem]`}
+              className={`${uiFont.className} pointer-events-auto mt-2 flex min-h-11 w-full touch-manipulation items-center justify-center gap-1.5 overflow-hidden rounded-xl border border-white/45 bg-[linear-gradient(135deg,rgba(255,255,255,0.18),rgba(18,24,30,0.42))] px-2 py-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-white backdrop-blur-xl backdrop-saturate-150 transition hover:border-white/65 hover:bg-[linear-gradient(135deg,rgba(255,255,255,0.24),rgba(18,24,30,0.5))]`}
             >
               {isBareShellMode ? <Sofa className="h-3.5 w-3.5" /> : <BedDouble className="h-3.5 w-3.5" />}
               {isBareShellMode ? "View Furnished" : "View Bare Shell"}
+            </button>
+          ) : null}
+          {showDimensionsToggle ? (
+            <button
+              type="button"
+              onClick={handleDimensionsToggle}
+              aria-pressed={isDimensionsVisible}
+              className={`${uiFont.className} pointer-events-auto mt-2 flex min-h-11 w-full touch-manipulation items-center justify-center overflow-hidden rounded-xl border px-2 py-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-white backdrop-blur-xl backdrop-saturate-150 transition ${
+                isDimensionsVisible
+                  ? "border-[#ecd1a0]/65 bg-[linear-gradient(135deg,rgba(236,209,160,0.28),rgba(55,43,24,0.5))]"
+                  : "border-white/45 bg-[linear-gradient(135deg,rgba(255,255,255,0.18),rgba(18,24,30,0.42))] hover:border-white/65 hover:bg-[linear-gradient(135deg,rgba(255,255,255,0.24),rgba(18,24,30,0.5))]"
+              }`}
+            >
+              {isDimensionsVisible ? "Hide Dimensions" : "Show Dimensions"}
             </button>
           ) : null}
         </div>
@@ -2909,7 +2612,7 @@ export default function InteriorPanoWalkthrough({
         </div>
       ) : null}
 
-      <div className="pointer-events-auto absolute right-3 top-1/2 z-20 -translate-y-1/2 sm:right-5">
+      <div className="interior-navigation-controls pointer-events-auto absolute z-20">
         <div className="interior-direction-rail flex flex-col items-center gap-1.5 rounded-full p-1.5 sm:gap-2 sm:p-2">
           <ArrowButton
             icon={ArrowUp}
@@ -2957,6 +2660,18 @@ export default function InteriorPanoWalkthrough({
           display: none !important;
         }
 
+        .interior-navigation-controls {
+          right: 1.25rem;
+          top: 50%;
+          transform: translateY(-50%);
+        }
+
+        .interior-minimap-compact {
+          max-height: calc(
+            100% - max(0.75rem, env(safe-area-inset-bottom)) - 5.25rem
+          );
+        }
+
         .interior-direction-rail {
           border: 1px solid rgba(255, 255, 255, 0.1);
           background: rgba(3, 5, 4, 0.62);
@@ -2969,6 +2684,32 @@ export default function InteriorPanoWalkthrough({
         .interior-direction-button {
           border: 1px solid rgba(255, 255, 255, 0.1);
           background: rgba(4, 6, 5, 0.68);
+        }
+
+        @media (max-width: 1279px), (max-height: 850px) {
+          .interior-pano-walkthrough .interior-minimap-desktop {
+            display: none;
+          }
+
+          .interior-pano-walkthrough .interior-minimap-compact {
+            display: block;
+          }
+
+          .interior-pano-walkthrough .interior-navigation-controls {
+            top: auto;
+            right: auto;
+            bottom: max(0.75rem, env(safe-area-inset-bottom));
+            left: 50%;
+            transform: translateX(-50%);
+          }
+
+          .interior-pano-walkthrough .interior-direction-rail {
+            flex-direction: row;
+          }
+
+          .interior-pano-walkthrough .interior-pano-dev-overlay {
+            bottom: calc(max(0.75rem, env(safe-area-inset-bottom)) + 4.5rem);
+          }
         }
 
         @media (hover: hover) and (pointer: fine) {
