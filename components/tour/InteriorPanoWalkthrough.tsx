@@ -730,7 +730,8 @@ function getInteriorDimensionMarkers(
 
   const panoId = imageFilenameToPanoId(node.imageFilename);
   const markerOverrides = isBareShellMode
-    ? BARE_SHELL_DIMENSION_MARKER_OVERRIDES[panoId]
+    ? BARE_SHELL_DIMENSION_MARKER_OVERRIDES[panoId] ??
+      BARE_SHELL_DIMENSION_MARKER_OVERRIDES[panoId.replace(/-v\d+$/i, "")]
     : INTERIOR_DIMENSION_MARKER_OVERRIDES[panoId] ??
       INTERIOR_DIMENSION_MARKER_OVERRIDES[`LS_${node.id}`];
   if (!markerOverrides?.length) {

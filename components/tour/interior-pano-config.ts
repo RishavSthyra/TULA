@@ -33,6 +33,18 @@ const KITCHEN_FOYER_EXCLUDED_NODE_IDS = new Set([
   "spline_pano_02_F0015",
 ]);
 
+// R2 assets are intentionally immutable at the delivery layer. These render
+// replacements therefore use fresh folder IDs rather than overwriting a URL
+// which a visitor may have cached already.
+const VERSIONED_BARE_SHELL_PANO_IDS = new Set([
+  "PANO.00006",
+  "PANO.00020",
+  "PANO.00021",
+  "PANO.00023",
+  "PANO.00024",
+  "PANO.00025",
+]);
+
 const KITCHEN_FOYER_NODES = (
   kitchenFoyerNavData as ExteriorPanoNodeSource[]
 ).filter(({ id }) => !KITCHEN_FOYER_EXCLUDED_NODE_IDS.has(id));
@@ -164,10 +176,14 @@ export const INTERIOR_PANO_CONFIG: InteriorDeveloperConfig = {
   balconyPanoBasePath: KITCHEN_FOYER_BALCONY_PANO_BASE_PATH,
   furnishedNodes: KITCHEN_FOYER_NODES,
   // Keep the shared camera IDs and coordinates; only the R2 render folder changes.
-  bareShellNodes: KITCHEN_FOYER_NODES.map((node) => ({
-    ...node,
-    image_filename: `${exteriorImageFilenameToPanoId(node.image_filename)}.jpeg`,
-  })),
+  bareShellNodes: KITCHEN_FOYER_NODES.map((node) => {
+    const panoId = exteriorImageFilenameToPanoId(node.image_filename);
+
+    return {
+      ...node,
+      image_filename: `${panoId}${VERSIONED_BARE_SHELL_PANO_IDS.has(panoId) ? "-v2" : ""}.jpeg`,
+    };
+  }),
   balconyNodes: KITCHEN_FOYER_BALCONY_NODES,
   furnishedInitialNodeId: "spline_pano_03_F0018",
   bareShellInitialNodeId: "spline_pano_03_F0018",
