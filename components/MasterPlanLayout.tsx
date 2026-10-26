@@ -44,6 +44,7 @@ import {
 } from "@/lib/master-plan-hotspots";
 import { readJsonResponse } from "@/lib/utils";
 import { formatBlockLabel } from "@/lib/inventory-display";
+import { SITE_ICON_URL } from "@/lib/metadata";
 import type { InventoryApartment, TowerType } from "@/types/inventory";
 import type { MasterPlanDeveloperConfig } from "@/types/developer-config";
 import SignedImage from "@/src/components/common/SignedImage";
@@ -456,15 +457,25 @@ function SelectedFlatPlanPanel({
     () => getRoomDimensionItems(apartment.roomDimensions),
     [apartment.roomDimensions],
   );
+  const [floorPlanLoadState, setFloorPlanLoadState] = useState<{
+    src: string;
+    status: "loaded" | "error";
+  } | null>(null);
+  const currentFloorPlanLoadState =
+    floorPlanLoadState?.src === apartment.floorPlanImage
+      ? floorPlanLoadState.status
+      : "loading";
+  const isFloorPlanLoaded = currentFloorPlanLoadState === "loaded";
+
   return (
     <div
-      className="pointer-events-auto custom-scrollbar relative max-h-[min(82dvh,48rem)] w-[clamp(19rem,28vw,27rem)] overflow-y-auto bg-transparent p-0 text-[#1f3f2b] 2xl:w-[29rem]"
+      className="pointer-events-auto relative flex h-[min(82dvh,48rem)] w-[clamp(19rem,28vw,27rem)] flex-col overflow-hidden bg-transparent p-0 text-[#1f3f2b] 2xl:w-[29rem]"
       data-scroll-area="flat-plan-panel"
     >
-      <div className="relative">
+      <div className="relative flex min-h-0 flex-1 flex-col">
         <div className="pointer-events-none absolute left-0 right-0 top-[16.5rem] z-0 hidden h-16 rounded-b-[4rem] bg-[#1f3f2b]/90 blur-[18px] 2xl:block" />
 
-        <div className="relative z-10 overflow-hidden rounded-[30px] rounded-tr-[56px] border border-[#d7bf80]/48 bg-[linear-gradient(145deg,rgba(250,248,239,0.56)_0%,rgba(238,242,231,0.48)_58%,rgba(250,247,236,0.60)_100%)] pt-5 pb-5 pl-5 pr-8 shadow-[0_14px_40px_rgba(21,47,30,0.10),inset_0_1px_0_rgba(255,255,255,0.64),inset_0_0_0_1px_rgba(255,255,255,0.13)] backdrop-blur-sm 2xl:rounded-[36px] 2xl:rounded-tr-[68px]">
+        <div className="relative z-10 shrink-0 overflow-hidden rounded-[30px] rounded-tr-[56px] border border-[#d7bf80]/48 bg-[linear-gradient(145deg,rgba(250,248,239,0.56)_0%,rgba(238,242,231,0.48)_58%,rgba(250,247,236,0.60)_100%)] pb-3 pl-5 pr-8 pt-3 shadow-[0_14px_40px_rgba(21,47,30,0.10),inset_0_1px_0_rgba(255,255,255,0.64),inset_0_0_0_1px_rgba(255,255,255,0.13)] backdrop-blur-sm 2xl:rounded-[36px] 2xl:rounded-tr-[68px]">
           <div className="pointer-events-none absolute inset-[8px] rounded-[24px] rounded-tr-[48px] border border-[#ead8a4]/60 2xl:rounded-[28px] 2xl:rounded-tr-[58px]" />
           <div className="pointer-events-none absolute -left-10 bottom-4 h-40 w-20 rounded-[50%] border-r border-[#cfad63]/45 opacity-70" />
           <div className="pointer-events-none absolute -right-6 top-11 h-36 w-24 rounded-[50%] border-l border-[#cfad63]/45 opacity-60" />
@@ -484,84 +495,140 @@ function SelectedFlatPlanPanel({
                 Floor Plan
               </p>
               <h3
-                className={`${masterPlanSerif.className} mt-2 text-[2rem] font-semibold leading-none text-[#21462d] 2xl:text-[2.55rem]`}
+                className={`${masterPlanSerif.className} mt-1.5 text-[1.75rem] font-semibold leading-none text-[#21462d] 2xl:text-[2.25rem]`}
               >
                 {apartment.title} layout
               </h3>
-              <div className="mt-3 h-px w-16 bg-[#c4a667]" />
+              <div className="mt-2 h-px w-16 bg-[#c4a667]" />
             </div>
-            <span className="rounded-full border border-[#d8bd78]/55 bg-[#f8f4e8]/82 px-4 py-2 text-sm font-bold text-[#58715f] shadow-[0_10px_24px_rgba(33,50,35,0.10),inset_0_1px_0_rgba(255,255,255,0.92)]">
+            <span className="rounded-full border border-[#d8bd78]/55 bg-[#f8f4e8]/82 px-3.5 py-1.5 text-xs font-bold text-[#58715f] shadow-[0_10px_24px_rgba(33,50,35,0.10),inset_0_1px_0_rgba(255,255,255,0.92)]">
               {apartment.floorLabel || apartment.floor}
             </span>
           </div>
 
-          <div className="relative z-10 mx-auto mt-7 aspect-[4/4.55] w-[78%] max-w-[20rem] 2xl:mt-8 2xl:w-[80%]">
+          <div className="relative z-10 mx-auto mt-2 h-[clamp(11.5rem,28dvh,15rem)] w-[78%] max-w-[20rem] 2xl:mt-3 2xl:h-[clamp(13rem,28dvh,17rem)] 2xl:w-[80%]">
+            <div
+              className={`absolute inset-0 flex flex-col items-center justify-center transition duration-500 ${
+                isFloorPlanLoaded
+                  ? "scale-[0.98] opacity-0"
+                  : "scale-100 opacity-100"
+              }`}
+              role="status"
+              aria-label={
+                currentFloorPlanLoadState === "error"
+                  ? "Floor plan could not be loaded"
+                  : "Loading floor plan"
+              }
+            >
+              <div className="absolute inset-[12%] rounded-[40%] bg-[radial-gradient(circle,rgba(196,166,103,0.16)_0%,rgba(196,166,103,0.05)_48%,transparent_72%)] animate-pulse" />
+              <NextImage
+                src={SITE_ICON_URL}
+                alt=""
+                width={1152}
+                height={1004}
+                sizes="112px"
+                className="relative h-auto w-24 select-none object-contain opacity-55 drop-shadow-[0_8px_18px_rgba(33,70,45,0.12)] 2xl:w-28"
+              />
+              <p className="relative mt-2 text-[8px] font-bold uppercase tracking-[0.3em] text-[#687866]/75">
+                {currentFloorPlanLoadState === "error"
+                  ? "Plan unavailable"
+                  : "Preparing floor plan"}
+              </p>
+              {currentFloorPlanLoadState !== "error" ? (
+                <div className="relative mt-3 h-px w-20 overflow-hidden bg-[#c4a667]/20">
+                  <motion.div
+                    className="absolute inset-y-0 w-1/2 bg-[linear-gradient(90deg,transparent,#c4a667,transparent)]"
+                    animate={{ x: ["-110%", "220%"] }}
+                    transition={{
+                      duration: 1.35,
+                      ease: "easeInOut",
+                      repeat: Infinity,
+                    }}
+                  />
+                </div>
+              ) : null}
+            </div>
             <SignedImage
               src={apartment.floorPlanImage}
+              placeholderSrc={null}
               alt={`${apartment.title} floor plan`}
               fill
               sizes="(min-width: 1536px) 380px, 320px"
-              className="object-contain mix-blend-multiply drop-shadow-[0_18px_30px_rgba(19,61,40,0.16)]"
+              onLoad={() =>
+                setFloorPlanLoadState({
+                  src: apartment.floorPlanImage,
+                  status: "loaded",
+                })
+              }
+              onError={() =>
+                setFloorPlanLoadState({
+                  src: apartment.floorPlanImage,
+                  status: "error",
+                })
+              }
+              className={`z-10 object-contain mix-blend-multiply drop-shadow-[0_18px_30px_rgba(19,61,40,0.16)] transition-opacity duration-500 ${
+                isFloorPlanLoaded ? "opacity-100" : "opacity-0"
+              }`}
             />
           </div>
 
-          <div className="relative z-10 mt-5 grid grid-cols-2 gap-4">
-            <div className="rounded-full border border-[#d8bd78]/45 bg-[#fbfaf4]/88 px-5 py-3 text-sm font-bold text-[#1f3f2b] shadow-[0_12px_26px_rgba(33,50,35,0.09),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-xl">
+          <div className="relative z-10 mt-2 grid grid-cols-2 gap-2.5">
+            <div className="rounded-full border border-[#d8bd78]/45 bg-[#fbfaf4]/88 px-4 py-2 text-xs font-bold text-[#1f3f2b] shadow-[0_12px_26px_rgba(33,50,35,0.09),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-xl">
               {apartment.bhk} BHK
             </div>
-            <div className="rounded-full border border-[#d8bd78]/45 bg-[#fbfaf4]/88 px-5 py-3 text-right text-sm font-bold text-[#1f3f2b] shadow-[0_12px_26px_rgba(33,50,35,0.09),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-xl">
+            <div className="rounded-full border border-[#d8bd78]/45 bg-[#fbfaf4]/88 px-4 py-2 text-right text-xs font-bold text-[#1f3f2b] shadow-[0_12px_26px_rgba(33,50,35,0.09),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-xl">
               {apartment.areaSqft} sqft
             </div>
           </div>
         </div>
 
-        <div className="relative z-0 mt-6 overflow-hidden rounded-[30px] rounded-bl-[42px] border border-[#d7bf80]/42 bg-[linear-gradient(180deg,rgba(35,65,42,0.62),rgba(29,55,37,0.68))] px-5 pb-5 pt-6 text-[#f7efd9] shadow-[0_14px_40px_rgba(21,47,30,0.12),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-sm 2xl:mt-7 2xl:rounded-[36px] 2xl:rounded-bl-[52px] 2xl:px-6 2xl:pb-6 2xl:pt-7">
+        <div className="relative z-0 mt-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[30px] rounded-bl-[42px] border border-[#d7bf80]/42 bg-[linear-gradient(180deg,rgba(35,65,42,0.62),rgba(29,55,37,0.68))] px-4 pb-4 pt-4 text-[#f7efd9] shadow-[0_14px_40px_rgba(21,47,30,0.12),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-sm 2xl:mt-4 2xl:rounded-[36px] 2xl:rounded-bl-[52px] 2xl:px-5 2xl:pb-5 2xl:pt-5">
           <div className="pointer-events-none absolute inset-[8px] rounded-[24px] rounded-bl-[34px] border border-[#ead8a4]/22 2xl:rounded-[28px] 2xl:rounded-bl-[42px]" />
           <div className="pointer-events-none absolute -bottom-10 -left-7 h-48 w-28 rounded-[50%] border-r border-[#cfad63]/45 opacity-70" />
 
-          <div className="relative z-10 flex items-center justify-between gap-3">
+          <div className="relative z-10 flex shrink-0 items-center justify-between gap-3">
             <div>
               <p className="text-[9px] font-bold uppercase tracking-[0.34em] text-[#d9c28a]">
                 Spatial Composition
               </p>
               <h4
-                className={`${masterPlanSerif.className} mt-2 text-2xl font-semibold leading-none text-[#fff6df]`}
+                className={`${masterPlanSerif.className} mt-1.5 text-[1.35rem] font-semibold leading-none text-[#fff6df]`}
               >
                 Room Dimensions
               </h4>
             </div>
-            <span className="rounded-full border border-[#d9c28a]/35 bg-white/10 px-4 py-2 text-sm font-semibold text-[#fff6df] backdrop-blur-xl">
+            <span className="rounded-full border border-[#d9c28a]/35 bg-white/10 px-3 py-1.5 text-xs font-semibold text-[#fff6df] backdrop-blur-xl">
               {dimensionItems.length} rooms
             </span>
           </div>
 
-          <div className="relative z-10 mt-5 space-y-0">
+          <div className="custom-scrollbar relative z-10 mt-3 grid min-h-0 flex-1 grid-cols-2 content-start gap-2 overflow-y-auto overscroll-contain pr-2">
             {dimensionItems.length > 0 ? (
               dimensionItems.map((item, index) => (
                 <div
                   key={item.key}
-                  className="flex items-center justify-between gap-4 border-b border-[#d9c28a]/18 py-3.5 last:border-b-0 last:pb-0"
+                  className="flex min-h-[5rem] min-w-0 flex-col justify-between rounded-2xl border border-[#d9c28a]/20 bg-white/[0.07] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-sm"
                 >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#d9c28a]/36 bg-white/[0.09] backdrop-blur-xl">
-                      <Ruler className="h-4 w-4 text-[#d9c28a]" />
+                  <div className="flex min-w-0 items-start justify-between gap-2">
+                    <p className="line-clamp-2 text-[13px] font-medium leading-[1.2] text-[#fff6df]">
+                      {item.label}
+                    </p>
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#d9c28a]/28 bg-white/[0.08]">
+                      <Ruler className="h-3 w-3 text-[#d9c28a]" />
                     </span>
-                    <div className="min-w-0">
-                      <p className="text-[10px] uppercase tracking-[0.28em] text-[#d9c28a]/70">
-                        {String(index + 1).padStart(2, "0")}
-                      </p>
-                      <p className="mt-1 truncate text-sm font-medium text-[#fff6df]">
-                        {item.label}
-                      </p>
-                    </div>
                   </div>
-                  <p className="shrink-0 text-right text-sm font-semibold text-[#f7efd9]">
-                    {item.value}
-                  </p>
+                  <div className="mt-2 flex items-end justify-between gap-2">
+                    <p className="text-[9px] font-semibold tracking-[0.18em] text-[#d9c28a]/62">
+                      {String(index + 1).padStart(2, "0")}
+                    </p>
+                    <p className="shrink-0 text-right text-xs font-semibold text-[#f7efd9]">
+                      {item.value}
+                    </p>
+                  </div>
                 </div>
               ))
             ) : (
-              <p className="py-3 text-xs text-[#f7efd9]/72">
+              <p className="col-span-2 py-3 text-xs text-[#f7efd9]/72">
                 Room dimensions are not available for this apartment yet.
               </p>
             )}
