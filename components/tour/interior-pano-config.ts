@@ -26,6 +26,7 @@ export const KITCHEN_FOYER_BLOCKED_NAVIGATION_PAIRS = [
 export const KITCHEN_FOYER_ADDITIONAL_NAVIGATION_PAIRS = [
   ["spline_pano_01_F0006", "spline_pano_01_F0007"],
   ["spline_pano_03_F0018", "spline_pano_04_F0019"],
+  ["spline_pano_04_F0023", "spline_pano_05_F0024"],
 ] as const;
 
 const KITCHEN_FOYER_EXCLUDED_NODE_IDS = new Set([

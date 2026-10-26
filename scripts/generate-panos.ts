@@ -296,7 +296,7 @@ async function run(): Promise<void> {
 
   const files = fs
     .readdirSync(INPUT)
-    .filter((file) => /\.(?:webp|png)$/i.test(file))
+    .filter((file) => /\.(?:webp|png|jpe?g)$/i.test(file))
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
 
   if (files.length === 0) {
