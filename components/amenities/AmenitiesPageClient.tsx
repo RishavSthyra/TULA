@@ -20,9 +20,9 @@ import {
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
+  ArrowLeft,
   ChevronLeft,
   ChevronRight,
-  Map,
   Maximize2,
   Minimize2,
   Pause,
@@ -437,9 +437,15 @@ const VideoPlayerControls = memo(function VideoPlayerControls({
         className="grid h-[48px] w-[48px] place-items-center rounded-full border border-white/15 bg-black/60 text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_34px_rgba(0,0,0,0.3)] backdrop-blur-xl transition hover:border-[#78c995]/75 hover:bg-black/75 hover:text-[#8bd3a7] disabled:cursor-default disabled:opacity-[0.45] sm:h-[56px] sm:w-[56px]"
       >
         {isPlaying ? (
-          <Pause className="h-5 w-5 fill-current stroke-[1.5]" aria-hidden="true" />
+          <Pause
+            className="h-5 w-5 fill-current stroke-[1.5]"
+            aria-hidden="true"
+          />
         ) : (
-          <Play className="ml-0.5 h-5 w-5 fill-current stroke-[1.5]" aria-hidden="true" />
+          <Play
+            className="ml-0.5 h-5 w-5 fill-current stroke-[1.5]"
+            aria-hidden="true"
+          />
         )}
       </button>
 
@@ -490,11 +496,12 @@ const VideoPlayerControls = memo(function VideoPlayerControls({
   );
 });
 
-export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) {
+export default function AmenitiesPageClient({
+  data,
+}: AmenitiesPageClientProps) {
   const router = useRouter();
   const stageRef = useRef<HTMLElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const transitionTokenRef = useRef(0);
   const carouselTransitionLockedRef = useRef(false);
   const carouselUnlockTimerRef = useRef<number | null>(null);
   const deckHideTimerRef = useRef<number | null>(null);
@@ -506,6 +513,7 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
+  const [isVideoFrameReady, setIsVideoFrameReady] = useState(false);
   const [isDeckVisible, setIsDeckVisible] = useState(true);
   const prefersReducedMotion = useReducedMotion();
 
@@ -581,15 +589,21 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
     return true;
   }, []);
 
+  const activateAmenity = useCallback((id: string) => {
+    setIsVideoFrameReady(false);
+    setDisplayedAmenityId(id);
+    setActiveId(id);
+  }, []);
+
   const selectAmenity = useCallback(
     (id: string) => {
       if (id === activeId || !beginCarouselTransition()) {
         return;
       }
 
-      setActiveId(id);
+      activateAmenity(id);
     },
-    [activeId, beginCarouselTransition],
+    [activateAmenity, activeId, beginCarouselTransition],
   );
 
   const goToRelativeAmenity = useCallback(
@@ -604,10 +618,28 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
 
       const nextIndex =
         (activeIndex + offset + data.items.length) % data.items.length;
-      setActiveId(data.items[nextIndex].id);
+      activateAmenity(data.items[nextIndex].id);
     },
-    [activeIndex, beginCarouselTransition, data.items],
+    [activateAmenity, activeIndex, beginCarouselTransition, data.items],
   );
+
+  const advanceAfterPlayback = useCallback(() => {
+    if (data.items.length < 2) {
+      return;
+    }
+
+    const nextIndex = (activeIndex + 1) % data.items.length;
+    activateAmenity(data.items[nextIndex].id);
+  }, [activateAmenity, activeIndex, data.items]);
+
+  const goBack = useCallback(() => {
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.push("/");
+  }, [router]);
 
   useEffect(() => {
     return () => {
@@ -643,8 +675,7 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
       await element.requestFullscreen();
 
       const orientation = screen.orientation as
-        | ScreenOrientationWithLock
-        | undefined;
+        ScreenOrientationWithLock | undefined;
       await orientation?.lock?.("landscape").catch(() => undefined);
     } catch {
       // Fullscreen and orientation locking are browser/permission dependent.
@@ -762,22 +793,15 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
   }, [goToRelativeAmenity, togglePlayback]);
 
   useEffect(() => {
-    if (!activeAmenity || activeAmenity.id === displayedAmenityId) {
+    if (data.items.length < 2) {
       return;
     }
 
-    if (!hasMediaSource(activeAmenity.videoSrc)) {
-      const frameId = window.requestAnimationFrame(() => {
-        setDisplayedAmenityId(activeAmenity.id);
-      });
+    const nextAmenity = data.items[(activeIndex + 1) % data.items.length];
 
-      return () => {
-        window.cancelAnimationFrame(frameId);
-      };
+    if (!hasMediaSource(nextAmenity?.videoSrc)) {
+      return;
     }
-
-    const token = transitionTokenRef.current + 1;
-    transitionTokenRef.current = token;
 
     const preloadVideo = document.createElement("video");
     preloadVideo.preload = "auto";
@@ -788,17 +812,7 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
     preloadVideo.setAttribute("muted", "");
     preloadVideo.setAttribute("playsinline", "");
     preloadVideo.setAttribute("webkit-playsinline", "");
-    preloadVideo.src = activeAmenity.videoSrc as string;
-
-    const revealAmenity = () => {
-      if (transitionTokenRef.current === token) {
-        setDisplayedAmenityId(activeAmenity.id);
-      }
-    };
-
-    preloadVideo.addEventListener("loadeddata", revealAmenity, { once: true });
-    preloadVideo.addEventListener("canplay", revealAmenity, { once: true });
-    preloadVideo.addEventListener("error", revealAmenity, { once: true });
+    preloadVideo.src = nextAmenity.videoSrc;
     preloadVideo.load();
 
     return () => {
@@ -806,7 +820,7 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
       preloadVideo.removeAttribute("src");
       preloadVideo.load();
     };
-  }, [activeAmenity, displayedAmenityId]);
+  }, [activeIndex, data.items]);
 
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
@@ -870,7 +884,9 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
             <video
               ref={videoRef}
               key={displayedAmenity.videoSrc}
-              className="relative z-[1] h-full w-full object-cover object-center"
+              className={`relative z-[1] h-full w-full object-cover object-center transition-opacity duration-300 ${
+                isVideoFrameReady ? "opacity-100" : "opacity-0"
+              }`}
               src={displayedAmenity.videoSrc}
               poster={
                 hasMediaSource(displayedAmenity.thumbnailSrc)
@@ -879,12 +895,14 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
               }
               autoPlay
               muted={isMuted}
-              loop
               playsInline
               preload="auto"
+              onLoadedData={() => setIsVideoFrameReady(true)}
+              onCanPlay={() => setIsVideoFrameReady(true)}
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
               onError={() => setIsPlaying(false)}
+              onEnded={advanceAfterPlayback}
             />
           </>
         ) : hasMediaSource(displayedAmenity.thumbnailSrc) ? (
@@ -900,7 +918,9 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
           />
         ) : (
           <div className="grid h-full w-full place-items-center bg-[radial-gradient(circle_at_72%_26%,rgba(120,201,149,0.12),transparent_31%),linear-gradient(135deg,#101511,#030504_58%)]">
-            <span className={`${displaySerif.className} text-5xl text-white/80 sm:text-8xl`}>
+            <span
+              className={`${displaySerif.className} text-5xl text-white/80 sm:text-8xl`}
+            >
               {displayedAmenity.title}
             </span>
           </div>
@@ -944,19 +964,22 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
         <div className="ml-auto flex items-center gap-2.5 sm:gap-[13px]">
           <button
             type="button"
-            onClick={() => router.push("/master-plan")}
-            aria-label="View masterplan"
-            className="inline-flex h-[44px] items-center gap-2 rounded-full border border-white/15 bg-black/60 px-4 text-[13px] font-medium text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_34px_rgba(0,0,0,0.3)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-[#78c995]/75 hover:bg-black/75 hover:text-[#8bd3a7] sm:h-[48px] sm:gap-2.5 sm:px-[21px] sm:text-[14px]"
+            onClick={goBack}
+            aria-label="Go back to the previous page"
+            className="inline-flex h-[44px] items-center gap-2 rounded-full border border-white/30 bg-white/[0.09] px-4 text-[13px] font-medium text-white/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.24),0_12px_36px_rgba(0,0,0,0.2)] backdrop-blur-[22px] backdrop-saturate-150 transition hover:-translate-y-0.5 hover:border-white/45 hover:bg-white/[0.16] hover:text-white sm:h-[48px] sm:gap-2.5 sm:px-[21px] sm:text-[14px]"
           >
-            <Map className="h-[18px] w-[18px] sm:h-5 sm:w-5" aria-hidden="true" />
-            <span className="hidden sm:inline">View Masterplan</span>
+            <ArrowLeft
+              className="h-[18px] w-[18px] sm:h-5 sm:w-5"
+              aria-hidden="true"
+            />
+            <span className="hidden sm:inline">Back</span>
           </button>
 
           <button
             type="button"
             onClick={toggleFullscreen}
             aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-            className="grid h-[44px] w-[44px] place-items-center rounded-full border border-white/15 bg-black/60 text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_34px_rgba(0,0,0,0.3)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-[#78c995]/75 hover:bg-black/75 hover:text-[#8bd3a7] sm:h-[48px] sm:w-[48px]"
+            className="grid h-[44px] w-[44px] place-items-center rounded-full border border-white/30 bg-white/[0.09] text-white/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.24),0_12px_36px_rgba(0,0,0,0.2)] backdrop-blur-[22px] backdrop-saturate-150 transition hover:-translate-y-0.5 hover:border-white/45 hover:bg-white/[0.16] hover:text-white sm:h-[48px] sm:w-[48px]"
           >
             {isFullscreen ? (
               <Minimize2 className="h-[18px] w-[18px]" aria-hidden="true" />
@@ -994,7 +1017,10 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
           aria-label="Previous carousel item"
           className="absolute left-1/2 top-[62px] z-20 -ml-4 grid h-8 w-8 -translate-x-[190px] place-items-center bg-transparent text-white/75 transition hover:scale-110 hover:text-[#8bd3a7] sm:-translate-x-[515px] xl:-translate-x-[565px]"
         >
-          <ChevronLeft className="h-[22px] w-[22px] stroke-[1.65]" aria-hidden="true" />
+          <ChevronLeft
+            className="h-[22px] w-[22px] stroke-[1.65]"
+            aria-hidden="true"
+          />
         </button>
 
         <MotionConfig
@@ -1022,7 +1048,10 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
           aria-label="Next carousel item"
           className="absolute left-1/2 top-[62px] z-20 -ml-4 grid h-8 w-8 translate-x-[190px] place-items-center bg-transparent text-white/75 transition hover:scale-110 hover:text-[#8bd3a7] sm:translate-x-[515px] xl:translate-x-[565px]"
         >
-          <ChevronRight className="h-[22px] w-[22px] stroke-[1.65]" aria-hidden="true" />
+          <ChevronRight
+            className="h-[22px] w-[22px] stroke-[1.65]"
+            aria-hidden="true"
+          />
         </button>
 
         <div className="absolute left-1/2 top-[134px] -translate-x-1/2 text-center drop-shadow-[0_4px_16px_rgba(0,0,0,0.72)] sm:top-[136px]">
@@ -1031,9 +1060,7 @@ export default function AmenitiesPageClient({ data }: AmenitiesPageClientProps) 
             <span className="mx-2 text-white/30">/</span>
             {totalPosition}
           </p>
-          <p
-            className="mt-[2px] max-w-[320px] truncate text-[17px] font-medium leading-none text-white/94 sm:text-[19px]"
-          >
+          <p className="mt-[2px] max-w-[320px] truncate text-[17px] font-medium leading-none text-white/94 sm:text-[19px]">
             {activeAmenity.title}
           </p>
         </div>
