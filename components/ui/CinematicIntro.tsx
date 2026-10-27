@@ -4,8 +4,10 @@ import {
   memo,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type MutableRefObject,
 } from "react";
 import gsap from "gsap";
@@ -13,19 +15,37 @@ import { Howl, Howler } from "howler";
 import PreloaderCornerLogo from "@/components/ui/PreloaderCornerLogo";
 
 type CinematicIntroProps = {
-  onComplete?: () => void;
+  onComplete?: (reason: "played" | "already-seen") => void;
   progress?: number;
   readyToComplete?: boolean;
 };
 
 type CinematicIntroStageProps = {
-  onCompleteRef: MutableRefObject<(() => void) | undefined>;
+  onCompleteRef: MutableRefObject<
+    ((reason: "played" | "already-seen") => void) | undefined
+  >;
   readyToComplete?: boolean;
   loaderNodeRef: MutableRefObject<HTMLDivElement | null>;
 };
 
 const SESSION_KEY = "tula-cinematic-intro-complete";
 const INTRO_AUDIO_URL = "/atlasaudio-nature-519434.mp3";
+
+function subscribeToIntroSession() {
+  return () => undefined;
+}
+
+function getIntroSessionSnapshot() {
+  try {
+    return window.sessionStorage.getItem(SESSION_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function getIntroSessionServerSnapshot() {
+  return false;
+}
 
 const TIMELINE_START = 0.15;
 const LINE_IN_DURATION = 1.18;
@@ -40,6 +60,11 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
   loaderNodeRef,
 }: CinematicIntroStageProps) {
   const [isActive, setIsActive] = useState(true);
+  const sessionIntroComplete = useSyncExternalStore(
+    subscribeToIntroSession,
+    getIntroSessionSnapshot,
+    getIntroSessionServerSnapshot,
+  );
   const [showSoundPrompt, setShowSoundPrompt] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
   const loaderRef = useRef<HTMLDivElement>(null);
@@ -81,8 +106,21 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
 
   const shouldPlay = useCallback((): boolean => {
     if (typeof window === "undefined") return false;
-    return true;
+
+    try {
+      return window.sessionStorage.getItem(SESSION_KEY) !== "1";
+    } catch {
+      return true;
+    }
   }, []);
+
+  useLayoutEffect(() => {
+    if (!sessionIntroComplete) {
+      return;
+    }
+
+    onCompleteRef.current?.("already-seen");
+  }, [onCompleteRef, sessionIntroComplete]);
 
   const handleComplete = useCallback(() => {
     const audio = audioRef.current;
@@ -93,9 +131,13 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
       }, 950);
     }
 
-    sessionStorage.setItem(SESSION_KEY, "1");
+    try {
+      window.sessionStorage.setItem(SESSION_KEY, "1");
+    } catch {
+      // Storage can be unavailable in restrictive browser modes.
+    }
     setIsActive(false);
-    onCompleteRef.current?.();
+    onCompleteRef.current?.("played");
   }, [onCompleteRef]);
 
   const fadeOutWhenReady = useCallback(() => {
@@ -267,7 +309,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           revealRef.current,
         ],
         { opacity: 1 },
-        0
+        0,
       );
 
       tl.set(
@@ -283,7 +325,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           revealBrandRef.current,
         ],
         { opacity: 0 },
-        0
+        0,
       );
 
       tl.set(
@@ -299,7 +341,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           revealBrandRef.current,
         ],
         { willChange: "transform, opacity, filter" },
-        0
+        0,
       );
 
       tl.set(goldLeakRef.current, { x: -40 }, 0);
@@ -308,12 +350,12 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
       tl.to(
         greenGlowRef.current,
         { scale: 1.12, duration: 14.5, ease: "sine.inOut" },
-        0
+        0,
       );
       tl.to(
         goldLeakRef.current,
         { x: 40, duration: 14.5, ease: "sine.inOut" },
-        0
+        0,
       );
       tl.to(
         mistRef.current,
@@ -323,7 +365,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           duration: 14.5,
           ease: "sine.inOut",
         },
-        0
+        0,
       );
       tl.to(
         vignetteRef.current,
@@ -334,13 +376,13 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           repeat: 3,
           ease: "sine.inOut",
         },
-        0
+        0,
       );
 
       tl.to(
         loaderRef.current,
         { opacity: 0.56, duration: 1, ease: "power2.out" },
-        TIMELINE_START
+        TIMELINE_START,
       );
 
       const screen1Start = TIMELINE_START + 0.35;
@@ -359,7 +401,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           duration: LINE_IN_DURATION,
           ease: "power3.out",
         },
-        screen1Start
+        screen1Start,
       );
 
       tl.fromTo(
@@ -373,7 +415,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           duration: LINE_IN_DURATION,
           ease: "power3.out",
         },
-        screen1Start + 1.15
+        screen1Start + 1.15,
       );
 
       tl.to(
@@ -386,7 +428,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           duration: LINE_OUT_DURATION,
           ease: "power2.in",
         },
-        screen2Start - SCREEN_OVERLAP
+        screen2Start - SCREEN_OVERLAP,
       );
 
       tl.fromTo(
@@ -400,7 +442,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           duration: 1.08,
           ease: "power3.out",
         },
-        screen2Start
+        screen2Start,
       );
 
       tl.fromTo(
@@ -414,7 +456,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           duration: 1.08,
           ease: "power3.out",
         },
-        screen2Start + 0.92
+        screen2Start + 0.92,
       );
 
       tl.fromTo(
@@ -428,11 +470,15 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           duration: 1.08,
           ease: "power3.out",
         },
-        screen2Start + 1.84
+        screen2Start + 1.84,
       );
 
       tl.to(
-        [screen2Line1Ref.current, screen2Line2Ref.current, screen2Line3Ref.current],
+        [
+          screen2Line1Ref.current,
+          screen2Line2Ref.current,
+          screen2Line3Ref.current,
+        ],
         {
           opacity: 0,
           filter: "blur(6px)",
@@ -441,7 +487,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           duration: LINE_OUT_DURATION,
           ease: "power2.in",
         },
-        screen3Start - SCREEN_OVERLAP
+        screen3Start - SCREEN_OVERLAP,
       );
 
       tl.fromTo(
@@ -455,7 +501,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           duration: LINE_IN_DURATION,
           ease: "power3.out",
         },
-        screen3Start
+        screen3Start,
       );
 
       tl.fromTo(
@@ -469,7 +515,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           duration: 1.35,
           ease: "power3.out",
         },
-        screen3Start + 1.2
+        screen3Start + 1.2,
       );
 
       tl.to(
@@ -482,7 +528,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           duration: LINE_OUT_DURATION,
           ease: "power2.in",
         },
-        revealStart - SCREEN_OVERLAP
+        revealStart - SCREEN_OVERLAP,
       );
 
       tl.set(revealRef.current, { opacity: 1 }, revealStart - 0.3);
@@ -498,7 +544,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           duration: 1.05,
           ease: "power3.out",
         },
-        revealStart
+        revealStart,
       );
 
       tl.to(
@@ -510,7 +556,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           duration: 0.75,
           ease: "power2.inOut",
         },
-        revealStart + 1.05
+        revealStart + 1.05,
       );
 
       tl.fromTo(
@@ -529,7 +575,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           duration: 1.4,
           ease: "power3.out",
         },
-        revealStart + 1.95
+        revealStart + 1.95,
       );
 
       tl.call(fadeOutWhenReady, undefined, 14.15);
@@ -546,7 +592,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
           revealBrandRef.current,
         ],
         { willChange: "auto" },
-        14.2
+        14.2,
       );
 
       timelineRef.current = tl;
@@ -558,7 +604,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
     };
   }, [shouldPlay, handleComplete, fadeOutWhenReady, isActive]);
 
-  if (!isActive) return null;
+  if (!isActive || sessionIntroComplete) return null;
 
   return (
     <div
@@ -726,10 +772,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
         </div>
 
         {/* Final Reveal */}
-        <div
-          ref={revealRef}
-          className="cinematic-reveal"
-        >
+        <div ref={revealRef} className="cinematic-reveal">
           <span
             ref={revealWelcomeRef}
             className="cinematic-serif cinematic-reveal__welcome"
@@ -745,9 +788,7 @@ const CinematicIntroStage = memo(function CinematicIntroStage({
               src="https://cdn.sthyra.com/TULA/Images/Whisper_of_Tree_Logo_Gold%201_01.png"
               alt="TULA — Whisper of Trees"
             />
-            <span className="cinematic-reveal__byline">
-              By Tula Properties
-            </span>
+            <span className="cinematic-reveal__byline">By Tula Properties</span>
           </div>
         </div>
       </div>

@@ -120,10 +120,8 @@ export default function HomePageClient({
     signedAssetUrls[masterPlanWarmupVideoKey] ??
     initialSignedAssetUrls[masterPlanWarmupVideoKey] ??
     null;
-  const signedHeroPosterUrl =
-    initialSignedAssetUrls[HERO_POSTER_URL] ?? null;
-  const signedHeroLogoUrl =
-    initialSignedAssetUrls[HERO_LOGO_URL] ?? null;
+  const signedHeroPosterUrl = initialSignedAssetUrls[HERO_POSTER_URL] ?? null;
+  const signedHeroLogoUrl = initialSignedAssetUrls[HERO_LOGO_URL] ?? null;
 
   useEffect(() => {
     loaderStartedAtRef.current =
@@ -135,11 +133,7 @@ export default function HomePageClient({
   }, [heroReady]);
 
   useEffect(() => {
-    if (
-      !heroReady ||
-      !criticalHeroAssetsReady ||
-      !projectOverviewAssetsReady
-    ) {
+    if (!heroReady || !criticalHeroAssetsReady || !projectOverviewAssetsReady) {
       return;
     }
 
@@ -172,7 +166,10 @@ export default function HomePageClient({
         }
 
         setProgress((currentProgress) =>
-          Math.max(currentProgress, Math.min(96, Math.round((completed / total) * 96))),
+          Math.max(
+            currentProgress,
+            Math.min(96, Math.round((completed / total) * 96)),
+          ),
         );
       },
     }).then(() => {
@@ -214,9 +211,18 @@ export default function HomePageClient({
     });
   }, []);
 
-  const handleIntroComplete = useCallback(() => {
-    setIntroComplete(true);
-  }, []);
+  const handleIntroComplete = useCallback(
+    (reason: "played" | "already-seen") => {
+      if (reason === "already-seen") {
+        setHeroVideoSrc(signedHeroVideoUrl ?? HERO_VIDEO_URL);
+        setProgress(100);
+        setLoading(false);
+      }
+
+      setIntroComplete(true);
+    },
+    [HERO_VIDEO_URL, signedHeroVideoUrl],
+  );
 
   useEffect(() => {
     if (typeof window === "undefined" || !loading) {
@@ -354,12 +360,16 @@ export default function HomePageClient({
           : []),
         { href: "/models/forglb.glb", as: "fetch" },
         { href: "/models/forglb%20-%20Copy.glb", as: "fetch" },
-      ].filter((link): link is {
-        href: string;
-        as: "fetch" | "image" | "video";
-        crossOrigin?: "anonymous";
-        fetchPriority?: "high" | "low" | "auto";
-      } => Boolean(link.href)),
+      ].filter(
+        (
+          link,
+        ): link is {
+          href: string;
+          as: "fetch" | "image" | "video";
+          crossOrigin?: "anonymous";
+          fetchPriority?: "high" | "low" | "auto";
+        } => Boolean(link.href),
+      ),
     );
 
     const criticalVideoStates = new Map<
@@ -439,7 +449,10 @@ export default function HomePageClient({
       posterImage.onload = settlePoster;
       posterImage.onerror = settlePoster;
       posterImage.src = criticalPosterSource;
-      void posterImage.decode().then(settlePoster).catch(() => undefined);
+      void posterImage
+        .decode()
+        .then(settlePoster)
+        .catch(() => undefined);
 
       heroWarmVideoCleanups.push(() => {
         posterImage.onload = null;
@@ -534,7 +547,10 @@ export default function HomePageClient({
       video.addEventListener("error", handleHeroWarmMediaError, { once: true });
 
       heroWarmVideoCleanups.push(() => {
-        video.removeEventListener("loadedmetadata", handleHeroWarmMediaProgress);
+        video.removeEventListener(
+          "loadedmetadata",
+          handleHeroWarmMediaProgress,
+        );
         video.removeEventListener("loadeddata", handleHeroWarmMediaProgress);
         video.removeEventListener("canplay", publishCurrentHeroVideoSource);
         video.removeEventListener("progress", handleHeroWarmMediaProgress);
@@ -650,9 +666,7 @@ export default function HomePageClient({
       {!introComplete ? (
         <CinematicIntro
           progress={
-            heroReady &&
-            criticalHeroAssetsReady &&
-            projectOverviewAssetsReady
+            heroReady && criticalHeroAssetsReady && projectOverviewAssetsReady
               ? 100
               : progress
           }
@@ -661,9 +675,9 @@ export default function HomePageClient({
         />
       ) : null}
       <main
-        aria-hidden={loading || !introComplete}
+        aria-hidden={!introComplete}
         className={`app-screen overflow-hidden bg-neutral-950 text-white transition-opacity duration-300 ${
-          loading ? "pointer-events-none opacity-0" : "opacity-100"
+          introComplete ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
       >
         <HeroSection

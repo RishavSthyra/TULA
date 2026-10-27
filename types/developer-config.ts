@@ -67,6 +67,10 @@ export type MasterPlanDeveloperConfig = {
   towerBWorldDummies: TowerDummyAnchors;
   towerACameras: Record<string, MasterPlanCameraConfig>;
   towerBCameras: Record<string, MasterPlanCameraConfig>;
+  frameCameras?: MasterPlanCameraConfig[];
+  reverseHotspotDirection?: boolean;
+  debugModel?: boolean;
+  previewLabel?: string;
   towerATransform: {
     position: [number, number, number];
     quaternion: QuaternionConfig;

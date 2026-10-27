@@ -329,16 +329,19 @@ const HIGHLIGHT_EXPANDED_MATRIX_CACHE = new WeakMap<
 >();
 const INVISIBLE_PROXY_MATERIAL = new MeshBasicMaterial({
   colorWrite: false,
-  depthWrite: false,
+  depthTest: true,
+  depthWrite: true,
   opacity: 0,
   side: DoubleSide,
   toneMapped: false,
   transparent: true,
 });
 const DEBUG_PROXY_MATERIAL = new MeshBasicMaterial({
+  color: "#ff39d4",
   colorWrite: true,
-  depthWrite: false,
-  opacity: 0,
+  depthTest: true,
+  depthWrite: true,
+  opacity: 0.42,
   side: DoubleSide,
   toneMapped: false,
   transparent: true,
@@ -428,9 +431,12 @@ function getHighlightFillMaterial(color: string, opacity: number) {
 
   const material = new MeshBasicMaterial({
     color,
-    depthTest: false,
+    depthTest: true,
     depthWrite: false,
     opacity,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
     side: DoubleSide,
     toneMapped: false,
     transparent: true,
@@ -454,7 +460,7 @@ function getHighlightLineMaterial(
 
   const material = new LineBasicMaterial({
     color,
-    depthTest: false,
+    depthTest: true,
     depthWrite: false,
     linewidth: thickness,
     opacity,
@@ -1285,6 +1291,14 @@ function getPrecomputedTrackingCameraView(
     return null;
   }
 
+  return getTrackingCameraViewFromConfig(cameraData, trackingKey, aspect);
+}
+
+function getTrackingCameraViewFromConfig(
+  cameraData: SerializedTrackingCamera,
+  trackingKey: UnrealCameraKey,
+  aspect: number,
+) {
   const horizontalFov = MathUtils.degToRad(cameraData.fov);
   const verticalFov = MathUtils.radToDeg(
     2 * Math.atan(Math.tan(horizontalFov / 2) / aspect),
@@ -2592,6 +2606,7 @@ const TowerScene = memo(function TowerScene({
   onPointerSelectionReady,
   allowHover,
   onApartmentHover,
+  presentedVideoFrameRef,
   rotationProgressRef,
   selectedApartmentId,
   selectedTower,
@@ -2625,6 +2640,7 @@ const TowerScene = memo(function TowerScene({
     apartmentId: string | null,
     pointerPosition: PointerPosition | null,
   ) => void;
+  presentedVideoFrameRef: MutableRefObject<number>;
   rotationProgressRef: MutableRefObject<number>;
   selectedApartmentId: string | null;
   selectedTower: TowerType | null;
@@ -2645,6 +2661,7 @@ const TowerScene = memo(function TowerScene({
   const towerAInteractionGltf = useGLTF(towerAModelPath);
   const towerBInteractionGltf = useGLTF(towerBModelPath);
   const cameraRef = useRef<ThreePerspectiveCamera | null>(null);
+  const lastAppliedExactFrameRef = useRef<number | null>(null);
   const fallbackGroupRef = useRef<Group | null>(null);
   const hoveredApartmentIdRef = useRef<string | null>(null);
   const trackingDebugLoggedRef = useRef(false);
@@ -2654,13 +2671,14 @@ const TowerScene = memo(function TowerScene({
   const activeTowerCode = towerTypeToCode(selectedTower) ?? "A";
   const interactiveTowerScope = useMemo<TowerType | null>(() => null, []);
   const useVisibleTrialModel = false;
+  const showDebugModel = masterPlanConfig?.debugModel === true;
   const shouldUseTrialTrackingAlignment =
     isThreeDsMaxTrial && !useVisibleTrialModel;
   const preparedTowerA = useMemo(
     () =>
       getPreparedTowerScene(
         towerAGltf.scene,
-        false,
+        showDebugModel,
         towerAInteractionGltf.scene,
         "A",
         enableBoundsTree,
@@ -2669,6 +2687,7 @@ const TowerScene = memo(function TowerScene({
     [
       enableBoundsTree,
       isThreeDsMaxTrial,
+      showDebugModel,
       towerAGltf.scene,
       towerAInteractionGltf.scene,
       useVisibleTrialModel,
@@ -2678,7 +2697,7 @@ const TowerScene = memo(function TowerScene({
     () =>
       getPreparedTowerScene(
         towerBGltf.scene,
-        false,
+        showDebugModel,
         towerBInteractionGltf.scene,
         "B",
         enableBoundsTree,
@@ -2687,6 +2706,7 @@ const TowerScene = memo(function TowerScene({
     [
       enableBoundsTree,
       isThreeDsMaxTrial,
+      showDebugModel,
       towerBGltf.scene,
       towerBInteractionGltf.scene,
       useVisibleTrialModel,
@@ -2728,11 +2748,46 @@ const TowerScene = memo(function TowerScene({
   const currentTrackingKey =
     TOWER_A_TRACKING_KEYS[nearestTrackingFrameInfo.index] ??
     TOWER_A_TRACKING_KEYS[0];
+  const configuredFrameCamera = useMemo(() => {
+    const frameCameras = masterPlanConfig?.frameCameras;
+
+    if (!frameCameras?.length) {
+      return null;
+    }
+
+    const frameIndex =
+      (((Math.round(currentFrame) - 1) % frameCameras.length) +
+        frameCameras.length) %
+      frameCameras.length;
+    const camera = frameCameras[frameIndex];
+
+    if (!camera) {
+      return null;
+    }
+
+    return {
+      fov: camera.fov,
+      position: [camera.position.x, camera.position.y, camera.position.z] as [
+        number,
+        number,
+        number,
+      ],
+      quaternion: camera.quaternion,
+    } satisfies SerializedTrackingCamera;
+  }, [currentFrame, masterPlanConfig?.frameCameras]);
   const towerTrackingTransform =
     activeTowerCode === "B" ? towerBTrackingTransform : towerATrackingTransform;
   const trackingCameraView = useMemo(() => {
     if (isThreeDsMaxTrial && useVisibleTrialModel) {
       return null;
+    }
+
+    if (configuredFrameCamera) {
+      return getTrackingCameraViewFromConfig(
+        configuredFrameCamera,
+        currentTrackingKey,
+        normalizedTrackingVideoAspect,
+      );
     }
 
     const fromCamera = getPrecomputedTrackingCameraView(
@@ -2784,6 +2839,8 @@ const TowerScene = memo(function TowerScene({
     } satisfies TrackingCameraView;
   }, [
     activeTowerCode,
+    configuredFrameCamera,
+    currentTrackingKey,
     isThreeDsMaxTrial,
     normalizedTrackingVideoAspect,
     masterPlanConfig,
@@ -2861,8 +2918,12 @@ const TowerScene = memo(function TowerScene({
     preparedTrialModel.apartments,
   ]);
   const activeHotspot = useMemo(
-    () => getNearestMasterPlanHotspot(currentFrame),
-    [currentFrame],
+    () =>
+      getNearestMasterPlanHotspot(
+        currentFrame,
+        masterPlanConfig?.reverseHotspotDirection,
+      ),
+    [currentFrame, masterPlanConfig?.reverseHotspotDirection],
   );
   const apartmentIndex = useMemo(
     () => buildInventoryApartmentIndex(apartments),
@@ -3104,7 +3165,15 @@ const TowerScene = memo(function TowerScene({
   ]);
   const fallbackScenePosition = BASE_MODEL_OFFSET;
   const trackedScenePosition: [number, number, number] = [0, 0, 0];
-  const shouldShowSelectedApartment = selectedApartmentId !== null;
+  const hotspotSelectedApartmentId = useMemo(
+    () =>
+      selectedApartmentId &&
+      isApartmentIdAllowedAtHotspot(selectedApartmentId, activeHotspot)
+        ? selectedApartmentId
+        : null,
+    [activeHotspot, selectedApartmentId],
+  );
+  const shouldShowSelectedApartment = hotspotSelectedApartmentId !== null;
   const shouldRenderTowerProxies =
     showTowerMeshes || showTrackingDebug || shouldShowSelectedApartment;
   const hotspotHoveredApartmentId = useMemo(
@@ -3171,20 +3240,21 @@ const TowerScene = memo(function TowerScene({
       ? effectiveHoveredApartmentId
       : null;
   const towerASelectedApartmentId =
-    selectedApartmentId &&
+    hotspotSelectedApartmentId &&
     (isThreeDsMaxTrial
-      ? preparedTrialModel.apartments.has(selectedApartmentId)
-      : preparedTowerA.apartments.has(selectedApartmentId))
-      ? selectedApartmentId
+      ? preparedTrialModel.apartments.has(hotspotSelectedApartmentId)
+      : preparedTowerA.apartments.has(hotspotSelectedApartmentId))
+      ? hotspotSelectedApartmentId
       : null;
   const towerBSelectedApartmentId =
-    selectedApartmentId && preparedTowerB.apartments.has(selectedApartmentId)
-      ? selectedApartmentId
+    hotspotSelectedApartmentId &&
+    preparedTowerB.apartments.has(hotspotSelectedApartmentId)
+      ? hotspotSelectedApartmentId
       : null;
   const fallbackSelectedApartmentId =
-    selectedApartmentId &&
-    primaryPreparedModel.apartments.has(selectedApartmentId)
-      ? selectedApartmentId
+    hotspotSelectedApartmentId &&
+    primaryPreparedModel.apartments.has(hotspotSelectedApartmentId)
+      ? hotspotSelectedApartmentId
       : null;
   const highlightRenderMode: HighlightRenderMode =
     interactionMode === "dragging" || interactionMode === "settling"
@@ -3221,7 +3291,11 @@ const TowerScene = memo(function TowerScene({
   useEffect(() => {
     const camera = cameraRef.current;
 
-    if (!camera || !trackingCameraView) {
+    if (
+      !camera ||
+      !trackingCameraView ||
+      masterPlanConfig?.frameCameras?.length
+    ) {
       return;
     }
 
@@ -3233,12 +3307,56 @@ const TowerScene = memo(function TowerScene({
     camera.position.copy(trackingCameraView.position);
     camera.quaternion.copy(trackingCameraView.quaternion);
     invalidate();
-  }, [invalidate, trackingCameraView]);
+  }, [invalidate, masterPlanConfig?.frameCameras, trackingCameraView]);
 
   useFrame(() => {
     const camera = cameraRef.current;
 
     if (!camera) {
+      return;
+    }
+
+    const exactFrameCameras = masterPlanConfig?.frameCameras;
+
+    if (exactFrameCameras?.length) {
+      const frameIndex =
+        (((Math.round(presentedVideoFrameRef.current) - 1) %
+          exactFrameCameras.length) +
+          exactFrameCameras.length) %
+        exactFrameCameras.length;
+
+      if (lastAppliedExactFrameRef.current === frameIndex) {
+        return;
+      }
+
+      const exactCamera = exactFrameCameras[frameIndex];
+
+      if (!exactCamera) {
+        return;
+      }
+
+      const exactCameraView = getTrackingCameraViewFromConfig(
+        {
+          fov: exactCamera.fov,
+          position: [
+            exactCamera.position.x,
+            exactCamera.position.y,
+            exactCamera.position.z,
+          ],
+          quaternion: exactCamera.quaternion,
+        },
+        currentTrackingKey,
+        normalizedTrackingVideoAspect,
+      );
+
+      if (Math.abs(camera.fov - exactCameraView.fov) > 0.001) {
+        camera.fov = exactCameraView.fov;
+        camera.updateProjectionMatrix();
+      }
+
+      camera.position.copy(exactCameraView.position);
+      camera.quaternion.copy(exactCameraView.quaternion);
+      lastAppliedExactFrameRef.current = frameIndex;
       return;
     }
 
@@ -3288,6 +3406,29 @@ const TowerScene = memo(function TowerScene({
           quaternion={towerATrackingTransform.quaternion.toArray()}
           scale={towerATrackingTransform.scale}
         >
+          {showDebugModel ? (
+            <>
+              <mesh position={[89948, 1334, -57740]} renderOrder={1000}>
+                <sphereGeometry args={[900, 20, 20]} />
+                <meshBasicMaterial
+                  color="#33ffd1"
+                  depthTest={false}
+                  toneMapped={false}
+                />
+              </mesh>
+              <mesh
+                position={[-72212.390625, 1334, -78069.2578125]}
+                renderOrder={1000}
+              >
+                <sphereGeometry args={[900, 20, 20]} />
+                <meshBasicMaterial
+                  color="#ffe04a"
+                  depthTest={false}
+                  toneMapped={false}
+                />
+              </mesh>
+            </>
+          ) : null}
           <group
             position={trackedScenePosition}
             scale={
@@ -3474,6 +3615,7 @@ export default function MasterPlanFrameHoverStage({
   const lastPassiveVideoSyncFrameRef = useRef<number | null>(null);
   const lastPassiveVideoSyncTimeRef = useRef(0);
   const pendingVideoSeekProgressRef = useRef<number | null>(null);
+  const presentedVideoFrameRef = useRef(initialFrame);
   const lastDisplayedFrameCommitTimeRef = useRef(0);
   const lastInvalidateSignatureRef = useRef("");
   const progressFrameRef = useRef<number | null>(null);
@@ -3541,6 +3683,9 @@ export default function MasterPlanFrameHoverStage({
     ? true
     : showApartmentMeshes;
   const trackingVideoAspect = config?.aspectRatio ?? TRACKING_VIDEO_ASPECT;
+  const exactFrameTimelineFps = config?.frameCameras?.length
+    ? config.fps
+    : null;
   const coverViewport = useMemo(
     () =>
       getCoverViewport(
@@ -3575,8 +3720,11 @@ export default function MasterPlanFrameHoverStage({
     [performanceProfile.isSafariLike, performanceProfile.tier],
   );
   const displayedFrameCommitIntervalMs = useMemo(
-    () => getDisplayedFrameCommitIntervalMs(performanceProfile.tier),
-    [performanceProfile.tier],
+    () =>
+      exactFrameTimelineFps
+        ? 1000 / exactFrameTimelineFps
+        : getDisplayedFrameCommitIntervalMs(performanceProfile.tier),
+    [exactFrameTimelineFps, performanceProfile.tier],
   );
   const passiveVideoSyncIntervalMs = useMemo(
     () =>
@@ -3865,8 +4013,14 @@ export default function MasterPlanFrameHoverStage({
       const targetFrame = progressToFrame(progress);
       const wrappedProgress = wrapProgress(progress);
       const targetTime = Math.min(
-        wrappedProgress * video.duration,
-        Math.max(video.duration - 1 / MASTER_PLAN_SCRUB_VIDEO_FPS, 0),
+        exactFrameTimelineFps
+          ? (targetFrame - 1) / exactFrameTimelineFps
+          : wrappedProgress * video.duration,
+        Math.max(
+          video.duration -
+            1 / (exactFrameTimelineFps ?? MASTER_PLAN_SCRUB_VIDEO_FPS),
+          0,
+        ),
       );
       const previousFrame = lastSyncedVideoFrameRef.current;
       const now =
@@ -3959,6 +4113,7 @@ export default function MasterPlanFrameHoverStage({
     [
       dragVideoFrameSkip,
       dragVideoSyncIntervalMs,
+      exactFrameTimelineFps,
       performanceProfile.isSafariLike,
     ],
   );
@@ -4478,6 +4633,38 @@ export default function MasterPlanFrameHoverStage({
       return;
     }
 
+    let videoFrameCallbackId: number | null = null;
+    const syncPresentedVideoFrame = (mediaTime: number) => {
+      if (exactFrameTimelineFps === null) {
+        return;
+      }
+
+      const nextFrame = wrapFrame(
+        Math.round(mediaTime * exactFrameTimelineFps) + 1,
+      );
+      presentedVideoFrameRef.current = nextFrame;
+      video.dataset.presentedFrame = String(nextFrame);
+      canvasInvalidateRef.current?.();
+    };
+    const watchPresentedVideoFrame: VideoFrameRequestCallback = (
+      _now,
+      metadata,
+    ) => {
+      syncPresentedVideoFrame(metadata.mediaTime);
+      videoFrameCallbackId = video.requestVideoFrameCallback(
+        watchPresentedVideoFrame,
+      );
+    };
+
+    if (
+      exactFrameTimelineFps !== null &&
+      typeof video.requestVideoFrameCallback === "function"
+    ) {
+      videoFrameCallbackId = video.requestVideoFrameCallback(
+        watchPresentedVideoFrame,
+      );
+    }
+
     const syncVideoState = () => {
       video.pause();
       lastSyncedVideoFrameRef.current = null;
@@ -4509,6 +4696,10 @@ export default function MasterPlanFrameHoverStage({
       video,
     });
     const flushPendingVideoSeek = () => {
+      if (typeof video.requestVideoFrameCallback !== "function") {
+        syncPresentedVideoFrame(video.currentTime);
+      }
+
       const pendingProgress = pendingVideoSeekProgressRef.current;
 
       if (pendingProgress === null) {
@@ -4522,12 +4713,17 @@ export default function MasterPlanFrameHoverStage({
     video.addEventListener("seeked", flushPendingVideoSeek);
 
     return () => {
+      if (videoFrameCallbackId !== null) {
+        video.cancelVideoFrameCallback(videoFrameCallbackId);
+      }
+
       stopVideoRevealFrame();
       pendingVideoSeekProgressRef.current = null;
       video.removeEventListener("seeked", flushPendingVideoSeek);
       cleanup();
     };
   }, [
+    exactFrameTimelineFps,
     performanceProfile.isSafariLike,
     signedScrubVideoPath,
     stopVideoRevealFrame,
@@ -4952,8 +5148,12 @@ export default function MasterPlanFrameHoverStage({
   ]);
   const trackingFrame = snapInfo.frame;
   const activeHotspot = useMemo(
-    () => getNearestMasterPlanHotspot(trackingFrame),
-    [trackingFrame],
+    () =>
+      getNearestMasterPlanHotspot(
+        trackingFrame,
+        config?.reverseHotspotDirection,
+      ),
+    [config?.reverseHotspotDirection, trackingFrame],
   );
   const interactiveTowerScope = useMemo<TowerType | null>(() => null, []);
   const apartmentIndex = useMemo(
@@ -5465,6 +5665,13 @@ export default function MasterPlanFrameHoverStage({
       ref={sectionRef}
       className="absolute inset-0 select-none overflow-hidden bg-black [touch-action:none] [-webkit-user-drag:none] [-webkit-user-select:none]"
     >
+      {config?.previewLabel ? (
+        <div className="pointer-events-none absolute left-1/2 top-4 z-50 -translate-x-1/2 rounded-full border border-emerald-200/35 bg-black/65 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-100 shadow-lg backdrop-blur-md">
+          {config.previewLabel}
+          {config.debugModel ? " · alignment overlay" : ""}
+        </div>
+      ) : null}
+
       <div
         className={`absolute inset-0 bg-cover bg-center transition-opacity duration-300 ${
           showFallbackBackdrop ? "opacity-100" : "opacity-0"
@@ -5670,6 +5877,7 @@ export default function MasterPlanFrameHoverStage({
                       onInvalidateReady={handleCanvasInvalidateReady}
                       onPointerSelectionReady={handlePointerSelectionReady}
                       onApartmentHover={handleApartmentHover}
+                      presentedVideoFrameRef={presentedVideoFrameRef}
                       rotationProgressRef={displayProgressRef}
                       selectedApartmentId={
                         !isDragging && !isSettling ? selectedApartmentId : null

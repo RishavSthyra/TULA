@@ -1,9 +1,9 @@
 import HomePageClient from "@/components/HomePageClient";
 import { getPublishedDeveloperRuntimeConfig } from "@/lib/developer-config";
 import { buildPageMetadata } from "@/lib/metadata";
+import { MASTER_PLAN_ORBIT_VIDEO_URL } from "@/lib/master-plan-asset-keys";
 import { signR2AssetKeys } from "@/lib/server/r2-signed-assets";
 import { TOWER_SELECTION_IMAGE_URL } from "@/lib/tower-selection-assets";
-import trialData from "@/data/master-plan-3dsmax-trial.json";
 
 const HOME_FORWARD_VIDEO_URL =
   "https://cdn.sthyra.com/TULA/Videos/Home%20Page2.mp4";
@@ -33,7 +33,7 @@ export default async function HomePage() {
     heroMobileFallbackKey: HOME_FIRST_FRAME_URL,
     heroStageFallbackKey: HOME_FIRST_FRAME_URL,
     heroPosterKey: HOME_FIRST_FRAME_URL,
-    masterPlanWarmupVideoKey: trialData.video.assetKey,
+    masterPlanWarmupVideoKey: MASTER_PLAN_ORBIT_VIDEO_URL,
   };
   const signedHomeCriticalAssets = signR2AssetKeys(Object.values(home));
 

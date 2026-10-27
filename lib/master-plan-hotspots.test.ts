@@ -131,3 +131,11 @@ test("maps each camera-stop frame to its hotspot", () => {
     );
   });
 });
+
+test("reverses the quarter-turn hotspot order for the new orbit", () => {
+  const expectedKeys = ["A1", "A4", "A3", "A2"] as const;
+
+  MASTER_PLAN_HOTSPOT_FRAMES.forEach((frame, index) => {
+    assert.equal(getNearestMasterPlanHotspot(frame, true), expectedKeys[index]);
+  });
+});

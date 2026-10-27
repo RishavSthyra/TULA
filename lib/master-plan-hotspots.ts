@@ -36,8 +36,11 @@ function wrapMasterPlanFrame(frame: number, totalFrames = 360) {
 
 export function getNearestMasterPlanHotspot(
   frame: number,
+  reverseDirection = false,
 ): MasterPlanHotspotKey {
-  const normalizedFrame = wrapMasterPlanFrame(frame);
+  const normalizedFrame = wrapMasterPlanFrame(
+    reverseDirection ? 2 - frame : frame,
+  );
   let closestIndex = 0;
   let smallestDistance = Number.POSITIVE_INFINITY;
 

@@ -1,5 +1,4 @@
-const MASTER_PLAN_FIRST_FRAME_URL =
-  "https://cdn.sthyra.com/TULA/Videos/360final2LAST2_GOP3_HQ_first_frame.avif";
+import { MASTER_PLAN_ORBIT_FALLBACK_IMAGE_URL } from "@/lib/master-plan-asset-keys";
 
 export default function MasterPlanLoading() {
   return (
@@ -7,7 +6,7 @@ export default function MasterPlanLoading() {
       <div
         className="absolute inset-0 bg-cover bg-center"
         style={{
-          backgroundImage: `url('${MASTER_PLAN_FIRST_FRAME_URL}')`,
+          backgroundImage: `url('${MASTER_PLAN_ORBIT_FALLBACK_IMAGE_URL}')`,
         }}
       />
     </section>
