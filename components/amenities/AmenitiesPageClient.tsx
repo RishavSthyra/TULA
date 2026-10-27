@@ -27,8 +27,6 @@ import {
   Minimize2,
   Pause,
   Play,
-  Volume2,
-  VolumeX,
 } from "lucide-react";
 import { scheduleAmenityVideoWarmup } from "@/lib/amenity-video-warmup";
 
@@ -253,17 +251,13 @@ const VideoPlayerControls = memo(function VideoPlayerControls({
   mediaKey,
   hasVideo,
   isPlaying,
-  isMuted,
   onTogglePlayback,
-  onToggleMuted,
 }: {
   videoRef: RefObject<HTMLVideoElement | null>;
   mediaKey: string;
   hasVideo: boolean;
   isPlaying: boolean;
-  isMuted: boolean;
   onTogglePlayback: () => void;
-  onToggleMuted: () => void;
 }) {
   const progressFillRef = useRef<HTMLSpanElement | null>(null);
   const seekInputRef = useRef<HTMLInputElement | null>(null);
@@ -428,7 +422,7 @@ const VideoPlayerControls = memo(function VideoPlayerControls({
   ]);
 
   return (
-    <div className="absolute bottom-[12px] left-4 right-4 z-30 grid grid-cols-[48px_minmax(0,1fr)_48px] items-center gap-3 sm:bottom-[17px] sm:left-[34px] sm:right-[38px] sm:grid-cols-[56px_126px_minmax(0,1fr)_56px] sm:gap-4">
+    <div className="absolute bottom-[12px] left-4 right-4 z-30 grid grid-cols-[48px_minmax(0,1fr)] items-center gap-3 sm:bottom-[17px] sm:left-[34px] sm:right-[38px] sm:grid-cols-[56px_126px_minmax(0,1fr)] sm:gap-4">
       <button
         type="button"
         onClick={onTogglePlayback}
@@ -478,20 +472,6 @@ const VideoPlayerControls = memo(function VideoPlayerControls({
           className="absolute inset-0 z-[2] h-full w-full cursor-pointer appearance-none bg-transparent disabled:cursor-default disabled:opacity-[0.45] [&::-moz-range-thumb]:h-[10px] [&::-moz-range-thumb]:w-[10px] [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-white/45 [&::-moz-range-thumb]:bg-[#050706] [&::-moz-range-thumb]:shadow-[0_0_0_4px_rgba(0,0,0,0.12),0_0_12px_rgba(0,0,0,0.34)] [&::-moz-range-track]:h-[2px] [&::-moz-range-track]:bg-transparent [&::-webkit-slider-runnable-track]:h-[2px] [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:mt-[-4px] [&::-webkit-slider-thumb]:h-[10px] [&::-webkit-slider-thumb]:w-[10px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white/45 [&::-webkit-slider-thumb]:bg-[#050706] [&::-webkit-slider-thumb]:shadow-[0_0_0_4px_rgba(0,0,0,0.12),0_0_12px_rgba(0,0,0,0.34)]"
         />
       </div>
-
-      <button
-        type="button"
-        onClick={onToggleMuted}
-        disabled={!hasVideo}
-        aria-label={isMuted ? "Unmute video" : "Mute video"}
-        className="grid h-[48px] w-[48px] place-items-center rounded-full border border-white/15 bg-black/60 text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_34px_rgba(0,0,0,0.3)] backdrop-blur-xl transition hover:border-[#78c995]/75 hover:bg-black/75 hover:text-[#8bd3a7] disabled:cursor-default disabled:opacity-[0.45] sm:h-[56px] sm:w-[56px]"
-      >
-        {isMuted ? (
-          <VolumeX className="h-5 w-5 stroke-[1.6]" aria-hidden="true" />
-        ) : (
-          <Volume2 className="h-5 w-5 stroke-[1.6]" aria-hidden="true" />
-        )}
-      </button>
     </div>
   );
 });
@@ -512,7 +492,6 @@ export default function AmenitiesPageClient({
   );
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(true);
   const [isVideoFrameReady, setIsVideoFrameReady] = useState(false);
   const [isDeckVisible, setIsDeckVisible] = useState(true);
   const prefersReducedMotion = useReducedMotion();
@@ -656,9 +635,8 @@ export default function AmenitiesPageClient({
 
     return () => {
       window.cancelAnimationFrame(frameId);
-      clearDeckHideTimer();
     };
-  }, [activeId, clearDeckHideTimer, revealDeck]);
+  }, [revealDeck]);
 
   const toggleFullscreen = useCallback(async () => {
     if (typeof document === "undefined") {
@@ -702,16 +680,6 @@ export default function AmenitiesPageClient({
     video.pause();
     setIsPlaying(false);
   }, []);
-
-  const toggleMuted = useCallback(() => {
-    const video = videoRef.current;
-    const nextMuted = !isMuted;
-
-    setIsMuted(nextMuted);
-    if (video) {
-      video.muted = nextMuted;
-    }
-  }, [isMuted]);
 
   useEffect(() => {
     scheduleAmenityVideoWarmup({
@@ -842,12 +810,6 @@ export default function AmenitiesPageClient({
     };
   }, [displayedAmenity?.videoSrc, displayedAmenityId]);
 
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.muted = isMuted;
-    }
-  }, [isMuted]);
-
   if (!activeAmenity || !displayedAmenity) {
     return (
       <main className="grid min-h-[100dvh] place-items-center bg-[#050706] text-white">
@@ -864,6 +826,7 @@ export default function AmenitiesPageClient({
     <main
       ref={stageRef}
       onPointerDown={revealDeck}
+      onPointerMove={revealDeck}
       className={`${interfaceSans.className} relative isolate h-[100dvh] min-h-[100dvh] w-full overflow-hidden bg-[#050706] text-white`}
     >
       {/* Full-screen amenity media */}
@@ -894,7 +857,7 @@ export default function AmenitiesPageClient({
                   : undefined
               }
               autoPlay
-              muted={isMuted}
+              muted
               playsInline
               preload="auto"
               onLoadedData={() => setIsVideoFrameReady(true)}
@@ -933,7 +896,24 @@ export default function AmenitiesPageClient({
       />
 
       {/* Header */}
-      <header className="absolute left-5 right-5 top-4 z-20 flex min-h-[58px] items-center sm:left-[34px] sm:right-[38px] sm:top-[24px]">
+      <motion.header
+        className="absolute left-5 right-5 top-4 z-20 flex min-h-[58px] items-center sm:left-[34px] sm:right-[38px] sm:top-[24px]"
+        initial={false}
+        animate={{
+          opacity: isDeckVisible ? 1 : 0,
+          y: isDeckVisible ? 0 : -118,
+        }}
+        transition={{
+          duration: prefersReducedMotion ? 0.2 : 0.62,
+          ease: [0.22, 1, 0.36, 1],
+        }}
+        style={{
+          pointerEvents: isDeckVisible ? "auto" : "none",
+          willChange: "transform, opacity",
+        }}
+        aria-hidden={!isDeckVisible}
+        inert={!isDeckVisible ? true : undefined}
+      >
         <button
           type="button"
           onClick={() => router.back()}
@@ -988,7 +968,7 @@ export default function AmenitiesPageClient({
             )}
           </button>
         </div>
-      </header>
+      </motion.header>
 
       {/* Flat filmstrip carousel — replaces the old rounded 3D deck */}
       <motion.section
@@ -1092,9 +1072,7 @@ export default function AmenitiesPageClient({
         mediaKey={displayedAmenity.id}
         hasVideo={hasVideo}
         isPlaying={isPlaying}
-        isMuted={isMuted}
         onTogglePlayback={togglePlayback}
-        onToggleMuted={toggleMuted}
       />
 
       {!isDeckVisible ? (
