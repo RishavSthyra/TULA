@@ -10,31 +10,29 @@ export type ExteriorMinimapLocation = {
   exteriorAmenityId?: string;
   startingPanoFrame: number;
   panoFrames: number[];
+  viewYawOffsetDegrees?: number;
 };
 
 export const EXTERIOR_MINIMAP_IMAGE_URL =
-  "https://cdn.sthyra.com/TULA/Images/Mini%20Map%20final.avif";
+  "https://cdn.sthyra.com/TULA/Images/masterplan%20new%20compressed.avif";
 
-// World-space calibration supplied in metres. Three corners are enough to
-// preserve the minimap's angled right edge with an affine projection.
-export const EXTERIOR_MINIMAP_BOUNDS = {
-  topLeft: {
-    x: -139.546,
-    y: 110.85,
+// Maps exterior render-world metres to the replacement 16:9 minimap.
+export const EXTERIOR_MINIMAP_PROJECTION = {
+  left: {
+    x: 0.002544112514,
+    y: 0.000672513718,
+    offset: 0.493112438728,
   },
-  topRight: {
-    x: 174.211,
-    y: 110.85,
-  },
-  bottomRight: {
-    x: 145.597,
-    y: -106.671,
+  top: {
+    x: -0.00042922394,
+    y: -0.004846913241,
+    offset: 0.524160977532,
   },
 } as const;
 
 export const EXTERIOR_MINIMAP_IMAGE_LAYOUT = {
-  width: 2982,
-  height: 2110,
+  width: 7680,
+  height: 4320,
 } as const;
 
 // Pano node positions are exported in centimetres; minimap calibration and
@@ -53,19 +51,30 @@ export const EXTERIOR_MINIMAP_LOCATIONS: ExteriorMinimapLocation[] = [
     exteriorAmenityId: "entrance",
     startingPanoFrame: 2,
     panoFrames: [2],
+    viewYawOffsetDegrees: 240,
   },
   {
     id: "clubhouse",
     name: "Clubhouse",
-    coordinate: { x: 128.616, y: 74.46 },
+    coordinate: { x: 105.616, y: 45.46 },
     exteriorAmenityId: "clubhouse",
-    startingPanoFrame: 240,
-    panoFrames: [240],
+    startingPanoFrame: 241,
+    panoFrames: [241],
+        viewYawOffsetDegrees: 35,
+  },
+    {
+    id: "yoga",
+    name: "Yoga",
+    coordinate: { x:-129.806, y: 90.687 },
+    exteriorAmenityId: "clubhouse",
+    startingPanoFrame: 180,
+    panoFrames: [180],
+        viewYawOffsetDegrees: 135,
   },
   {
     id: "sports-area",
     name: "Sports Area",
-    coordinate: { x: 103.898, y: -69.087 },
+    coordinate: { x: 131.898, y: -65.087 },
     startingPanoFrame: 25,
     panoFrames: [25],
   },
@@ -84,14 +93,16 @@ export const EXTERIOR_MINIMAP_LOCATIONS: ExteriorMinimapLocation[] = [
     exteriorAmenityId: "amphitheater",
     startingPanoFrame: 53,
     panoFrames: [53],
+    viewYawOffsetDegrees: 240,
   },
   {
     id: "kids-play-area",
     name: "Kids Play Area",
-    coordinate: { x: 50.821, y: -21.415 },
+    coordinate: { x: 70.821, y: -21.415 },
     exteriorAmenityId: "children-park",
     startingPanoFrame: 47,
     panoFrames: [47],
+    viewYawOffsetDegrees: 180,
   },
   {
     id: "garden-walk",
@@ -103,7 +114,7 @@ export const EXTERIOR_MINIMAP_LOCATIONS: ExteriorMinimapLocation[] = [
   {
     id: "swimming-pool",
     name: "Swimming Pool",
-    coordinate: { x: -1.811, y: 30.816 },
+    coordinate: { x: -7.8, y: 39.816 },
     exteriorAmenityId: "swimming-pool",
     startingPanoFrame: 75,
     panoFrames: [75],
@@ -111,30 +122,34 @@ export const EXTERIOR_MINIMAP_LOCATIONS: ExteriorMinimapLocation[] = [
   {
     id: "gazebo",
     name: "Gazebo",
-    coordinate: { x: 24.103, y: 24.588 },
-    startingPanoFrame: 90,
-    panoFrames: [90],
+    coordinate: { x: 14.103, y: 35.588 },
+    startingPanoFrame: 80,
+    panoFrames: [80],
+      viewYawOffsetDegrees: 240,
   },
   {
     id: "pool-bar-area",
     name: "Pool Bar Area",
-    coordinate: { x: 14.066, y: 21.776 },
-    startingPanoFrame: 65,
-    panoFrames: [65],
+    coordinate: { x: -17.066, y: 25.776 },
+    startingPanoFrame: 70,
+    panoFrames: [70],
+        viewYawOffsetDegrees: 80,
   },
   {
     id: "pet-park",
     name: "Pet Park",
-    coordinate: { x: -63.215, y: 43.936 },
+    coordinate: { x: -63.215, y: 50.936 },
     startingPanoFrame: 167,
     panoFrames: [167],
+    viewYawOffsetDegrees: 280,
   },
   {
     id: "fountain-and-mosaic-trees",
     name: "Fountain and Mosaic Trees",
-    coordinate: { x: -84.806, y: 87.687 },
+    coordinate: { x: -105.806, y: 93.687 },
     startingPanoFrame: 202,
     panoFrames: [202],
+    viewYawOffsetDegrees: 150,
   },
   {
     id: "butterfly-garden",
@@ -143,5 +158,6 @@ export const EXTERIOR_MINIMAP_LOCATIONS: ExteriorMinimapLocation[] = [
     exteriorAmenityId: "butterfly-garden",
     startingPanoFrame: 210,
     panoFrames: [210],
+        viewYawOffsetDegrees: 300,
   },
 ];

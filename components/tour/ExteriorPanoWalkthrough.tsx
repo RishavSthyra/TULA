@@ -44,10 +44,10 @@ import {
   type ExteriorAmenity,
 } from "@/data/exteriorAmenities";
 import {
-  EXTERIOR_MINIMAP_BOUNDS,
   EXTERIOR_MINIMAP_IMAGE_LAYOUT,
   EXTERIOR_MINIMAP_IMAGE_URL,
   EXTERIOR_MINIMAP_LOCATIONS,
+  EXTERIOR_MINIMAP_PROJECTION,
   EXTERIOR_PANO_WORLD_UNITS_PER_METRE,
   type ExteriorMinimapLocation,
 } from "@/data/exteriorMinimap";
@@ -113,15 +113,22 @@ const CACHE_MAX_ITEMS = 320;
 const CACHE_TTL_MS = 1000 * 60 * 10;
 const AUTOROTATE_IDLE_MS = 4000;
 const TRAIL_ADVANCE_MS = 15000;
-const DIRECTIONS: NavigationDirection[] = ["forward", "left", "right", "backward"];
-const VIEW_DIRECTION_ALIGNMENT_FLOOR = 0.08;
+const DIRECTIONS: NavigationDirection[] = [
+  "forward",
+  "left",
+  "right",
+  "backward",
+];
+// Keep directional arrows inside a forward-facing cone. A low threshold lets
+// a nearby side node beat the node that is actually in front of the viewer.
+const VIEW_DIRECTION_ALIGNMENT_FLOOR = 0.5;
 // Dev pano angle tool is intentionally hard-disabled; keep the JSX below for
 // future tuning without running debug state updates during walkthrough use.
 const EXTERIOR_PANO_DEV_TOOL_ENABLED = false;
 const TRACKPAD_PANO_YAW_RADIANS_PER_PIXEL = 0.0032;
 const EMPTY_IMAGE_DATA_URL =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
-const LOCAL_EXTERIOR_MINIMAP_IMAGE_URL = "/images/exterior-minimap-fallback.jpg";
+const LOCAL_EXTERIOR_MINIMAP_IMAGE_URL = EXTERIOR_MINIMAP_IMAGE_URL;
 // Single calibration value aligning world heading with the minimap image's north.
 const EXTERIOR_MINIMAP_HEADING_OFFSET_DEG = -90;
 const EXTERIOR_COMPACT_MINIMAP_ZOOM = 1.32;
@@ -293,11 +300,7 @@ function getExteriorPreloaderProgress(
 
 function getWheelPixelDelta(event: WheelEvent) {
   const scale =
-    event.deltaMode === 1
-      ? 16
-      : event.deltaMode === 2
-        ? window.innerWidth
-        : 1;
+    event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerWidth : 1;
 
   return {
     x: event.deltaX * scale,
@@ -320,7 +323,9 @@ function scheduleIdle(callback: () => void) {
     };
 
   if (typeof hostWindow.requestIdleCallback === "function") {
-    const id = hostWindow.requestIdleCallback(() => callback(), { timeout: 800 });
+    const id = hostWindow.requestIdleCallback(() => callback(), {
+      timeout: 800,
+    });
     return () => hostWindow.cancelIdleCallback?.(id);
   }
 
@@ -428,7 +433,10 @@ function getViewForwardVector(node: ExteriorTourNode, yaw: number): Vec3 {
   );
 }
 
-function getViewDirectionAxis(direction: NavigationDirection, viewForward: Vec3) {
+function getViewDirectionAxis(
+  direction: NavigationDirection,
+  viewForward: Vec3,
+) {
   switch (direction) {
     case "left":
       return perpendicularRight(viewForward);
@@ -440,41 +448,6 @@ function getViewDirectionAxis(direction: NavigationDirection, viewForward: Vec3)
     default:
       return viewForward;
   }
-}
-
-/**
- * Double-clicking follows the way the visitor is currently looking.  The tour
- * path itself is deliberately sequential, but a visitor who turns around
- * should be able to retrace it without first pressing the on-screen back
- * arrow.
- */
-function getSequentialDirectionForView(
-  graph: ExteriorTourGraph,
-  nodeId: string,
-  currentYaw: number,
-): Extract<NavigationDirection, "forward" | "backward"> {
-  const node = graph.byId[nodeId];
-  if (!node) {
-    return "forward";
-  }
-
-  const { nextId, previousId } = getSequentialNodeIds(graph, nodeId);
-  const viewForward = getViewForwardVector(node, currentYaw);
-  const getAlignment = (targetId: string | null) => {
-    const target = targetId ? graph.byId[targetId] : null;
-    if (!target) {
-      return Number.NEGATIVE_INFINITY;
-    }
-
-    return dotPlanar(
-      normalizePlanar(subVec3(target.rawPosition, node.rawPosition), node.forward),
-      viewForward,
-    );
-  };
-
-  return getAlignment(previousId) > getAlignment(nextId)
-    ? "backward"
-    : "forward";
 }
 
 function getViewDirectionalCandidates(
@@ -504,39 +477,44 @@ function getViewDirectionalCandidates(
   const viewForward = getViewForwardVector(node, currentYaw);
   const axis = getViewDirectionAxis(direction, viewForward);
   const neighborIds = new Set(node.neighbors.map((neighbor) => neighbor.id));
-  const distanceScale = Math.max(graph.medianNearestDistance * 4, node.nearestDistance * 4, 1);
+  const distanceScale = Math.max(
+    graph.medianNearestDistance * 4,
+    node.nearestDistance * 4,
+    1,
+  );
 
   const rankCandidates = (
     candidates: ExteriorTourNode[],
     alignmentFloor: number,
   ) =>
     candidates
-    .map((candidate) => {
-      const delta = subVec3(candidate.rawPosition, node.rawPosition);
-      const candidateDirection = normalizePlanar(delta, axis);
-      const alignment = dotPlanar(candidateDirection, axis);
-      const distance = Math.hypot(delta.x, delta.y);
-      const distanceBias = 1 - clamp(distance / distanceScale, 0, 1);
-      const isNeighbor = neighborIds.has(candidate.id);
-      const neighborBonus = isNeighbor ? 0.7 : 0;
-      const farPenalty = isNeighbor ? 0 : 0.3;
+      .map((candidate) => {
+        const delta = subVec3(candidate.rawPosition, node.rawPosition);
+        const candidateDirection = normalizePlanar(delta, axis);
+        const alignment = dotPlanar(candidateDirection, axis);
+        const distance = Math.hypot(delta.x, delta.y);
+        const distanceBias = 1 - clamp(distance / distanceScale, 0, 1);
+        const isNeighbor = neighborIds.has(candidate.id);
+        const neighborBonus = isNeighbor ? 0.7 : 0;
+        const farPenalty = isNeighbor ? 0 : 0.3;
 
-      return {
-        node: candidate,
-        score: alignment * 1.8 + distanceBias * 0.42 + neighborBonus - farPenalty,
-        alignment,
-        distance,
-      };
-    })
-    .filter((candidate) => candidate.alignment > alignmentFloor)
-    .sort((a, b) => {
-      const scoreDelta = b.score - a.score;
-      if (Math.abs(scoreDelta) > 0.035) {
-        return scoreDelta;
-      }
+        return {
+          node: candidate,
+          score:
+            alignment * 1.8 + distanceBias * 0.42 + neighborBonus - farPenalty,
+          alignment,
+          distance,
+        };
+      })
+      .filter((candidate) => candidate.alignment > alignmentFloor)
+      .sort((a, b) => {
+        const scoreDelta = b.score - a.score;
+        if (Math.abs(scoreDelta) > 0.035) {
+          return scoreDelta;
+        }
 
-      return a.distance - b.distance;
-    });
+        return a.distance - b.distance;
+      });
 
   const neighborCandidates = rankCandidates(
     node.neighbors
@@ -639,16 +617,7 @@ const AmenityCard = forwardRef<
     onClick: () => void;
     compact?: boolean;
   }
->(function AmenityCard(
-  {
-    amenity,
-    imageSrc,
-    isActive,
-    onClick,
-    compact,
-  },
-  ref,
-) {
+>(function AmenityCard({ amenity, imageSrc, isActive, onClick, compact }, ref) {
   const isCompact = compact ?? false;
 
   return (
@@ -787,8 +756,14 @@ function ExteriorMinimapGraphic({
       ? signedMinimapImageUrl
       : fallbackMinimapImageUrl;
   const isCompact = variant === "compact";
-  const compactTranslateX = (0.5 - activeMinimapPoint.leftPercent) * 100;
-  const compactTranslateY = (0.5 - activeMinimapPoint.topPercent) * 100;
+  const compactTranslateX =
+    (0.5 - activeMinimapPoint.leftPercent) *
+    100 *
+    EXTERIOR_COMPACT_MINIMAP_ZOOM;
+  const compactTranslateY =
+    (0.5 - activeMinimapPoint.topPercent) *
+    100 *
+    EXTERIOR_COMPACT_MINIMAP_ZOOM;
 
   const mapContents = (
     <div className="relative h-full w-full overflow-hidden bg-[#101612]">
@@ -803,41 +778,45 @@ function ExteriorMinimapGraphic({
         className="pointer-events-none absolute inset-0 block h-full w-full select-none object-cover brightness-[0.78] contrast-[1.08] saturate-[0.78]"
       />
 
-      {minimapDots.map((marker) => (
-        <button
-          key={marker.id}
-          type="button"
-          aria-label={
-            marker.amenity
-              ? `Go to ${marker.name}`
-              : `${marker.name} location`
-          }
-          title={marker.name}
-          tabIndex={isCompact ? -1 : 0}
-          disabled={!marker.amenity}
-          onClick={(event) => {
-            event.stopPropagation();
-            if (!isCompact && marker.amenity) {
-              void jumpToAmenity(marker.amenity);
-            }
-          }}
-          className={`group absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border transition ${
-            isCompact
-              ? "pointer-events-none"
-              : marker.amenity
-                ? "hover:scale-110"
-                : "cursor-default"
-          } ${
-            activeAmenityId === marker.id
-              ? "border-white/90 bg-[#8bd3a7] shadow-[0_0_0_3px_rgba(120,201,149,0.2),0_0_12px_rgba(120,201,149,0.34)]"
-              : "border-white/76 bg-white/82 shadow-[0_0_0_2px_rgba(0,0,0,0.18)]"
-          }`}
+      {!isCompact
+        ? minimapDots.map((marker) => (
+            <button
+              key={marker.id}
+              type="button"
+              aria-label={`Go to ${marker.name}`}
+              title={marker.name}
+              disabled={!marker.amenity}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (marker.amenity) {
+                  void jumpToAmenity(marker.amenity);
+                }
+              }}
+              className={`group absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border transition ${
+                marker.amenity ? "hover:scale-110" : "cursor-default"
+              } ${
+                activeAmenityId === marker.id
+                  ? "border-white/90 bg-[#d7b878] shadow-[0_0_0_3px_rgba(215,184,120,0.2),0_0_12px_rgba(215,184,120,0.34)]"
+                  : "border-white/76 bg-white/82 shadow-[0_0_0_2px_rgba(0,0,0,0.18)]"
+              }`}
+              style={{
+                left: `${marker.leftPercent * 100}%`,
+                top: `${marker.topPercent * 100}%`,
+              }}
+            />
+          ))
+        : null}
+
+      {!isCompact ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute z-20 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/95 bg-[#78e89a] shadow-[0_0_0_5px_rgba(39,119,62,0.3),0_0_18px_rgba(134,243,169,0.95)]"
           style={{
-            left: `${marker.leftPercent * 100}%`,
-            top: `${marker.topPercent * 100}%`,
+            left: `${activeMinimapPoint.leftPercent * 100}%`,
+            top: `${activeMinimapPoint.topPercent * 100}%`,
           }}
         />
-      ))}
+      ) : null}
     </div>
   );
 
@@ -955,7 +934,9 @@ function ExteriorMinimapPanel({
 }) {
   if (!isExpanded) {
     return (
-      <div className={`${uiFont.className} relative text-white ${className ?? ""}`}>
+      <div
+        className={`${uiFont.className} relative text-white ${className ?? ""}`}
+      >
         <div className="relative ml-auto w-fit">
           <ExteriorMinimapGraphic
             variant="compact"
@@ -993,12 +974,16 @@ function ExteriorMinimapPanel({
       className={`relative overflow-hidden rounded-[1.85rem] ${PREMIUM_PANEL_SURFACE} ${className ?? ""}`}
     >
       <div className="relative z-10">
-        <div className={`${uiFont.className} flex items-start justify-between gap-3 px-4 pb-3 pt-4 text-white`}>
+        <div
+          className={`${uiFont.className} flex items-start justify-between gap-3 px-4 pb-3 pt-4 text-white`}
+        >
           <div className="min-w-0">
             <div className="truncate text-[10px] font-bold uppercase tracking-[0.26em] text-white/62">
               Amenity Map
             </div>
-            <div className={`${editorialFont.className} mt-1 text-[1.55rem] leading-none text-white`}>
+            <div
+              className={`${editorialFont.className} mt-1 text-[1.55rem] leading-none text-white`}
+            >
               Exterior Route
             </div>
           </div>
@@ -1110,7 +1095,7 @@ export default function ExteriorPanoWalkthrough({
             roll: primaryNode.roll,
             facingAxis: primaryNode.facingAxis,
             angle: primaryNode.yaw,
-            viewYaw: primaryNode.yaw,
+            viewYaw: primaryNode.yaw + (location.viewYawOffsetDegrees ?? 0),
             viewPitch: primaryNode.pitch,
           },
           coordinate: {
@@ -1154,10 +1139,16 @@ export default function ExteriorPanoWalkthrough({
   const [minimapOffset, setMinimapOffset] = useState({ x: 0, y: 0 });
   const [isMinimapDragging, setIsMinimapDragging] = useState(false);
   const [isAppleTouchFallbackMode] = useState(false);
-  const [fallbackPreviewUrl, setFallbackPreviewUrl] = useState<string | null>(null);
-  const [previewOverlayUrl, setPreviewOverlayUrl] = useState<string | null>(null);
+  const [fallbackPreviewUrl, setFallbackPreviewUrl] = useState<string | null>(
+    null,
+  );
+  const [previewOverlayUrl, setPreviewOverlayUrl] = useState<string | null>(
+    null,
+  );
   const [isPreviewOverlayVisible, setIsPreviewOverlayVisible] = useState(false);
-  const [copiedDebugPanoId, setCopiedDebugPanoId] = useState<string | null>(null);
+  const [copiedDebugPanoId, setCopiedDebugPanoId] = useState<string | null>(
+    null,
+  );
   const [copiedDebugSnippetPanoId, setCopiedDebugSnippetPanoId] = useState<
     string | null
   >(null);
@@ -1178,7 +1169,10 @@ export default function ExteriorPanoWalkthrough({
     dragging: false,
   });
 
-  const assetStore = useMemo(() => new PanoAssetStore(cdnBaseUrl), [cdnBaseUrl]);
+  const assetStore = useMemo(
+    () => new PanoAssetStore(cdnBaseUrl),
+    [cdnBaseUrl],
+  );
   const walkthroughRootRef = useRef<HTMLElement | null>(null);
   const viewerHostRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<Viewer | null>(null);
@@ -1205,7 +1199,9 @@ export default function ExteriorPanoWalkthrough({
   });
   const cacheRef = useRef(new Map<string, ResolvedPano>());
   const availabilityRef = useRef(new Map<string, "available" | "missing">());
-  const availabilityPromiseRef = useRef(new Map<string, Promise<ResolvedPano>>());
+  const availabilityPromiseRef = useRef(
+    new Map<string, Promise<ResolvedPano>>(),
+  );
   const viewRef = useRef<ViewSnapshot>({
     yaw: 0,
     pitch: 0,
@@ -1218,9 +1214,9 @@ export default function ExteriorPanoWalkthrough({
   const fallbackPreviewLoadIdRef = useRef(0);
   const previewOverlayLoadIdRef = useRef(0);
   const warmupRunIdRef = useRef(0);
-  const previewOverlayHideTimeoutRef = useRef<
-    ReturnType<typeof globalThis.setTimeout> | null
-  >(null);
+  const previewOverlayHideTimeoutRef = useRef<ReturnType<
+    typeof globalThis.setTimeout
+  > | null>(null);
   const flythroughRunIdRef = useRef(0);
   const flythroughPhaseRef = useRef<FlythroughPhase>("idle");
   const prefersReducedMotionRef = useRef(false);
@@ -1285,41 +1281,18 @@ export default function ExteriorPanoWalkthrough({
   });
   const projectMinimapPoint = useCallback(
     (coordinate: { x: number; y: number }) => {
-      const horizontal = {
-        x:
-          EXTERIOR_MINIMAP_BOUNDS.topRight.x -
-          EXTERIOR_MINIMAP_BOUNDS.topLeft.x,
-        y:
-          EXTERIOR_MINIMAP_BOUNDS.topRight.y -
-          EXTERIOR_MINIMAP_BOUNDS.topLeft.y,
-      };
-      const vertical = {
-        x:
-          EXTERIOR_MINIMAP_BOUNDS.bottomRight.x -
-          EXTERIOR_MINIMAP_BOUNDS.topRight.x,
-        y:
-          EXTERIOR_MINIMAP_BOUNDS.bottomRight.y -
-          EXTERIOR_MINIMAP_BOUNDS.topRight.y,
-      };
-      const delta = {
-        x: coordinate.x - EXTERIOR_MINIMAP_BOUNDS.topLeft.x,
-        y: coordinate.y - EXTERIOR_MINIMAP_BOUNDS.topLeft.y,
-      };
-      const determinant =
-        horizontal.x * vertical.y - horizontal.y * vertical.x;
-
-      if (Math.abs(determinant) < Number.EPSILON) {
-        return { leftPercent: 0.5, topPercent: 0.5 };
-      }
-
       return {
         leftPercent: clamp(
-          (delta.x * vertical.y - delta.y * vertical.x) / determinant,
+          coordinate.x * EXTERIOR_MINIMAP_PROJECTION.left.x +
+            coordinate.y * EXTERIOR_MINIMAP_PROJECTION.left.y +
+            EXTERIOR_MINIMAP_PROJECTION.left.offset,
           0,
           1,
         ),
         topPercent: clamp(
-          (horizontal.x * delta.y - horizontal.y * delta.x) / determinant,
+          coordinate.x * EXTERIOR_MINIMAP_PROJECTION.top.x +
+            coordinate.y * EXTERIOR_MINIMAP_PROJECTION.top.y +
+            EXTERIOR_MINIMAP_PROJECTION.top.offset,
           0,
           1,
         ),
@@ -1328,6 +1301,10 @@ export default function ExteriorPanoWalkthrough({
     [],
   );
   const activeMinimapPoint = useMemo<MinimapPoint>(() => {
+    if (activeAmenity) {
+      return projectMinimapPoint(activeAmenity.coordinate);
+    }
+
     if (!activeNode) {
       return { leftPercent: 0.5, topPercent: 0.5 };
     }
@@ -1336,7 +1313,7 @@ export default function ExteriorPanoWalkthrough({
       x: activeNode.rawPosition.x / EXTERIOR_PANO_WORLD_UNITS_PER_METRE,
       y: -activeNode.rawPosition.y / EXTERIOR_PANO_WORLD_UNITS_PER_METRE,
     });
-  }, [activeNode, projectMinimapPoint]);
+  }, [activeAmenity, activeNode, projectMinimapPoint]);
   const updateMinimapHeading = useCallback(
     (yaw: number) => {
       const node = graph.byId[activeNodeIdRef.current];
@@ -1404,9 +1381,10 @@ export default function ExteriorPanoWalkthrough({
   const exteriorMenuViewportHeightWithBuffer = exteriorMenuViewportHeight
     ? Math.ceil(exteriorMenuViewportHeight) + 16
     : null;
-  const mobileExteriorMenuViewportHeightWithBuffer = mobileExteriorMenuViewportHeight
-    ? Math.ceil(mobileExteriorMenuViewportHeight) + 16
-    : null;
+  const mobileExteriorMenuViewportHeightWithBuffer =
+    mobileExteriorMenuViewportHeight
+      ? Math.ceil(mobileExteriorMenuViewportHeight) + 16
+      : null;
   const openMinimapExpanded = useCallback(() => {
     setIsMinimapExpanded(true);
   }, []);
@@ -1475,21 +1453,24 @@ export default function ExteriorPanoWalkthrough({
     };
   }, []);
 
-  const hidePreviewOverlay = useCallback((delay = IOS_PREVIEW_OVERLAY_FADE_MS) => {
-    if (flythroughPhaseRef.current !== "idle") {
-      return;
-    }
+  const hidePreviewOverlay = useCallback(
+    (delay = IOS_PREVIEW_OVERLAY_FADE_MS) => {
+      if (flythroughPhaseRef.current !== "idle") {
+        return;
+      }
 
-    if (previewOverlayHideTimeoutRef.current !== null) {
-      globalThis.clearTimeout(previewOverlayHideTimeoutRef.current);
-      previewOverlayHideTimeoutRef.current = null;
-    }
+      if (previewOverlayHideTimeoutRef.current !== null) {
+        globalThis.clearTimeout(previewOverlayHideTimeoutRef.current);
+        previewOverlayHideTimeoutRef.current = null;
+      }
 
-    previewOverlayHideTimeoutRef.current = globalThis.setTimeout(() => {
-      setIsPreviewOverlayVisible(false);
-      previewOverlayHideTimeoutRef.current = null;
-    }, delay);
-  }, []);
+      previewOverlayHideTimeoutRef.current = globalThis.setTimeout(() => {
+        setIsPreviewOverlayVisible(false);
+        previewOverlayHideTimeoutRef.current = null;
+      }, delay);
+    },
+    [],
+  );
 
   const preparePreviewOverlay = useCallback(
     async (previewUrl: string | null | undefined) => {
@@ -1590,7 +1571,11 @@ export default function ExteriorPanoWalkthrough({
           previewFile = meta.preview;
         }
 
-        const previewUrl = getResolvedPreviewUrl(node.panoId, cdnBaseUrl, previewFile);
+        const previewUrl = getResolvedPreviewUrl(
+          node.panoId,
+          cdnBaseUrl,
+          previewFile,
+        );
 
         try {
           signedPreviewUrl = await assetStore.preloadPreview(
@@ -1602,7 +1587,10 @@ export default function ExteriorPanoWalkthrough({
           if (!meta) {
             throw error;
           }
-          console.warn(`Exterior preview warmup failed for ${node.panoId}`, error);
+          console.warn(
+            `Exterior preview warmup failed for ${node.panoId}`,
+            error,
+          );
         }
 
         if (!signedPreviewUrl) {
@@ -1686,10 +1674,7 @@ export default function ExteriorPanoWalkthrough({
   }, []);
 
   const preloadNodePreview = useCallback(
-    async (
-      nodeId: string,
-      fetchPriority: "high" | "low" | "auto" = "high",
-    ) => {
+    async (nodeId: string, fetchPriority: "high" | "low" | "auto" = "high") => {
       const cached = cacheRef.current.get(nodeId);
       if (cached?.previewUrl) {
         await assetStore.preloadImage(cached.previewUrl, fetchPriority);
@@ -1709,11 +1694,7 @@ export default function ExteriorPanoWalkthrough({
         // The preview can still be available when metadata is temporarily unavailable.
       }
 
-      return assetStore.preloadPreview(
-        node.panoId,
-        previewFile,
-        fetchPriority,
-      );
+      return assetStore.preloadPreview(node.panoId, previewFile, fetchPriority);
     },
     [assetStore, graph],
   );
@@ -1900,10 +1881,14 @@ export default function ExteriorPanoWalkthrough({
       );
       const initialYawDegrees = initialAmenity
         ? initialAmenity.startingPano.viewYaw
-        : initialNode?.yaw ?? 0;
+        : (initialNode?.yaw ?? 0);
       const initialYaw = degToRad(initialYawDegrees + initialYawOffsetDegrees);
       const initialPitch = initialAmenity
-        ? clamp(degToRad(initialAmenity.startingPano.viewPitch), MIN_PITCH, MAX_PITCH)
+        ? clamp(
+            degToRad(initialAmenity.startingPano.viewPitch),
+            MIN_PITCH,
+            MAX_PITCH,
+          )
         : initialNode
           ? clamp(degToRad(initialNode.pitch), MIN_PITCH, MAX_PITCH)
           : 0;
@@ -1971,7 +1956,11 @@ export default function ExteriorPanoWalkthrough({
 
       localViewer.addEventListener("load-progress", ({ progress }) => {
         setLoadState(
-          createLoadState("detail", "Streaming tiles", clamp(progress / 100, 0, 1)),
+          createLoadState(
+            "detail",
+            "Streaming tiles",
+            clamp(progress / 100, 0, 1),
+          ),
         );
       });
 
@@ -1988,7 +1977,11 @@ export default function ExteriorPanoWalkthrough({
       localViewer.addEventListener("panorama-error", ({ error }) => {
         console.error("Exterior panorama error:", error);
         localViewer?.hideError();
-        if (!retriedInitialPreviewImage && initialPreviewFallback && localViewer) {
+        if (
+          !retriedInitialPreviewImage &&
+          initialPreviewFallback &&
+          localViewer
+        ) {
           retriedInitialPreviewImage = true;
           setLoadState(createLoadState("preview", "Retrying panorama"));
           void localViewer
@@ -2001,7 +1994,10 @@ export default function ExteriorPanoWalkthrough({
               showLoader: false,
             })
             .catch((fallbackError) => {
-              console.error("Exterior initial preview fallback failed:", fallbackError);
+              console.error(
+                "Exterior initial preview fallback failed:",
+                fallbackError,
+              );
               localViewer?.hideError();
               hidePreviewOverlay(0);
               setLoadState(createLoadState("error", "Panorama unavailable"));
@@ -2087,14 +2083,17 @@ export default function ExteriorPanoWalkthrough({
 
     const runId = startWarmupRun();
     let cancelled = false;
-    const shouldContinue = () =>
-      !cancelled && warmupRunIdRef.current === runId;
+    const shouldContinue = () => !cancelled && warmupRunIdRef.current === runId;
 
     const cancelIdle = scheduleIdle(() => {
       void (async () => {
         try {
-          const warmupProfile = getWarmupProfile(isCompactExperienceRef.current);
-          const resolved = await resolvePano(activeNode.id, { previewPriority: "high" });
+          const warmupProfile = getWarmupProfile(
+            isCompactExperienceRef.current,
+          );
+          const resolved = await resolvePano(activeNode.id, {
+            previewPriority: "high",
+          });
           if (!shouldContinue()) {
             return;
           }
@@ -2176,7 +2175,13 @@ export default function ExteriorPanoWalkthrough({
             await preloadResolvedFocusTiles(
               neighborResolved,
               {
-                yaw: neighbor ? degToRad(neighbor.yaw) : 0,
+                yaw: neighbor
+                  ? preserveViewYawBetweenNodes(
+                      activeNode,
+                      neighbor,
+                      viewRef.current.yaw,
+                    )
+                  : 0,
                 pitch: neighbor
                   ? clamp(degToRad(neighbor.pitch), MIN_PITCH, MAX_PITCH)
                   : 0,
@@ -2306,7 +2311,9 @@ export default function ExteriorPanoWalkthrough({
         let flythroughRunId: number | null = null;
 
         try {
-          const target = await resolvePano(targetId, { previewPriority: "high" });
+          const target = await resolvePano(targetId, {
+            previewPriority: "high",
+          });
           if (isAppleTouchFallbackMode) {
             await preparePreviewOverlay(target.previewUrl);
           }
@@ -2370,7 +2377,9 @@ export default function ExteriorPanoWalkthrough({
               )
             : degToRad(options.viewYawDegrees);
 
-        const targetPromise = resolvePano(targetId, { previewPriority: "high" });
+        const targetPromise = resolvePano(targetId, {
+          previewPriority: "high",
+        });
         await preloadNodePreview(targetId, "high").catch(() => null);
 
         const target = await targetPromise;
@@ -2405,7 +2414,10 @@ export default function ExteriorPanoWalkthrough({
         } as const;
         let completed: boolean | void;
         try {
-          completed = await viewer.setPanorama(target.panorama, panoramaOptions);
+          completed = await viewer.setPanorama(
+            target.panorama,
+            panoramaOptions,
+          );
         } catch (previewTransitionError) {
           const fallbackPanorama = buildPreviewOnlyFallback(
             target.panorama,
@@ -2414,7 +2426,10 @@ export default function ExteriorPanoWalkthrough({
           if (!fallbackPanorama) {
             throw previewTransitionError;
           }
-          completed = await viewer.setPanorama(fallbackPanorama, panoramaOptions);
+          completed = await viewer.setPanorama(
+            fallbackPanorama,
+            panoramaOptions,
+          );
         }
 
         if (completed !== false) {
@@ -2469,12 +2484,15 @@ export default function ExteriorPanoWalkthrough({
   );
 
   const jumpToAmenity = useCallback(
-    (amenity: ExteriorAmenity) =>
-      jumpToNode(amenity.startingPano.nodeId, {
+    (amenity: ExteriorAmenity) => {
+      setIsTrailPlaying(false);
+
+      return jumpToNode(amenity.startingPano.nodeId, {
         viewYawDegrees: amenity.startingPano.viewYaw,
         viewPitchDegrees: amenity.startingPano.viewPitch,
         viewZoom: amenity.startingPano.viewZoom,
-      }),
+      });
+    },
     [jumpToNode],
   );
 
@@ -2500,10 +2518,19 @@ export default function ExteriorPanoWalkthrough({
       const bounds = event.currentTarget.getBoundingClientRect();
 
       setMinimapZoom((current) => {
-        const nextZoom = clamp(current + (event.deltaY < 0 ? 0.18 : -0.18), 1, 3.2);
+        const nextZoom = clamp(
+          current + (event.deltaY < 0 ? 0.18 : -0.18),
+          1,
+          3.2,
+        );
 
         setMinimapOffset((currentOffset) =>
-          clampMinimapOffset(currentOffset, bounds.width, bounds.height, nextZoom),
+          clampMinimapOffset(
+            currentOffset,
+            bounds.width,
+            bounds.height,
+            nextZoom,
+          ),
         );
 
         return nextZoom;
@@ -2585,10 +2612,15 @@ export default function ExteriorPanoWalkthrough({
   );
 
   const navigateTo = useCallback(
-    async (direction: NavigationDirection) => {
+    async (
+      direction: NavigationDirection,
+      options: { primeTargetTiles?: boolean } = {},
+    ) => {
       if (isTransitioning || navigationLockRef.current) {
         return;
       }
+
+      setIsTrailPlaying(false);
 
       const viewer = viewerRef.current;
       const fromNode = graph.byId[activeNodeIdRef.current];
@@ -2651,7 +2683,9 @@ export default function ExteriorPanoWalkthrough({
           }
 
           if (!navigated) {
-            throw new Error(`No available pano found for direction ${direction}`);
+            throw new Error(
+              `No available pano found for direction ${direction}`,
+            );
           }
         } catch (error) {
           console.error("Exterior navigation failed:", error);
@@ -2675,7 +2709,7 @@ export default function ExteriorPanoWalkthrough({
       autorotatePluginRef.current?.stop();
       setIsTransitioning(true);
       setLoadState(createLoadState("preview", "Switching panorama"));
- 
+
       const currentPosition = viewer.getPosition();
 
       try {
@@ -2718,19 +2752,28 @@ export default function ExteriorPanoWalkthrough({
           }
 
           const targetWarmupRunId = startWarmupRun();
-          flythroughRunId = await beginFlythrough(false);
-          void preloadResolvedFocusTiles(
+          const targetTileWarmup = preloadResolvedFocusTiles(
             target,
             {
               yaw: targetYaw,
               pitch: targetPitch,
               zoom: targetZoom,
             },
-            warmupProfile.activeFocusLimit,
+            options.primeTargetTiles
+              ? Math.min(warmupProfile.activeFocusLimit, 8)
+              : warmupProfile.activeFocusLimit,
             warmupProfile.activeFocusConcurrency,
             "high",
             targetWarmupRunId,
           );
+
+          if (options.primeTargetTiles) {
+            await targetTileWarmup.catch(() => undefined);
+          } else {
+            void targetTileWarmup.catch(() => undefined);
+          }
+
+          flythroughRunId = await beginFlythrough(false);
 
           try {
             const panoramaOptions = {
@@ -2748,7 +2791,10 @@ export default function ExteriorPanoWalkthrough({
               },
               showLoader: false,
             } as const;
-            const completed = await viewer.setPanorama(target.panorama, panoramaOptions);
+            const completed = await viewer.setPanorama(
+              target.panorama,
+              panoramaOptions,
+            );
 
             if (completed === false) {
               cancelFlythrough();
@@ -2885,18 +2931,11 @@ export default function ExteriorPanoWalkthrough({
       return;
     }
 
-    const getTapDirection = () =>
-      getSequentialDirectionForView(
-        graph,
-        activeNodeIdRef.current,
-        viewerRef.current?.getPosition().yaw ?? viewRef.current.yaw,
-      );
-
     const handleDoubleClick = (event: MouseEvent) => {
       event.preventDefault();
       event.stopPropagation();
 
-      void navigateTo(getTapDirection());
+      void navigateTo("forward", { primeTargetTiles: true });
     };
 
     const handlePointerDown = (event: PointerEvent) => {
@@ -2930,12 +2969,14 @@ export default function ExteriorPanoWalkthrough({
         return;
       }
 
-      const direction = getTapDirection();
+      const direction: NavigationDirection = "forward";
       const now = performance.now();
       const isDoubleTap =
         now - tapState.lastTapAt < 320 &&
-        Math.hypot(event.clientX - tapState.lastTapX, event.clientY - tapState.lastTapY) <
-          34 &&
+        Math.hypot(
+          event.clientX - tapState.lastTapX,
+          event.clientY - tapState.lastTapY,
+        ) < 34 &&
         tapState.lastDirection === direction;
 
       tapState.lastTapAt = now;
@@ -2947,7 +2988,7 @@ export default function ExteriorPanoWalkthrough({
         event.preventDefault();
         event.stopPropagation();
         tapState.lastTapAt = 0;
-        void navigateTo(direction);
+        void navigateTo(direction, { primeTargetTiles: true });
       }
     };
 
@@ -2960,7 +3001,7 @@ export default function ExteriorPanoWalkthrough({
       host.removeEventListener("pointerdown", handlePointerDown);
       host.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [graph, navigateTo]);
+  }, [navigateTo]);
 
   useEffect(() => {
     const host = viewerHostRef.current;
@@ -2996,8 +3037,7 @@ export default function ExteriorPanoWalkthrough({
       const position = viewer.getPosition();
       const nextView = {
         yaw: wrapAngleRad(
-          position.yaw +
-            horizontalDelta * TRACKPAD_PANO_YAW_RADIANS_PER_PIXEL,
+          position.yaw + horizontalDelta * TRACKPAD_PANO_YAW_RADIANS_PER_PIXEL,
         ),
         pitch: position.pitch,
         zoom: viewer.getZoomLevel(),
@@ -3028,7 +3068,12 @@ export default function ExteriorPanoWalkthrough({
   }, []);
 
   useEffect(() => {
-    if (!isTrailPlaying || !activeNode || graph.order.length < 2 || isTransitioning) {
+    if (
+      !isTrailPlaying ||
+      !activeNode ||
+      graph.order.length < 2 ||
+      isTransitioning
+    ) {
       if (!isTrailPlaying) {
         resetTrailProgress();
       }
@@ -3124,23 +3169,27 @@ export default function ExteriorPanoWalkthrough({
     }
 
     resetTrailProgress();
-    void jumpToNode(previousNodeId, { recordHistory: false }).then((completed) => {
-      if (!completed) {
-        return;
-      }
+    void jumpToNode(previousNodeId, { recordHistory: false }).then(
+      (completed) => {
+        if (!completed) {
+          return;
+        }
 
-      const latestNodeId = nodeHistoryRef.current.at(-1);
-      if (latestNodeId === previousNodeId) {
-        nodeHistoryRef.current.pop();
-        setHistoryDepth(nodeHistoryRef.current.length);
-      }
-    });
+        const latestNodeId = nodeHistoryRef.current.at(-1);
+        if (latestNodeId === previousNodeId) {
+          nodeHistoryRef.current.pop();
+          setHistoryDepth(nodeHistoryRef.current.length);
+        }
+      },
+    );
   }, [historyDepth, isTransitioning, jumpToNode, resetTrailProgress]);
 
   const liveDebugYawDegrees = roundDebugDegrees(
     radToDeg(wrapAngleRad(liveDebugView.yaw)),
   );
-  const liveDebugPitchDegrees = roundDebugDegrees(radToDeg(liveDebugView.pitch));
+  const liveDebugPitchDegrees = roundDebugDegrees(
+    radToDeg(liveDebugView.pitch),
+  );
   const liveDebugSnippet = useMemo(() => {
     if (!activeNode) {
       return "";
@@ -3200,9 +3249,7 @@ export default function ExteriorPanoWalkthrough({
     opacity: isPreviewOverlayVisible ? 1 : 0,
     transitionProperty: "opacity",
     transitionDuration: `${
-      reduceFlythroughMotion
-        ? REDUCED_MOTION_CROSSFADE_MS
-        : PANO_TRANSITION_MS
+      reduceFlythroughMotion ? REDUCED_MOTION_CROSSFADE_MS : PANO_TRANSITION_MS
     }ms`,
     transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
     willChange: flythroughPhase === "idle" ? "auto" : "opacity",
@@ -3232,7 +3279,10 @@ export default function ExteriorPanoWalkthrough({
       <div className="sr-only">{subtitle}</div>
 
       <div className="absolute inset-0 overflow-hidden rounded-none md:rounded-[2.25rem]">
-        <div className="absolute inset-0" data-flythrough-phase={flythroughPhase}>
+        <div
+          className="absolute inset-0"
+          data-flythrough-phase={flythroughPhase}
+        >
           {fallbackPreviewUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -3308,13 +3358,19 @@ export default function ExteriorPanoWalkthrough({
           <div>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className={`${uiFont.className} text-[10px] uppercase tracking-[0.32em] text-white/62`}>
+                <div
+                  className={`${uiFont.className} text-[10px] uppercase tracking-[0.32em] text-white/62`}
+                >
                   Amenities
                 </div>
-                <div className={`${editorialFont.className} mt-2 text-[2rem] leading-none text-white`}>
+                <div
+                  className={`${editorialFont.className} mt-2 text-[2rem] leading-none text-white`}
+                >
                   Walkthrough Stops
                 </div>
-                <div className={`${uiFont.className} mt-2 max-w-[14rem] truncate text-xs font-semibold uppercase tracking-[0.18em] text-white/58 xl:hidden`}>
+                <div
+                  className={`${uiFont.className} mt-2 max-w-[14rem] truncate text-xs font-semibold uppercase tracking-[0.18em] text-white/58 xl:hidden`}
+                >
                   {activeAmenity?.name ?? "Exterior Trail"}
                 </div>
               </div>
@@ -3329,7 +3385,9 @@ export default function ExteriorPanoWalkthrough({
               </button>
             </div>
 
-            <div className={`${uiFont.className} mt-3 text-sm leading-6 text-white/72`}>
+            <div
+              className={`${uiFont.className} mt-3 text-sm leading-6 text-white/72`}
+            >
               Tap any amenity to jump into its exterior panorama.
             </div>
           </div>
@@ -3346,10 +3404,7 @@ export default function ExteriorPanoWalkthrough({
                 : undefined
             }
           >
-            <div
-              ref={setMobileExteriorMenuListNode}
-              className="space-y-3 pb-3"
-            >
+            <div ref={setMobileExteriorMenuListNode} className="space-y-3 pb-3">
               {visibleExteriorAmenities.map((amenity, index) => (
                 <AmenityCard
                   key={amenity.id}
@@ -3365,9 +3420,7 @@ export default function ExteriorPanoWalkthrough({
                     void jumpToAmenity(amenity);
                   }}
                   ref={
-                    index === 0
-                      ? setMobileExteriorMenuFirstItemNode
-                      : undefined
+                    index === 0 ? setMobileExteriorMenuFirstItemNode : undefined
                   }
                 />
               ))}
@@ -3386,10 +3439,7 @@ export default function ExteriorPanoWalkthrough({
                 : undefined
             }
           >
-            <div
-              ref={setExteriorMenuListNode}
-              className="space-y-3 pb-3"
-            >
+            <div ref={setExteriorMenuListNode} className="space-y-3 pb-3">
               {visibleExteriorAmenities.map((amenity, index) => (
                 <AmenityCard
                   key={amenity.id}
@@ -3404,11 +3454,7 @@ export default function ExteriorPanoWalkthrough({
                     setIsMobileAmenitiesOpen(false);
                     void jumpToAmenity(amenity);
                   }}
-                  ref={
-                    index === 0
-                      ? setExteriorMenuFirstItemNode
-                      : undefined
-                  }
+                  ref={index === 0 ? setExteriorMenuFirstItemNode : undefined}
                 />
               ))}
             </div>
@@ -3417,7 +3463,9 @@ export default function ExteriorPanoWalkthrough({
       </div>
 
       <div className="pointer-events-auto absolute right-3 top-1/2 z-20 -translate-y-1/2 sm:right-5">
-        <div className={`walkthrough-direction-rail flex flex-col items-center gap-1.5 rounded-full p-1.5 sm:gap-2 sm:p-2 ${PREMIUM_PANEL_SURFACE}`}>
+        <div
+          className={`walkthrough-direction-rail flex flex-col items-center gap-1.5 rounded-full p-1.5 sm:gap-2 sm:p-2 ${PREMIUM_PANEL_SURFACE}`}
+        >
           <ArrowButton
             icon={ArrowUp}
             label="Move forward"
@@ -3474,7 +3522,9 @@ export default function ExteriorPanoWalkthrough({
                 ) : (
                   <Clipboard className="h-3.5 w-3.5" />
                 )}
-                {copiedDebugSnippetPanoId === activeNode.panoId ? "Copied" : "Copy"}
+                {copiedDebugSnippetPanoId === activeNode.panoId
+                  ? "Copied"
+                  : "Copy"}
               </button>
             </div>
 
@@ -3524,9 +3574,7 @@ export default function ExteriorPanoWalkthrough({
         </div>
       ) : null}
 
-      <div
-        className="pointer-events-none absolute bottom-[5.25rem] left-5 z-30 hidden w-[19rem] xl:block 2xl:left-7 2xl:w-[20rem]"
-      >
+      <div className="pointer-events-none absolute bottom-[5.25rem] left-5 z-30 hidden w-[19rem] xl:block 2xl:left-7 2xl:w-[20rem]">
         <CurrentAmenityPanel
           name={activeAmenity?.name ?? "Exterior Trail"}
           description={activeAmenityDescription}

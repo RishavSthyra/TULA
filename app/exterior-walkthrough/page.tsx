@@ -43,7 +43,7 @@ function ExteriorWalkthroughHead({ initialPreviewKey }: { initialPreviewKey?: st
       <link
         rel="preload"
         as="image"
-        href="https://cdn.sthyra.com/TULA/Images/Whisper_of_Tree_Logo_Gold%201_01.png"
+        href="https://cdn.sthyra.com/TULA/Images/Gold%20Logo%20Compressed.avif"
         fetchPriority="high"
       />
       {initialPreviewUrl ? <link
@@ -90,7 +90,6 @@ export default async function ExteriorTourPage() {
           className="h-full w-full rounded-none"
           title={exterior.title}
           subtitle={exterior.subtitle}
-          forceSequentialForwardBack
         />
       </div>
     </main>

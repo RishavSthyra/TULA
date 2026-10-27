@@ -4,7 +4,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import PreloaderCornerLogo from "@/components/ui/PreloaderCornerLogo";
 
 const TULA_LOGO_URL =
-  "https://cdn.sthyra.com/TULA/Images/Whisper_of_Tree_Logo_Gold%201_01.png";
+  "https://cdn.sthyra.com/TULA/Images/Gold%20Logo%20Compressed.avif";
 
 type TulaBrandPreloaderProps = {
   progress?: number;
