@@ -422,7 +422,7 @@ const VideoPlayerControls = memo(function VideoPlayerControls({
   ]);
 
   return (
-    <div className="absolute bottom-[12px] left-4 right-4 z-30 grid grid-cols-[48px_minmax(0,1fr)] items-center gap-3 sm:bottom-[17px] sm:left-[34px] sm:right-[38px] sm:grid-cols-[56px_126px_minmax(0,1fr)] sm:gap-4">
+    <div className="pointer-events-auto absolute bottom-[12px] left-4 right-4 z-30 grid grid-cols-[48px_minmax(0,1fr)] items-center gap-3 sm:bottom-[17px] sm:left-[34px] sm:right-[38px] sm:grid-cols-[56px_126px_minmax(0,1fr)] sm:gap-4">
       <button
         type="button"
         onClick={onTogglePlayback}
@@ -830,7 +830,29 @@ export default function AmenitiesPageClient({
       className={`${interfaceSans.className} relative isolate h-[100dvh] min-h-[100dvh] w-full overflow-hidden bg-[#050706] text-white`}
     >
       {/* Full-screen amenity media */}
-      <div className="absolute inset-0" aria-hidden="true">
+      <motion.div
+        key={displayedAmenity.id}
+        className="pointer-events-none absolute inset-0"
+        initial={
+          prefersReducedMotion
+            ? { opacity: 0 }
+            : {
+                opacity: 0,
+                filter: "blur(28px) brightness(0.72)",
+                scale: 1.035,
+              }
+        }
+        animate={{
+          opacity: 1,
+          filter: "blur(0px) brightness(1)",
+          scale: 1,
+        }}
+        transition={{
+          duration: prefersReducedMotion ? 0.18 : 0.78,
+          ease: [0.22, 1, 0.36, 1],
+        }}
+        aria-hidden="true"
+      >
         {hasMediaSource(displayedAmenity.videoSrc) ? (
           <>
             {hasMediaSource(displayedAmenity.thumbnailSrc) ? (
@@ -888,7 +910,7 @@ export default function AmenitiesPageClient({
             </span>
           </div>
         )}
-      </div>
+      </motion.div>
 
       <div
         aria-hidden="true"
@@ -896,52 +918,54 @@ export default function AmenitiesPageClient({
       />
 
       {/* Header */}
-      <motion.header
-        className="absolute left-5 right-5 top-4 z-20 flex min-h-[58px] items-center sm:left-[34px] sm:right-[38px] sm:top-[24px]"
-        initial={false}
-        animate={{
-          opacity: isDeckVisible ? 1 : 0,
-          y: isDeckVisible ? 0 : -118,
-        }}
-        transition={{
-          duration: prefersReducedMotion ? 0.2 : 0.62,
-          ease: [0.22, 1, 0.36, 1],
-        }}
-        style={{
-          pointerEvents: isDeckVisible ? "auto" : "none",
-          willChange: "transform, opacity",
-        }}
-        aria-hidden={!isDeckVisible}
-        inert={!isDeckVisible ? true : undefined}
-      >
-        <button
-          type="button"
-          onClick={() => router.back()}
-          aria-label="Go back"
-          className="inline-flex shrink-0 items-center bg-transparent p-0 transition hover:opacity-90"
+      <header className="pointer-events-none absolute left-5 right-5 top-4 z-20 flex min-h-[58px] items-center sm:left-[34px] sm:right-[38px] sm:top-[24px]">
+        <div className="pointer-events-auto flex items-center">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            aria-label="Go back"
+            className="inline-flex shrink-0 items-center bg-transparent p-0 transition hover:opacity-90"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://cdn.sthyra.com/TULA/Images/Whisper_of_Tree_Logo_Gold%201.avif"
+              alt="Whisper of Trees"
+              width={512}
+              height={220}
+              loading="eager"
+              decoding="async"
+              draggable={false}
+              className="h-[2.75rem] w-auto max-w-[8.5rem] select-none object-contain brightness-0 invert opacity-95 drop-shadow-[0_5px_18px_rgba(0,0,0,0.4)] sm:h-[3.75rem] sm:max-w-[11rem]"
+            />
+          </button>
+
+          <span className="mx-4 h-[40px] w-px bg-[linear-gradient(180deg,transparent,rgba(255,255,255,0.28),transparent)] sm:ml-[26px] sm:mr-[38px] sm:h-[51px]" />
+
+          <span
+            className={`${displaySerif.className} hidden text-[28px] tracking-[0.015em] text-white/92 drop-shadow-[0_4px_18px_rgba(0,0,0,0.5)] sm:block lg:text-[32px]`}
+          >
+            {data.title || "Amenities"}
+          </span>
+        </div>
+
+        <motion.div
+          className="pointer-events-auto ml-auto flex items-center gap-2.5 sm:gap-[13px]"
+          initial={false}
+          animate={{
+            opacity: isDeckVisible ? 1 : 0,
+            y: isDeckVisible ? 0 : -92,
+          }}
+          transition={{
+            duration: prefersReducedMotion ? 0.2 : 0.56,
+            ease: [0.22, 1, 0.36, 1],
+          }}
+          style={{
+            pointerEvents: isDeckVisible ? "auto" : "none",
+            willChange: "transform, opacity",
+          }}
+          aria-hidden={!isDeckVisible}
+          inert={!isDeckVisible ? true : undefined}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="https://cdn.sthyra.com/TULA/Images/Whisper_of_Tree_Logo_Gold%201.avif"
-            alt="Whisper of Trees"
-            width={512}
-            height={220}
-            loading="eager"
-            decoding="async"
-            draggable={false}
-            className="h-[2.75rem] w-auto max-w-[8.5rem] select-none object-contain brightness-0 invert opacity-95 drop-shadow-[0_5px_18px_rgba(0,0,0,0.4)] sm:h-[3.75rem] sm:max-w-[11rem]"
-          />
-        </button>
-
-        <span className="mx-4 h-[40px] w-px bg-[linear-gradient(180deg,transparent,rgba(255,255,255,0.28),transparent)] sm:ml-[26px] sm:mr-[38px] sm:h-[51px]" />
-
-        <span
-          className={`${displaySerif.className} hidden text-[28px] tracking-[0.015em] text-white/92 drop-shadow-[0_4px_18px_rgba(0,0,0,0.5)] sm:block lg:text-[32px]`}
-        >
-          {data.title || "Amenities"}
-        </span>
-
-        <div className="ml-auto flex items-center gap-2.5 sm:gap-[13px]">
           <button
             type="button"
             onClick={goBack}
@@ -967,8 +991,8 @@ export default function AmenitiesPageClient({
               <Maximize2 className="h-[18px] w-[18px]" aria-hidden="true" />
             )}
           </button>
-        </div>
-      </motion.header>
+        </motion.div>
+      </header>
 
       {/* Flat filmstrip carousel — replaces the old rounded 3D deck */}
       <motion.section
@@ -1067,22 +1091,31 @@ export default function AmenitiesPageClient({
         </div>
       </motion.section>
 
-      <VideoPlayerControls
-        videoRef={videoRef}
-        mediaKey={displayedAmenity.id}
-        hasVideo={hasVideo}
-        isPlaying={isPlaying}
-        onTogglePlayback={togglePlayback}
-      />
-
-      {!isDeckVisible ? (
-        <button
-          type="button"
-          onPointerDown={revealDeck}
-          className="absolute inset-0 z-40 cursor-default bg-transparent"
-          aria-label="Show amenity details and carousel"
+      <motion.div
+        className="pointer-events-none absolute inset-0 z-30"
+        initial={false}
+        animate={{
+          opacity: isDeckVisible ? 1 : 0,
+          y: isDeckVisible ? 0 : 56,
+        }}
+        transition={{
+          duration: prefersReducedMotion ? 0.2 : 0.52,
+          ease: [0.22, 1, 0.36, 1],
+        }}
+        style={{
+          willChange: "transform, opacity",
+        }}
+        aria-hidden={!isDeckVisible}
+        inert={!isDeckVisible ? true : undefined}
+      >
+        <VideoPlayerControls
+          videoRef={videoRef}
+          mediaKey={displayedAmenity.id}
+          hasVideo={hasVideo}
+          isPlaying={isPlaying}
+          onTogglePlayback={togglePlayback}
         />
-      ) : null}
+      </motion.div>
     </main>
   );
 }

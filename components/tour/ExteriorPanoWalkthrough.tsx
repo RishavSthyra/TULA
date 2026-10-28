@@ -1322,7 +1322,9 @@ export default function ExteriorPanoWalkthrough({
       }
 
       const forward = getViewForwardVector(node, yaw);
-      const rawHeading = Math.atan2(-forward.y, forward.x);
+      // The minimap image uses the same north/south axis as the tour world.
+      // Negating Y mirrored only those headings while east/west appeared right.
+      const rawHeading = Math.atan2(forward.y, forward.x);
       const headingState = minimapHeadingStateRef.current;
 
       if (headingState.lastRawHeading === null) {

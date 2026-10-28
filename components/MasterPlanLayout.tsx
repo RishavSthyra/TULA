@@ -1,6 +1,7 @@
 "use client";
 
 import NextImage from "next/image";
+import { useRouter } from "next/navigation";
 import {
   startTransition,
   useCallback,
@@ -450,8 +451,10 @@ function MasterPlanHotspotControls({
 
 function SelectedFlatPlanPanel({
   apartment,
+  onExpand,
 }: {
   apartment: InventoryApartment;
+  onExpand: (apartment: InventoryApartment) => void;
 }) {
   const dimensionItems = useMemo(
     () => getRoomDimensionItems(apartment.roomDimensions),
@@ -506,7 +509,13 @@ function SelectedFlatPlanPanel({
             </span>
           </div>
 
-          <div className="relative z-10 mx-auto mt-2 h-[clamp(11.5rem,28dvh,15rem)] w-[78%] max-w-[20rem] 2xl:mt-3 2xl:h-[clamp(13rem,28dvh,17rem)] 2xl:w-[80%]">
+          <button
+            type="button"
+            onClick={() => onExpand(apartment)}
+            data-preserve-flat-selection="true"
+            className="group relative z-10 mx-auto mt-2 block h-[clamp(11.5rem,28dvh,15rem)] w-[78%] max-w-[20rem] cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c4a667] 2xl:mt-3 2xl:h-[clamp(13rem,28dvh,17rem)] 2xl:w-[80%]"
+            aria-label={`Enlarge ${apartment.title} floor plan`}
+          >
             <div
               className={`absolute inset-0 flex flex-col items-center justify-center transition duration-500 ${
                 isFloorPlanLoaded
@@ -568,9 +577,9 @@ function SelectedFlatPlanPanel({
               }
               className={`z-10 object-contain mix-blend-multiply drop-shadow-[0_18px_30px_rgba(19,61,40,0.16)] transition-opacity duration-500 ${
                 isFloorPlanLoaded ? "opacity-100" : "opacity-0"
-              }`}
+              } group-hover:scale-[1.025]`}
             />
-          </div>
+          </button>
 
           <div className="relative z-10 mt-2 grid grid-cols-2 gap-2.5">
             <div className="rounded-full border border-[#d8bd78]/45 bg-[#fbfaf4]/88 px-4 py-2 text-xs font-bold text-[#1f3f2b] shadow-[0_12px_26px_rgba(33,50,35,0.09),inset_0_1px_0_rgba(255,255,255,0.95)] backdrop-blur-xl">
@@ -582,11 +591,8 @@ function SelectedFlatPlanPanel({
           </div>
         </div>
 
-        <div className="relative z-0 mt-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[30px] rounded-bl-[42px] border border-[#d7bf80]/42 bg-[linear-gradient(180deg,rgba(35,65,42,0.62),rgba(29,55,37,0.68))] px-4 pb-4 pt-4 text-[#f7efd9] shadow-[0_14px_40px_rgba(21,47,30,0.12),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-sm 2xl:mt-4 2xl:rounded-[36px] 2xl:rounded-bl-[52px] 2xl:px-5 2xl:pb-5 2xl:pt-5">
-          <div className="pointer-events-none absolute inset-[8px] rounded-[24px] rounded-bl-[34px] border border-[#ead8a4]/22 2xl:rounded-[28px] 2xl:rounded-bl-[42px]" />
-          <div className="pointer-events-none absolute -bottom-10 -left-7 h-48 w-28 rounded-[50%] border-r border-[#cfad63]/45 opacity-70" />
-
-          <div className="relative z-10 flex shrink-0 items-center justify-between gap-3">
+        <div className="relative z-0 mt-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[26px] border border-[#d7bf80]/30 bg-[linear-gradient(180deg,rgba(31,62,39,0.68),rgba(25,50,32,0.76))] px-5 pb-3 pt-4 text-[#f7efd9] shadow-[0_14px_38px_rgba(21,47,30,0.12)] backdrop-blur-md 2xl:mt-4 2xl:px-6 2xl:pt-5">
+          <div className="relative z-10 flex shrink-0 items-end justify-between gap-3 border-b border-[#d9c28a]/22 pb-3">
             <div>
               <p className="text-[9px] font-bold uppercase tracking-[0.34em] text-[#d9c28a]">
                 Spatial Composition
@@ -597,31 +603,26 @@ function SelectedFlatPlanPanel({
                 Room Dimensions
               </h4>
             </div>
-            <span className="rounded-full border border-[#d9c28a]/35 bg-white/10 px-3 py-1.5 text-xs font-semibold text-[#fff6df] backdrop-blur-xl">
+            <span className="pb-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#d9c28a]">
               {dimensionItems.length} rooms
             </span>
           </div>
 
-          <div className="custom-scrollbar relative z-10 mt-3 grid min-h-0 flex-1 grid-cols-2 content-start gap-2 overflow-y-auto overscroll-contain pr-2">
+          <div className="custom-scrollbar relative z-10 grid min-h-0 flex-1 grid-cols-2 content-start gap-x-5 overflow-y-auto overscroll-contain pr-2">
             {dimensionItems.length > 0 ? (
               dimensionItems.map((item, index) => (
                 <div
                   key={item.key}
-                  className="flex min-h-[5rem] min-w-0 flex-col justify-between rounded-2xl border border-[#d9c28a]/20 bg-white/[0.07] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-sm"
+                  className="grid min-h-[4.15rem] min-w-0 grid-cols-[1.45rem_minmax(0,1fr)] items-center gap-2 border-b border-[#d9c28a]/16 py-2.5"
                 >
-                  <div className="flex min-w-0 items-start justify-between gap-2">
+                  <span className="text-[9px] font-semibold tracking-[0.12em] text-[#d9c28a]/62">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <div className="min-w-0">
                     <p className="line-clamp-2 text-[13px] font-medium leading-[1.2] text-[#fff6df]">
                       {item.label}
                     </p>
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#d9c28a]/28 bg-white/[0.08]">
-                      <Ruler className="h-3 w-3 text-[#d9c28a]" />
-                    </span>
-                  </div>
-                  <div className="mt-2 flex items-end justify-between gap-2">
-                    <p className="text-[9px] font-semibold tracking-[0.18em] text-[#d9c28a]/62">
-                      {String(index + 1).padStart(2, "0")}
-                    </p>
-                    <p className="shrink-0 text-right text-xs font-semibold text-[#f7efd9]">
+                    <p className="mt-1 truncate text-[11px] font-semibold tabular-nums text-[#d9c28a]">
                       {item.value}
                     </p>
                   </div>
@@ -689,6 +690,7 @@ export default function MasterPlanLayout({
   initialSignedAssetUrls = {},
   masterPlanConfig,
 }: MasterPlanLayoutProps) {
+  const router = useRouter();
   primeSignedAssetUrls(initialSignedAssetUrls);
   const specialUnitVideoConfigs = masterPlanConfig
     ? Object.fromEntries(
@@ -747,6 +749,8 @@ export default function MasterPlanLayout({
   const [currentFrame, setCurrentFrame] = useState(1);
   const [isStageInteracting, setIsStageInteracting] = useState(false);
   const [selectedApartment, setSelectedApartment] =
+    useState<InventoryApartment | null>(null);
+  const [expandedFloorPlan, setExpandedFloorPlan] =
     useState<InventoryApartment | null>(null);
   const [selectedApartmentMeshId, setSelectedApartmentMeshId] = useState<
     string | null
@@ -1382,6 +1386,7 @@ export default function MasterPlanLayout({
   };
 
   const clearSelectedApartment = useCallback(() => {
+    setExpandedFloorPlan(null);
     setSelectedApartment(null);
     setSelectedApartmentMeshId(null);
 
@@ -1390,6 +1395,21 @@ export default function MasterPlanLayout({
       setIsMobileSheetOpen(true);
     }
   }, [selectedTower]);
+
+  useEffect(() => {
+    if (!expandedFloorPlan) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setExpandedFloorPlan(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [expandedFloorPlan]);
 
   const closeSpecialUnitVideo = useCallback(() => {
     if (specialUnitVideoTimeoutRef.current !== null) {
@@ -1588,6 +1608,13 @@ export default function MasterPlanLayout({
       }
 
       const target = event.target;
+
+      if (
+        target instanceof Element &&
+        target.closest('[data-preserve-flat-selection="true"]')
+      ) {
+        return;
+      }
 
       if (
         selectedFlatPanelRef.current &&
@@ -1896,6 +1923,25 @@ export default function MasterPlanLayout({
         </div>
       ) : null}
 
+      {!isLeaving && !isSpecialVideoOpen ? (
+        <button
+          type="button"
+          data-preserve-flat-selection="true"
+          onClick={() => {
+            const searchParams = new URLSearchParams();
+            if (selectedApartment) {
+              searchParams.append("units", selectedApartment.id);
+            }
+            searchParams.set("frame", String(currentFrame));
+            router.push(`/master-plan/compare?${searchParams.toString()}`);
+          }}
+          className="absolute left-4 top-4 z-50 inline-flex h-10 items-center gap-2 rounded-full border border-white/45 bg-white/68 px-4 text-[10px] font-semibold uppercase tracking-[0.13em] text-[#294733] shadow-[0_12px_30px_rgba(15,32,20,0.16)] backdrop-blur-xl transition hover:bg-white/85 sm:left-6 sm:top-6 sm:h-11 sm:text-[11px]"
+        >
+          <Building2 className="h-3.5 w-3.5" aria-hidden="true" />
+          {selectedApartment ? "Compare this flat" : "Compare flats"}
+        </button>
+      ) : null}
+
       {shouldShowTopViewFullscreen ? (
         <div
           className={`pointer-events-none absolute inset-x-0 z-40 flex justify-center px-4 ${
@@ -2152,7 +2198,10 @@ export default function MasterPlanLayout({
                   transition={{ duration: 0.26, ease: smoothEase }}
                   className="pointer-events-none absolute left-4 top-[clamp(4.5rem,14vh,8.5rem)] z-40 hidden xl:block xl:origin-top-left xl:scale-[0.86] 2xl:left-7 2xl:scale-[0.92]"
                 >
-                  <SelectedFlatPlanPanel apartment={selectedApartment} />
+                  <SelectedFlatPlanPanel
+                    apartment={selectedApartment}
+                    onExpand={setExpandedFloorPlan}
+                  />
                 </motion.div>
               ) : null}
             </AnimatePresence>
@@ -2266,7 +2315,7 @@ export default function MasterPlanLayout({
                         </>
                       ) : (
                         <TowerSelect
-                            compactDesktop={isDesktopCompactViewport}
+                          compactDesktop={isDesktopCompactViewport}
                           embedded
                           isTopViewActive={isTopViewMode}
                           onClose={() => setIsDesktopSidebarOpen(false)}
@@ -2492,7 +2541,10 @@ export default function MasterPlanLayout({
                   transition={{ duration: 0.28, ease: smoothEase }}
                   className="pointer-events-none absolute left-4 top-[clamp(4.5rem,14vh,8.5rem)] z-20 hidden xl:block xl:origin-top-left xl:scale-[0.86] 2xl:left-7 2xl:scale-[0.92]"
                 >
-                  <SelectedFlatPlanPanel apartment={specialVideoApartment} />
+                  <SelectedFlatPlanPanel
+                    apartment={specialVideoApartment}
+                    onExpand={setExpandedFloorPlan}
+                  />
                 </motion.div>
               ) : null}
             </AnimatePresence>
@@ -2517,6 +2569,42 @@ export default function MasterPlanLayout({
                 </motion.div>
               ) : null}
             </AnimatePresence>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {expandedFloorPlan ? (
+          <motion.div
+            className="fixed inset-0 z-[160] flex items-center justify-center p-5 sm:p-10"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22 }}
+            data-preserve-flat-selection="true"
+          >
+            <button
+              type="button"
+              onClick={() => setExpandedFloorPlan(null)}
+              className="absolute inset-0 bg-black/62 backdrop-blur-[3px]"
+              aria-label="Close enlarged floor plan"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.94 }}
+              transition={{ duration: 0.3, ease: smoothEase }}
+              className="pointer-events-none relative h-[min(88dvh,60rem)] w-[min(92vw,78rem)]"
+            >
+              <SignedImage
+                src={expandedFloorPlan.floorPlanImage}
+                placeholderSrc={null}
+                alt={`${expandedFloorPlan.title} enlarged floor plan`}
+                fill
+                sizes="92vw"
+                className="object-contain drop-shadow-[0_28px_70px_rgba(0,0,0,0.46)]"
+              />
+            </motion.div>
           </motion.div>
         ) : null}
       </AnimatePresence>

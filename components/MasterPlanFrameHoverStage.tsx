@@ -4274,7 +4274,7 @@ export default function MasterPlanFrameHoverStage({
       }
 
       const rawTargetProgress = wrapProgress(
-        dragState.startProgress -
+        dragState.startProgress +
           dragState.clampedDeltaX / (dragConfig.pixelsPerFrame * TOTAL_FRAMES),
       );
       const maxLeadFrames =
@@ -4882,8 +4882,8 @@ export default function MasterPlanFrameHoverStage({
         dragState.clampedDeltaX === 0
           ? 0
           : dragState.clampedDeltaX > 0
-            ? -1
-            : 1;
+            ? 1
+            : -1;
       const snappedFrame =
         dragDirection === 0
           ? getNearestSnapFrame(releaseFrame)
@@ -5032,8 +5032,8 @@ export default function MasterPlanFrameHoverStage({
         dragState.clampedDeltaX === 0
           ? 0
           : dragState.clampedDeltaX > 0
-            ? -1
-            : 1;
+            ? 1
+            : -1;
       const snappedFrame =
         dragDirection === 0
           ? getNearestSnapFrame(releaseFrame)
