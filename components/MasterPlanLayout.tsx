@@ -55,6 +55,9 @@ import { useSignedAssetUrls } from "@/src/lib/use-signed-assets";
 const facingOptions = ["All", "North", "South", "East", "West"] as const;
 const statusOptions = ["All", "Available", "Reserved", "Sold"] as const;
 const bhkOptions = ["All", "2", "3", "3.5", "4"] as const;
+type BhkFilterValue = (typeof bhkOptions)[number] | null;
+type FacingFilterValue = (typeof facingOptions)[number] | null;
+type StatusFilterValue = (typeof statusOptions)[number] | null;
 const FLOOR_ALL_VALUE = "All";
 const INVENTORY_REFRESH_INTERVAL = 15000;
 const MATCHING_FLATS_PAGE_SIZE = 24;
@@ -723,15 +726,16 @@ export default function MasterPlanLayout({
 
   const [search, setSearch] = useState("");
   const [selectedTower, setSelectedTower] = useState<TowerType | null>(null);
+  const [filterTower, setFilterTower] = useState<TowerType | null>(null);
   const [apartments, setApartments] =
     useState<InventoryApartment[]>(initialApartments);
   const [isInventoryLoading, setIsInventoryLoading] = useState(
     initialApartments.length === 0,
   );
   const [inventoryError, setInventoryError] = useState<string | null>(null);
-  const [bhk, setBhk] = useState<(typeof bhkOptions)[number]>("All");
-  const [facing, setFacing] = useState<(typeof facingOptions)[number]>("All");
-  const [status, setStatus] = useState<(typeof statusOptions)[number]>("All");
+  const [bhk, setBhk] = useState<BhkFilterValue>(null);
+  const [facing, setFacing] = useState<FacingFilterValue>(null);
+  const [status, setStatus] = useState<StatusFilterValue>(null);
   const [floor, setFloor] = useState(FLOOR_ALL_VALUE);
   const [selectedAreaRange, setSelectedAreaRange] = useState<SelectedAreaRange>(
     { min: null, max: null },
@@ -1169,7 +1173,7 @@ export default function MasterPlanLayout({
     [deferredSearch],
   );
   const selectedBhkNumber = useMemo(
-    () => (bhk === "All" ? null : Number(bhk)),
+    () => (bhk === null || bhk === "All" ? null : Number(bhk)),
     [bhk],
   );
   const areaBounds = useMemo<AreaRange>(() => {
@@ -1235,13 +1239,20 @@ export default function MasterPlanLayout({
 
     return next;
   }, [apartments]);
+  const hasExplicitUnitFilter =
+    normalizedDeferredSearch.length > 0 ||
+    bhk !== null ||
+    facing !== null ||
+    status !== null ||
+    floor !== FLOOR_ALL_VALUE ||
+    isAreaFiltered;
 
   const filteredApartments = useMemo(() => {
-    if (!selectedTower) {
+    if (!filterTower || !hasExplicitUnitFilter) {
       return [];
     }
 
-    const towerRows = filterableApartmentsByTower.get(selectedTower) ?? [];
+    const towerRows = filterableApartmentsByTower.get(filterTower) ?? [];
     const hasSearch = normalizedDeferredSearch.length > 0;
 
     return towerRows.reduce<InventoryApartment[]>((matches, row) => {
@@ -1253,8 +1264,10 @@ export default function MasterPlanLayout({
         (floor === FLOOR_ALL_VALUE || row.floorValue === floor);
       const matchesBhk =
         selectedBhkNumber === null || apartment.bhk === selectedBhkNumber;
-      const matchesFacing = facing === "All" || apartment.facing === facing;
-      const matchesStatus = status === "All" || apartment.status === status;
+      const matchesFacing =
+        facing === null || facing === "All" || apartment.facing === facing;
+      const matchesStatus =
+        status === null || status === "All" || apartment.status === status;
       const matchesArea =
         apartment.areaSqft >= minArea && apartment.areaSqft <= maxArea;
 
@@ -1273,8 +1286,9 @@ export default function MasterPlanLayout({
     }, []);
   }, [
     filterableApartmentsByTower,
+    hasExplicitUnitFilter,
     normalizedDeferredSearch,
-    selectedTower,
+    filterTower,
     selectedBhkNumber,
     facing,
     status,
@@ -1283,11 +1297,11 @@ export default function MasterPlanLayout({
     maxArea,
   ]);
   const floorOptions = useMemo<FloorFilterOption[]>(() => {
-    if (!selectedTower) {
+    if (!filterTower) {
       return [{ value: FLOOR_ALL_VALUE, label: "All floors" }];
     }
 
-    const towerRows = filterableApartmentsByTower.get(selectedTower) ?? [];
+    const towerRows = filterableApartmentsByTower.get(filterTower) ?? [];
     const floors = new Map<number, string>();
 
     towerRows.forEach(({ apartment }) => {
@@ -1312,7 +1326,7 @@ export default function MasterPlanLayout({
           label: value === 0 ? "G" : label,
         })),
     ];
-  }, [filterableApartmentsByTower, selectedTower]);
+  }, [filterableApartmentsByTower, filterTower]);
   useEffect(() => {
     if (!floorOptions.some((option) => option.value === floor)) {
       setFloor(FLOOR_ALL_VALUE);
@@ -1341,21 +1355,16 @@ export default function MasterPlanLayout({
   }, [isFlatPanelOpen, selectedApartmentInventoryId, shouldUseCompactLayout]);
 
   const hasActiveInventoryFilters = useMemo(
-    () =>
-      normalizedDeferredSearch.length > 0 ||
-      bhk !== "All" ||
-      facing !== "All" ||
-      status !== "All" ||
-      floor !== FLOOR_ALL_VALUE ||
-      isAreaFiltered,
-    [normalizedDeferredSearch, bhk, facing, status, floor, isAreaFiltered],
+    () => filterTower !== null && hasExplicitUnitFilter,
+    [filterTower, hasExplicitUnitFilter],
   );
 
   const resetFilters = () => {
     setSearch("");
-    setBhk("All");
-    setFacing("All");
-    setStatus("All");
+    setFilterTower(null);
+    setBhk(null);
+    setFacing(null);
+    setStatus(null);
     setFloor(FLOOR_ALL_VALUE);
     setSelectedAreaRange({ min: null, max: null });
   };
@@ -1363,8 +1372,15 @@ export default function MasterPlanLayout({
   const handleTowerSelect = (tower: TowerType) => {
     setIsTopViewMode(false);
     setSelectedTower(tower);
+    setFilterTower(null);
     setIsDesktopSidebarOpen(true);
     setIsMobileSheetOpen(true);
+  };
+
+  const handleFilterTowerChange = (tower: TowerType) => {
+    setFilterTower(tower);
+    setSelectedTower(tower);
+    setFloor(FLOOR_ALL_VALUE);
   };
 
   const handleTopViewToggle = useCallback(() => {
@@ -2110,8 +2126,8 @@ export default function MasterPlanLayout({
                   <MasterPlanFiltersCard
                     search={search}
                     onSearchChange={setSearch}
-                    selectedTower={selectedTower}
-                    onTowerChange={handleTowerSelect}
+                    selectedTower={filterTower}
+                    onTowerChange={handleFilterTowerChange}
                     bhk={bhk}
                     onBhkChange={setBhk}
                     facing={facing}
@@ -2133,6 +2149,8 @@ export default function MasterPlanLayout({
 
                   <MasterPlanResultsCard
                     filteredApartments={filteredApartments}
+                    hasSelectedBlock={filterTower !== null}
+                    hasUnitSelection={hasExplicitUnitFilter}
                     isInventoryLoading={isInventoryLoading}
                     inventoryError={inventoryError}
                     onApartmentSelect={handleApartmentListSelect}
@@ -2272,7 +2290,7 @@ export default function MasterPlanLayout({
                     }}
                   >
                     <div
-                      className={`relative flex h-full min-h-0 flex-col overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] ${
+                      className={`relative flex h-full min-h-0 flex-col overflow-hidden ${
                         isDesktopCompactViewport ? "gap-4" : "gap-6"
                       }`}
                       data-scroll-area="sidebar"
@@ -2282,8 +2300,8 @@ export default function MasterPlanLayout({
                           <MasterPlanFiltersCard
                             search={search}
                             onSearchChange={setSearch}
-                            selectedTower={selectedTower}
-                            onTowerChange={handleTowerSelect}
+                            selectedTower={filterTower}
+                            onTowerChange={handleFilterTowerChange}
                             bhk={bhk}
                             onBhkChange={setBhk}
                             facing={facing}
@@ -2306,6 +2324,8 @@ export default function MasterPlanLayout({
 
                           <MasterPlanResultsCard
                             filteredApartments={filteredApartments}
+                            hasSelectedBlock={filterTower !== null}
+                            hasUnitSelection={hasExplicitUnitFilter}
                             isInventoryLoading={isInventoryLoading}
                             inventoryError={inventoryError}
                             onApartmentSelect={handleApartmentListSelect}
@@ -2422,8 +2442,8 @@ export default function MasterPlanLayout({
                           <MasterPlanFiltersCard
                             search={search}
                             onSearchChange={setSearch}
-                            selectedTower={selectedTower}
-                            onTowerChange={handleTowerSelect}
+                            selectedTower={filterTower}
+                            onTowerChange={handleFilterTowerChange}
                             bhk={bhk}
                             onBhkChange={setBhk}
                             facing={facing}
@@ -2445,6 +2465,8 @@ export default function MasterPlanLayout({
 
                           <MasterPlanResultsCard
                             filteredApartments={filteredApartments}
+                            hasSelectedBlock={filterTower !== null}
+                            hasUnitSelection={hasExplicitUnitFilter}
                             isInventoryLoading={isInventoryLoading}
                             inventoryError={inventoryError}
                             onApartmentSelect={handleApartmentListSelect}
@@ -2639,14 +2661,14 @@ function MasterPlanFiltersCard({
 }: {
   search: string;
   onSearchChange: (value: string) => void;
-  selectedTower: TowerType;
+  selectedTower: TowerType | null;
   onTowerChange: (tower: TowerType) => void;
-  bhk: (typeof bhkOptions)[number];
-  onBhkChange: (value: (typeof bhkOptions)[number]) => void;
-  facing: (typeof facingOptions)[number];
-  onFacingChange: (value: (typeof facingOptions)[number]) => void;
-  status: (typeof statusOptions)[number];
-  onStatusChange: (value: (typeof statusOptions)[number]) => void;
+  bhk: BhkFilterValue;
+  onBhkChange: (value: BhkFilterValue) => void;
+  facing: FacingFilterValue;
+  onFacingChange: (value: FacingFilterValue) => void;
+  status: StatusFilterValue;
+  onStatusChange: (value: StatusFilterValue) => void;
   floor: string;
   floorOptions: FloorFilterOption[];
   onFloorChange: (value: string) => void;
@@ -2662,10 +2684,11 @@ function MasterPlanFiltersCard({
   compactDesktop?: boolean;
 }) {
   const activeFilterCount =
+    Number(selectedTower !== null) +
     Number(search.trim().length > 0) +
-    Number(bhk !== "All") +
-    Number(facing !== "All") +
-    Number(status !== "All") +
+    Number(bhk !== null) +
+    Number(facing !== null) +
+    Number(status !== null) +
     Number(floor !== FLOOR_ALL_VALUE) +
     Number(isAreaFiltered);
   const [isCompactOpen, setIsCompactOpen] = useState(compact);
@@ -2732,7 +2755,9 @@ function MasterPlanFiltersCard({
               </p>
               <span className="inline-flex items-center gap-1 rounded-full border border-[#e3dece] bg-[#fbfaf4] px-2 py-0.5 text-[10px] font-medium text-[#456859]">
                 <Building2 className="h-3 w-3" />
-                {formatBlockLabel(selectedTower)}
+                {selectedTower
+                  ? formatBlockLabel(selectedTower)
+                  : "Choose a block"}
               </span>
             </div>
             <p className="mt-0.5 text-[10px] text-[#718277]">
@@ -2747,10 +2772,10 @@ function MasterPlanFiltersCard({
               <>
                 <button
                   type="button"
-                  onClick={onReset}
+                  onClick={onBack}
                   className="inline-flex h-8 items-center gap-1.5 rounded-full border border-emerald-100/65 bg-white/42 px-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-900 transition hover:bg-white/62"
                 >
-                  Reset
+                  Clear all
                 </button>
                 <button
                   type="button"
@@ -2778,7 +2803,9 @@ function MasterPlanFiltersCard({
 
         {activeFilterCount > 0 && !isCompactOpen ? (
           <div className="mt-3 flex flex-wrap gap-2">
-            {bhk !== "All" ? <FilterChip label={`${bhk} BHK`} /> : null}
+            {bhk !== null ? (
+              <FilterChip label={bhk === "All" ? "All BHK" : `${bhk} BHK`} />
+            ) : null}
             {floor !== FLOOR_ALL_VALUE ? (
               <FilterChip
                 label={
@@ -2787,8 +2814,16 @@ function MasterPlanFiltersCard({
                 }
               />
             ) : null}
-            {facing !== "All" ? <FilterChip label={facing} /> : null}
-            {status !== "All" ? <FilterChip label={status} /> : null}
+            {facing !== null ? (
+              <FilterChip
+                label={facing === "All" ? "All facings" : facing}
+              />
+            ) : null}
+            {status !== null ? (
+              <FilterChip
+                label={status === "All" ? "All statuses" : status}
+              />
+            ) : null}
             {isAreaFiltered ? (
               <FilterChip
                 label={`${formatAreaSqft(minArea)}–${formatAreaSqft(maxArea)} sqft`}
@@ -2866,10 +2901,10 @@ function MasterPlanFiltersCard({
 
   return (
     <motion.div
-      className={`surface-contain relative shrink-0 overflow-hidden border border-[#ded8c9]/82 bg-[#f3f2ea]/78 text-[#1f3f2b] shadow-[0_20px_56px_rgba(25,43,30,0.13),inset_0_1px_0_rgba(255,255,255,0.84)] backdrop-blur-md dark:border-emerald-100/10 dark:bg-emerald-950/45 dark:text-white dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] ${
+      className={`surface-contain custom-scrollbar relative shrink-0 overscroll-contain border border-[#ded8c9]/82 bg-[#f3f2ea]/78 text-[#1f3f2b] shadow-[0_20px_56px_rgba(25,43,30,0.13),inset_0_1px_0_rgba(255,255,255,0.84)] backdrop-blur-md [-webkit-overflow-scrolling:touch] dark:border-emerald-100/10 dark:bg-emerald-950/45 dark:text-white dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] ${
         compactDesktop
-          ? "rounded-[34px] rounded-tr-[64px] p-4"
-          : "rounded-[42px] rounded-tr-[88px] p-5"
+          ? "max-h-[62%] overflow-y-auto rounded-[34px] rounded-tr-[64px] p-4"
+          : "max-h-[68%] overflow-y-auto rounded-[42px] rounded-tr-[88px] p-5"
       }`}
     >
       <LiquidGlassFilterStyles />
@@ -2888,11 +2923,20 @@ function MasterPlanFiltersCard({
         className={`flex items-start justify-between gap-3 ${compactDesktop ? "mb-4" : "mb-5"}`}
       >
         <div className="min-w-0 flex-1">
-          <p
-            className={`font-bold uppercase text-[#58715f] ${compactDesktop ? "text-[9px] tracking-[0.28em]" : "text-[10px] tracking-[0.32em]"}`}
-          >
-            Filters
-          </p>
+          <div className="flex items-center gap-2.5">
+            <p
+              className={`font-bold uppercase text-[#58715f] ${compactDesktop ? "text-[9px] tracking-[0.28em]" : "text-[10px] tracking-[0.32em]"}`}
+            >
+              Filters
+            </p>
+            <button
+              type="button"
+              onClick={onBack}
+              className="relative z-20 rounded-full border border-[#d8d0bd] bg-[#fbfaf4]/82 px-2 py-1 text-[8px] font-bold uppercase tracking-[0.12em] text-[#557568] transition hover:bg-white hover:text-[#21492f]"
+            >
+              Clear all
+            </button>
+          </div>
           <h2
             className={`${masterPlanSerif.className} mt-1 font-medium leading-none text-[#21492f] ${compactDesktop ? "text-[1.7rem]" : "text-[2rem]"}`}
           >
@@ -3023,7 +3067,9 @@ function MasterPlanFiltersCard({
           </>
         ) : activeFilterCount > 0 ? (
           <div className="flex flex-wrap gap-2">
-            {bhk !== "All" ? <FilterChip label={`${bhk} BHK`} /> : null}
+            {bhk !== null ? (
+              <FilterChip label={bhk === "All" ? "All BHK" : `${bhk} BHK`} />
+            ) : null}
             {floor !== FLOOR_ALL_VALUE ? (
               <FilterChip
                 label={
@@ -3032,8 +3078,16 @@ function MasterPlanFiltersCard({
                 }
               />
             ) : null}
-            {facing !== "All" ? <FilterChip label={facing} /> : null}
-            {status !== "All" ? <FilterChip label={status} /> : null}
+            {facing !== null ? (
+              <FilterChip
+                label={facing === "All" ? "All facings" : facing}
+              />
+            ) : null}
+            {status !== null ? (
+              <FilterChip
+                label={status === "All" ? "All statuses" : status}
+              />
+            ) : null}
             {isAreaFiltered ? (
               <FilterChip
                 label={`${formatAreaSqft(minArea)}–${formatAreaSqft(maxArea)} sqft`}
@@ -3048,6 +3102,8 @@ function MasterPlanFiltersCard({
 
 function MasterPlanResultsCard({
   filteredApartments,
+  hasSelectedBlock,
+  hasUnitSelection,
   isInventoryLoading,
   inventoryError,
   onApartmentSelect,
@@ -3056,6 +3112,8 @@ function MasterPlanResultsCard({
   compactDesktop = false,
 }: {
   filteredApartments: InventoryApartment[];
+  hasSelectedBlock: boolean;
+  hasUnitSelection: boolean;
   isInventoryLoading: boolean;
   inventoryError: string | null;
   onApartmentSelect: (apartment: InventoryApartment) => void;
@@ -3105,8 +3163,8 @@ function MasterPlanResultsCard({
         compact
           ? "min-h-0 flex-1 overflow-hidden p-3"
           : compactDesktop
-            ? "flex-1 p-3.5"
-            : "flex-1 p-4"
+            ? "min-h-[12rem] flex-1 overflow-hidden p-3.5"
+            : "min-h-[13rem] flex-1 overflow-hidden p-4"
       }`}
     >
       <div
@@ -3128,7 +3186,11 @@ function MasterPlanResultsCard({
                 : "px-3 py-1 text-xs"
           }`}
         >
-          {filteredApartments.length} units
+          {hasSelectedBlock && hasUnitSelection
+            ? `${filteredApartments.length} units`
+            : hasSelectedBlock
+              ? "Select preference"
+              : "Select block"}
         </span>
       </div>
 
@@ -3358,9 +3420,19 @@ function MasterPlanResultsCard({
                 className={`flex items-center justify-center rounded-[22px] border border-dashed border-emerald-100/55 bg-emerald-50/38 px-4 text-center dark:border-white/10 dark:bg-white/5 ${compactDesktop ? "h-[190px]" : "h-[220px]"}`}
               >
                 <div>
-                  <p className="text-sm font-semibold">No flats found</p>
+                  <p className="text-sm font-semibold">
+                    {!hasSelectedBlock
+                      ? "Choose a block"
+                      : !hasUnitSelection
+                        ? "Choose a preference"
+                        : "No flats found"}
+                  </p>
                   <p className="mt-1 text-xs text-emerald-950/58">
-                    Try changing the filters.
+                    {!hasSelectedBlock
+                      ? "Select Block A, B, C or D to begin."
+                      : !hasUnitSelection
+                        ? "Select All or choose a specific option to view flats."
+                        : "Try changing the filters."}
                   </p>
                 </div>
               </motion.div>
@@ -3527,8 +3599,10 @@ function LiquidGlassFilterStyles() {
           inset 0 1px 0 rgba(255, 255, 255, 0.24),
           inset 0 -1px 0 rgba(0, 0, 0, 0.16),
           0 8px 16px rgba(37, 83, 43, 0.28);
+        opacity: var(--selection-opacity, 1);
         transition:
           transform 420ms cubic-bezier(1, 0, 0.4, 1),
+          opacity 180ms ease,
           background-color 420ms cubic-bezier(1, 0, 0.4, 1),
           box-shadow 420ms cubic-bezier(1, 0, 0.4, 1);
         animation: mpLiquidToggle 440ms ease;
@@ -3733,21 +3807,20 @@ function FilterPillGroup<T extends string>({
   compactDesktop = false,
 }: {
   options: readonly T[];
-  value: T;
+  value: T | null;
   onChange: (value: T) => void;
   getLabel?: (value: T) => string;
   compactDark?: boolean;
   compactDesktop?: boolean;
 }) {
   const name = useId();
-  const activeIndex = Math.max(
-    0,
-    options.findIndex((item) => item === value),
-  );
+  const selectedIndex = options.findIndex((item) => item === value);
+  const activeIndex = Math.max(0, selectedIndex);
   const switcherWidthRem = options.length >= 5 ? 100 : options.length * 6.45;
   const switcherStyle = {
     "--option-count": options.length,
     "--active-index": activeIndex,
+    "--selection-opacity": selectedIndex >= 0 ? 1 : 0,
     "--switcher-width":
       options.length >= 5 ? "100%" : `${switcherWidthRem.toFixed(2)}rem`,
   } as CSSProperties;
