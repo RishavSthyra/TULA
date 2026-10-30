@@ -132,15 +132,6 @@ const MOBILE_STAGE_MAX_SCALE = 2.8;
 const MOBILE_STAGE_MIN_SCALE = 1;
 const MOBILE_STAGE_TAP_MOVE_THRESHOLD_PX = 10;
 const THREE_DS_MAX_TRIAL_MODEL_CACHE_BUSTER = "trial-refresh=3";
-// Camera-relative screen-left corrections for the GLB at these orbit views.
-// Increase a value to move that view farther left; decrease it to move less.
-const FRAME_91_GLB_LEFT_OFFSET_CM = -70;
-const FRAME_271_GLB_LEFT_OFFSET_CM = 240;
-const FRAME_GLB_OFFSET_FALLOFF_FRAMES = 12;
-const FRAME_GLB_LEFT_CORRECTIONS = [
-  { frame: 91, offsetCm: FRAME_91_GLB_LEFT_OFFSET_CM },
-  { frame: 271, offsetCm: FRAME_271_GLB_LEFT_OFFSET_CM },
-] as const;
 const DEFAULT_MASTER_PLAN_PERFORMANCE_PROFILE: MasterPlanPerformanceProfile = {
   canvasPerformance: {
     debounce: 120,
@@ -2740,14 +2731,14 @@ const TowerScene = memo(function TowerScene({
     () => getTrackingInterpolationSegment(currentFrame),
     [currentFrame],
   );
-  const baseTowerATrackingTransform = useMemo(
+  const towerATrackingTransform = useMemo(
     () =>
       shouldUseTrialTrackingAlignment || !isThreeDsMaxTrial
         ? getPrecomputedTowerTransform("A", masterPlanConfig)
         : null,
     [isThreeDsMaxTrial, masterPlanConfig, shouldUseTrialTrackingAlignment],
   );
-  const baseTowerBTrackingTransform = useMemo(
+  const towerBTrackingTransform = useMemo(
     () =>
       shouldUseTrialTrackingAlignment || !isThreeDsMaxTrial
         ? getPrecomputedTowerTransform("B", masterPlanConfig)
@@ -2784,73 +2775,6 @@ const TowerScene = memo(function TowerScene({
       quaternion: camera.quaternion,
     } satisfies SerializedTrackingCamera;
   }, [currentFrame, masterPlanConfig?.frameCameras]);
-  const frameGlbOffset = useMemo(() => {
-    if (!isThreeDsMaxTrial || !configuredFrameCamera) {
-      return null;
-    }
-
-    const totalFrames = masterPlanConfig?.frameCameras?.length ?? TOTAL_FRAMES;
-    const leftOffsetCm = FRAME_GLB_LEFT_CORRECTIONS.reduce(
-      (totalOffset, correction) => {
-        const directDistance = Math.abs(currentFrame - correction.frame);
-        const frameDistance = Math.min(
-          directDistance,
-          Math.max(0, totalFrames - directDistance),
-        );
-
-        if (frameDistance >= FRAME_GLB_OFFSET_FALLOFF_FRAMES) {
-          return totalOffset;
-        }
-
-        const linearStrength =
-          1 - frameDistance / FRAME_GLB_OFFSET_FALLOFF_FRAMES;
-        const smoothStrength =
-          linearStrength * linearStrength * (3 - 2 * linearStrength);
-
-        return totalOffset + correction.offsetCm * smoothStrength;
-      },
-      0,
-    );
-
-    if (leftOffsetCm === 0) {
-      return null;
-    }
-
-    const cameraRight = new Vector3(1, 0, 0)
-      .applyQuaternion(new Quaternion(...configuredFrameCamera.quaternion))
-      .normalize();
-
-    return cameraRight.multiplyScalar(-leftOffsetCm);
-  }, [
-    configuredFrameCamera,
-    currentFrame,
-    isThreeDsMaxTrial,
-    masterPlanConfig?.frameCameras?.length,
-  ]);
-  const towerATrackingTransform = useMemo(() => {
-    if (!baseTowerATrackingTransform || !frameGlbOffset) {
-      return baseTowerATrackingTransform;
-    }
-
-    return {
-      ...baseTowerATrackingTransform,
-      position: baseTowerATrackingTransform.position
-        .clone()
-        .add(frameGlbOffset),
-    } satisfies SimilarityTransform;
-  }, [baseTowerATrackingTransform, frameGlbOffset]);
-  const towerBTrackingTransform = useMemo(() => {
-    if (!baseTowerBTrackingTransform || !frameGlbOffset) {
-      return baseTowerBTrackingTransform;
-    }
-
-    return {
-      ...baseTowerBTrackingTransform,
-      position: baseTowerBTrackingTransform.position
-        .clone()
-        .add(frameGlbOffset),
-    } satisfies SimilarityTransform;
-  }, [baseTowerBTrackingTransform, frameGlbOffset]);
   const towerTrackingTransform =
     activeTowerCode === "B" ? towerBTrackingTransform : towerATrackingTransform;
   const trackingCameraView = useMemo(() => {
