@@ -43,7 +43,7 @@ function ExteriorWalkthroughHead({ initialPreviewKey }: { initialPreviewKey?: st
       <link
         rel="preload"
         as="image"
-        href="https://cdn.sthyra.com/TULA/Images/Gold%20Logo%20Compressed.avif"
+        href="https://cdn.sthyra.com/TULA/Images/Green%20Whisper%20Tula%20Logo.avif"
         fetchPriority="high"
       />
       {initialPreviewUrl ? <link
