@@ -1,7 +1,7 @@
 const LOCAL_ASSET_KEY_PREFIX = "local:";
 
 export const MASTER_PLAN_ORBIT_VIDEO_URL =
-  "https://cdn.sthyra.com/TULA/Videos/360%208k%2060fps_GOP3_COMPRESSED.mp4";
+  "https://cdn.sthyra.com/TULA/Videos/LS_Building_Orbit_360_60fps_GOP3_v2.mp4";
 export const MASTER_PLAN_ORBIT_FALLBACK_IMAGE_URL =
   "https://cdn.sthyra.com/TULA/Images/first_frame.avif";
 
