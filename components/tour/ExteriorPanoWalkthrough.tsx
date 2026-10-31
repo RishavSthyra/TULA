@@ -17,7 +17,6 @@ import {
   Clipboard,
   Maximize2,
   Menu,
-  Minimize2,
   Pause,
   Play,
   SkipBack,
@@ -132,6 +131,10 @@ const LOCAL_EXTERIOR_MINIMAP_IMAGE_URL = EXTERIOR_MINIMAP_IMAGE_URL;
 // Single calibration value aligning world heading with the minimap image's north.
 const EXTERIOR_MINIMAP_HEADING_OFFSET_DEG = -90;
 const EXTERIOR_COMPACT_MINIMAP_ZOOM = 1.32;
+const EXTERIOR_EXPANDED_MINIMAP_ZOOM = 1.5;
+const EXTERIOR_EXPANDED_MINIMAP_LAYER_WIDTH = 2.25;
+const EXTERIOR_MINIMAP_IMAGE_ASPECT =
+  EXTERIOR_MINIMAP_IMAGE_LAYOUT.height / EXTERIOR_MINIMAP_IMAGE_LAYOUT.width;
 const PREMIUM_OLIVE_GRADIENT = "walkthrough-glass-accent";
 const PREMIUM_PANEL_SURFACE = "walkthrough-glass-panel";
 const PREMIUM_PILL_SURFACE = "walkthrough-glass-chip";
@@ -608,6 +611,31 @@ function clampMinimapOffset(
   };
 }
 
+function clampExpandedMinimapOffset(
+  offset: { x: number; y: number },
+  width: number,
+  height: number,
+) {
+  const scaledMapWidth =
+    width *
+    EXTERIOR_EXPANDED_MINIMAP_LAYER_WIDTH *
+    EXTERIOR_EXPANDED_MINIMAP_ZOOM;
+  const scaledMapHeight =
+    width *
+    EXTERIOR_EXPANDED_MINIMAP_LAYER_WIDTH *
+    EXTERIOR_MINIMAP_IMAGE_ASPECT *
+    EXTERIOR_EXPANDED_MINIMAP_ZOOM;
+
+  return {
+    x: clamp(offset.x, (width - scaledMapWidth) / 2, (scaledMapWidth - width) / 2),
+    y: clamp(
+      offset.y,
+      (height - scaledMapHeight) / 2,
+      (scaledMapHeight - height) / 2,
+    ),
+  };
+}
+
 const AmenityCard = forwardRef<
   HTMLButtonElement,
   {
@@ -720,10 +748,8 @@ function ExteriorMinimapGraphic({
   variant,
   signedMinimapImageUrl,
   fallbackMinimapImageUrl,
-  minimapZoom,
   minimapOffset,
   isMinimapDragging,
-  handleMinimapWheel,
   handleMinimapPointerDown,
   handleMinimapPointerMove,
   handleMinimapPointerUp,
@@ -756,14 +782,16 @@ function ExteriorMinimapGraphic({
       ? signedMinimapImageUrl
       : fallbackMinimapImageUrl;
   const isCompact = variant === "compact";
-  const compactTranslateX =
-    (0.5 - activeMinimapPoint.leftPercent) *
-    100 *
-    EXTERIOR_COMPACT_MINIMAP_ZOOM;
-  const compactTranslateY =
-    (0.5 - activeMinimapPoint.topPercent) *
-    100 *
-    EXTERIOR_COMPACT_MINIMAP_ZOOM;
+  const followZoom = isCompact
+    ? EXTERIOR_COMPACT_MINIMAP_ZOOM
+    : EXTERIOR_EXPANDED_MINIMAP_ZOOM;
+  const followTranslateX = isCompact
+    ? (0.5 - activeMinimapPoint.leftPercent) * 100 * followZoom
+    : 0;
+  const followTranslateY = isCompact
+    ? (0.5 - activeMinimapPoint.topPercent) * 100 * followZoom
+    : 0;
+  const followTransform = `translate(${followTranslateX}%, ${followTranslateY}%) scale(${followZoom})`;
 
   const mapContents = (
     <div className="relative h-full w-full overflow-hidden bg-[#101612]">
@@ -817,6 +845,7 @@ function ExteriorMinimapGraphic({
           }}
         />
       ) : null}
+
     </div>
   );
 
@@ -833,7 +862,7 @@ function ExteriorMinimapGraphic({
             onOpenCompact?.();
           }
         }}
-        className={`walkthrough-compact-minimap relative aspect-square cursor-pointer overflow-hidden rounded-full border border-white/16 bg-black/72 shadow-[0_18px_44px_rgba(0,0,0,0.44),inset_0_1px_0_rgba(255,255,255,0.1)] outline-none transition focus-visible:ring-2 focus-visible:ring-[#78c995]/80 ${className ?? ""}`}
+        className={`walkthrough-compact-minimap relative aspect-square cursor-pointer overflow-hidden rounded-full border border-[#ead9b5]/90 bg-black/72 shadow-[0_18px_44px_rgba(0,0,0,0.44),inset_0_1px_0_rgba(255,250,235,0.28)] outline-none transition focus-visible:ring-2 focus-visible:ring-[#ead9b5]/90 ${className ?? ""}`}
         style={{ touchAction: "manipulation" }}
       >
         <div
@@ -845,7 +874,7 @@ function ExteriorMinimapGraphic({
           <div
             className="relative h-full w-full will-change-transform"
             style={{
-              transform: `translate(${compactTranslateX}%, ${compactTranslateY}%) scale(${EXTERIOR_COMPACT_MINIMAP_ZOOM})`,
+              transform: followTransform,
               transformOrigin: "center center",
             }}
           >
@@ -853,7 +882,7 @@ function ExteriorMinimapGraphic({
           </div>
         </div>
 
-        <div className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle_at_center,transparent_48%,rgba(0,0,0,0.34)_82%,rgba(0,0,0,0.66)_100%)] shadow-[inset_0_0_0_5px_rgba(2,4,3,0.42)]" />
+        <div className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle_at_center,transparent_48%,rgba(0,0,0,0.34)_82%,rgba(0,0,0,0.66)_100%)] shadow-[inset_0_0_0_5px_rgba(234,217,181,0.48)]" />
         <div className="pointer-events-none absolute left-1/2 top-1/2 z-20 h-8 w-8 -translate-x-1/2 -translate-y-1/2">
           <span className="walkthrough-minimap-player-pulse absolute inset-0 rounded-full border border-[#86f3a9]/70 bg-[#78e89a]/18 shadow-[0_0_20px_rgba(120,232,154,0.46)]" />
           <span className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/90 bg-[#86f3a9] shadow-[0_0_0_3px_rgba(39,119,62,0.4),0_0_16px_rgba(134,243,169,0.95)]" />
@@ -864,33 +893,44 @@ function ExteriorMinimapGraphic({
 
   return (
     <div
-      className={`walkthrough-glass-map relative overflow-hidden rounded-[1.45rem] transition-[width,height,transform,opacity] duration-300 ${
-        minimapZoom > 1
-          ? isMinimapDragging
-            ? "cursor-grabbing"
-            : "cursor-grab"
-          : "cursor-default"
+      className={`walkthrough-glass-map relative aspect-square overflow-hidden rounded-full border border-[#ead9b5] bg-black/80 shadow-[0_28px_90px_rgba(0,0,0,0.52),inset_0_0_0_7px_rgb(234,217,181)] ${
+        isMinimapDragging ? "cursor-grabbing" : "cursor-grab"
       } ${className ?? ""}`}
-      onWheelCapture={handleMinimapWheel}
       onPointerDown={handleMinimapPointerDown}
       onPointerMove={handleMinimapPointerMove}
       onPointerUp={handleMinimapPointerUp}
       onPointerCancel={handleMinimapPointerUp}
-      style={{
-        touchAction: "none",
-        aspectRatio: `${EXTERIOR_MINIMAP_IMAGE_LAYOUT.width} / ${EXTERIOR_MINIMAP_IMAGE_LAYOUT.height}`,
-      }}
+      style={{ touchAction: "none" }}
     >
       <div
-        className="absolute inset-0 transition-transform duration-150 ease-out"
+        className="absolute left-1/2 top-1/2 w-[225%] will-change-transform"
         style={{
-          transform: `translate(${minimapOffset.x}px, ${minimapOffset.y}px) scale(${minimapZoom})`,
-          transformOrigin: "center center",
-          willChange: "transform",
+          aspectRatio: `${EXTERIOR_MINIMAP_IMAGE_LAYOUT.width} / ${EXTERIOR_MINIMAP_IMAGE_LAYOUT.height}`,
+          transform: `translate(calc(-50% + ${minimapOffset.x}px), calc(-50% + ${minimapOffset.y}px))`,
         }}
       >
-        {mapContents}
+        <div
+          className="relative h-full w-full will-change-transform"
+          style={{
+            transform: followTransform,
+            transformOrigin: "center center",
+            transition: "transform 450ms cubic-bezier(0.22, 1, 0.36, 1)",
+          }}
+        >
+          {mapContents}
+        </div>
       </div>
+
+      <div className="pointer-events-none absolute inset-0 z-10 rounded-full bg-[radial-gradient(circle_at_center,transparent_50%,rgba(0,0,0,0.18)_72%,rgba(0,0,0,0.62)_100%)]" />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-30 rounded-full"
+        style={{
+          border: "8px solid #ead9b5",
+          boxShadow:
+            "inset 0 0 0 2px #fff8e8, 0 0 0 1px rgba(63, 49, 25, 0.45)",
+        }}
+      />
     </div>
   );
 }
@@ -971,65 +1011,26 @@ function ExteriorMinimapPanel({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-[1.85rem] ${PREMIUM_PANEL_SURFACE} ${className ?? ""}`}
+      className={`relative aspect-square ${className ?? ""}`}
     >
-      <div className="relative z-10">
-        <div
-          className={`${uiFont.className} flex items-start justify-between gap-3 px-4 pb-3 pt-4 text-white`}
-        >
-          <div className="min-w-0">
-            <div className="truncate text-[10px] font-bold uppercase tracking-[0.26em] text-white/62">
-              Amenity Map
-            </div>
-            <div
-              className={`${editorialFont.className} mt-1 text-[1.55rem] leading-none text-white`}
-            >
-              Exterior Route
-            </div>
-          </div>
-          <button
-            type="button"
-            aria-label={isExpanded ? "Collapse minimap" : "Expand minimap"}
-            onClick={onToggleExpanded}
-            className={`walkthrough-glass-button flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/86 transition hover:scale-105 active:scale-95 ${PREMIUM_PILL_SURFACE}`}
-          >
-            {isExpanded ? (
-              <Minimize2 className="h-4 w-4" />
-            ) : (
-              <Maximize2 className="h-4 w-4" />
-            )}
-          </button>
-        </div>
+      <ExteriorMinimapGraphic
+        variant="expanded"
+        signedMinimapImageUrl={signedMinimapImageUrl}
+        fallbackMinimapImageUrl={fallbackMinimapImageUrl}
+        minimapZoom={minimapZoom}
+        minimapOffset={minimapOffset}
+        isMinimapDragging={isMinimapDragging}
+        handleMinimapWheel={handleMinimapWheel}
+        handleMinimapPointerDown={handleMinimapPointerDown}
+        handleMinimapPointerMove={handleMinimapPointerMove}
+        handleMinimapPointerUp={handleMinimapPointerUp}
+        minimapDots={minimapDots}
+        activeAmenityId={activeAmenityId}
+        activeMinimapPoint={activeMinimapPoint}
+        jumpToAmenity={jumpToAmenity}
+        className={mapClassName}
+      />
 
-        <div className="px-4 pb-4">
-          {/* <div className="mb-3 flex items-center justify-between gap-3">
-            <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white/78 ${PREMIUM_PILL_SURFACE}`}>
-              {isExpanded ? "Tap outside to close" : "Expand for detail"}
-            </span>
-            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/56">
-              Scroll to zoom
-            </span>
-          </div> */}
-
-          <ExteriorMinimapGraphic
-            variant="expanded"
-            signedMinimapImageUrl={signedMinimapImageUrl}
-            fallbackMinimapImageUrl={fallbackMinimapImageUrl}
-            minimapZoom={minimapZoom}
-            minimapOffset={minimapOffset}
-            isMinimapDragging={isMinimapDragging}
-            handleMinimapWheel={handleMinimapWheel}
-            handleMinimapPointerDown={handleMinimapPointerDown}
-            handleMinimapPointerMove={handleMinimapPointerMove}
-            handleMinimapPointerUp={handleMinimapPointerUp}
-            minimapDots={minimapDots}
-            activeAmenityId={activeAmenityId}
-            activeMinimapPoint={activeMinimapPoint}
-            jumpToAmenity={jumpToAmenity}
-            className={mapClassName}
-          />
-        </div>
-      </div>
     </div>
   );
 }
@@ -1214,6 +1215,7 @@ export default function ExteriorPanoWalkthrough({
   const fallbackPreviewLoadIdRef = useRef(0);
   const previewOverlayLoadIdRef = useRef(0);
   const warmupRunIdRef = useRef(0);
+  const navigationPrimeRunIdRef = useRef(0);
   const previewOverlayHideTimeoutRef = useRef<ReturnType<
     typeof globalThis.setTimeout
   > | null>(null);
@@ -1339,7 +1341,6 @@ export default function ExteriorPanoWalkthrough({
       minimapHeadingRotationRef.current =
         EXTERIOR_MINIMAP_HEADING_OFFSET_DEG -
         radToDeg(headingState.continuousHeading);
-
       if (minimapHeadingFrameRef.current !== null) {
         return;
       }
@@ -1709,12 +1710,14 @@ export default function ExteriorPanoWalkthrough({
       concurrency: number,
       fetchPriority: "high" | "low" | "auto",
       runId: number,
+      shouldContinueOverride?: () => boolean,
     ) => {
       if (resolved.mode !== "tiles" || !resolved.meta) {
         return;
       }
 
-      const shouldContinue = () => warmupRunIdRef.current === runId;
+      const shouldContinue =
+        shouldContinueOverride ?? (() => warmupRunIdRef.current === runId);
       if (!shouldContinue()) {
         return;
       }
@@ -1748,6 +1751,7 @@ export default function ExteriorPanoWalkthrough({
   useEffect(() => {
     return () => {
       warmupRunIdRef.current += 1;
+      navigationPrimeRunIdRef.current += 1;
       flythroughRunIdRef.current += 1;
       flythroughPhaseRef.current = "idle";
       if (previewOverlayHideTimeoutRef.current !== null) {
@@ -2221,6 +2225,84 @@ export default function ExteriorPanoWalkthrough({
     startWarmupRun,
   ]);
 
+  const primePanoNavigationNeighbors = useCallback(
+    (sourceNode: ExteriorTourNode, sourceYaw: number) => {
+      const runId = navigationPrimeRunIdRef.current + 1;
+      navigationPrimeRunIdRef.current = runId;
+      const shouldContinue = () =>
+        navigationPrimeRunIdRef.current === runId;
+      const warmupProfile = getWarmupProfile(
+        isCompactExperienceRef.current,
+      );
+      const neighborIds = ["forward", "backward"]
+        .flatMap((direction) =>
+          getViewDirectionalCandidates(
+            graph,
+            sourceNode.id,
+            direction as NavigationDirection,
+            sourceYaw,
+            forceSequentialForwardBack,
+          )
+            .slice(0, 1)
+            .map((candidate) => candidate.node.id),
+        )
+        .filter(
+          (nodeId, index, allNodeIds) =>
+            nodeId !== sourceNode.id && allNodeIds.indexOf(nodeId) === index,
+        );
+
+      void Promise.all(
+        neighborIds.map(async (nodeId) => {
+          try {
+            await preloadNodePreview(nodeId, "high");
+            if (!shouldContinue()) {
+              return;
+            }
+
+            const neighborNode = graph.byId[nodeId];
+            const resolved = await resolvePano(nodeId, {
+              previewPriority: "high",
+            });
+            if (!neighborNode || !shouldContinue()) {
+              return;
+            }
+
+            await preloadResolvedFocusTiles(
+              resolved,
+              {
+                yaw: preserveViewYawBetweenNodes(
+                  sourceNode,
+                  neighborNode,
+                  sourceYaw,
+                ),
+                pitch: clamp(
+                  degToRad(neighborNode.pitch),
+                  MIN_PITCH,
+                  MAX_PITCH,
+                ),
+                zoom: DEFAULT_ZOOM,
+              },
+              Math.max(warmupProfile.neighborFocusLimit, 8),
+              warmupProfile.neighborFocusConcurrency,
+              "high",
+              runId,
+              shouldContinue,
+            );
+          } catch {
+            // Directional warmup is opportunistic; navigation remains available.
+          }
+        }),
+      );
+    },
+    [
+      forceSequentialForwardBack,
+      graph,
+      preloadNodePreview,
+      preloadResolvedFocusTiles,
+      resolvePano,
+    ],
+  );
+
   const pushNavigationHistory = useCallback((nodeId: string) => {
     try {
       const history = nodeHistoryRef.current;
@@ -2247,6 +2329,7 @@ export default function ExteriorPanoWalkthrough({
       targetId: string,
       options: {
         recordHistory?: boolean;
+        primeNeighbors?: boolean;
         viewYawDegrees?: number;
         viewPitchDegrees?: number;
         viewZoom?: number;
@@ -2294,6 +2377,12 @@ export default function ExteriorPanoWalkthrough({
         };
         if (EXTERIOR_PANO_DEV_TOOL_ENABLED) {
           setLiveDebugView(viewRef.current);
+        }
+        if (options.primeNeighbors) {
+          const currentNode = graph.byId[targetId];
+          if (currentNode) {
+            primePanoNavigationNeighbors(currentNode, targetYaw);
+          }
         }
         return true;
       }
@@ -2450,6 +2539,9 @@ export default function ExteriorPanoWalkthrough({
           startTransition(() => {
             setActiveNodeId(targetId);
           });
+          if (options.primeNeighbors) {
+            primePanoNavigationNeighbors(targetNode, targetYaw);
+          }
           await finishFlythrough(flythroughRunId);
 
           return true;
@@ -2479,6 +2571,7 @@ export default function ExteriorPanoWalkthrough({
       preloadNodePreview,
       preloadResolvedFocusTiles,
       preparePreviewOverlay,
+      primePanoNavigationNeighbors,
       pushNavigationHistory,
       resolvePano,
       startWarmupRun,
@@ -2490,6 +2583,7 @@ export default function ExteriorPanoWalkthrough({
       setIsTrailPlaying(false);
 
       return jumpToNode(amenity.startingPano.nodeId, {
+        primeNeighbors: true,
         viewYawDegrees: amenity.startingPano.viewYaw,
         viewPitchDegrees: amenity.startingPano.viewPitch,
         viewZoom: amenity.startingPano.viewZoom,
@@ -2543,7 +2637,10 @@ export default function ExteriorPanoWalkthrough({
 
   const handleMinimapPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
-      if (minimapZoom <= 1) {
+      if (
+        event.target instanceof Element &&
+        event.target.closest("button")
+      ) {
         return;
       }
 
@@ -2560,7 +2657,7 @@ export default function ExteriorPanoWalkthrough({
 
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [minimapZoom],
+    [],
   );
 
   const handleMinimapPointerMove = useCallback(
@@ -2581,18 +2678,17 @@ export default function ExteriorPanoWalkthrough({
       dragState.lastY = event.clientY;
 
       setMinimapOffset((current) =>
-        clampMinimapOffset(
+        clampExpandedMinimapOffset(
           {
             x: current.x + deltaX,
             y: current.y + deltaY,
           },
           bounds.width,
           bounds.height,
-          minimapZoom,
         ),
       );
     },
-    [minimapZoom],
+    [],
   );
 
   const handleMinimapPointerUp = useCallback(
@@ -3471,25 +3567,33 @@ export default function ExteriorPanoWalkthrough({
           <ArrowButton
             icon={ArrowUp}
             label="Move forward"
-            onClick={() => void navigateTo("forward")}
+            onClick={() =>
+              void navigateTo("forward", { primeTargetTiles: true })
+            }
             disabled={isTransitioning}
           />
           <ArrowButton
             icon={ArrowLeft}
             label="Move left"
-            onClick={() => void navigateTo("left")}
+            onClick={() =>
+              void navigateTo("left", { primeTargetTiles: true })
+            }
             disabled={isTransitioning}
           />
           <ArrowButton
             icon={ArrowRight}
             label="Move right"
-            onClick={() => void navigateTo("right")}
+            onClick={() =>
+              void navigateTo("right", { primeTargetTiles: true })
+            }
             disabled={isTransitioning}
           />
           <ArrowButton
             icon={ArrowDown}
             label="Move back"
-            onClick={() => void navigateTo("backward")}
+            onClick={() =>
+              void navigateTo("backward", { primeTargetTiles: true })
+            }
             disabled={isTransitioning}
           />
         </div>
@@ -3658,7 +3762,10 @@ export default function ExteriorPanoWalkthrough({
             }}
             className="absolute inset-0 bg-[rgba(6,12,10,0.42)] backdrop-blur-[10px]"
           />
-          <div className="relative z-10 w-[min(94vw,72rem)]">
+          <div
+            className="relative z-10"
+            style={{ width: "min(78vh, 92vw, 46rem)" }}
+          >
             <ExteriorMinimapPanel
               isExpanded
               onToggleExpanded={() => {
@@ -3678,8 +3785,8 @@ export default function ExteriorPanoWalkthrough({
               activeAmenityId={activeAmenityId}
               activeMinimapPoint={activeMinimapPoint}
               jumpToAmenity={jumpToAmenityFromExpandedMap}
-              className="mx-auto w-full max-w-[72rem] rounded-[2.2rem]"
-              mapClassName="w-full"
+              className="mx-auto w-full"
+              mapClassName="h-full w-full"
             />
           </div>
         </div>

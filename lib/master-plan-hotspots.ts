@@ -1,6 +1,6 @@
 import type { InventoryApartment, TowerType } from "@/types/inventory";
 
-export const MASTER_PLAN_HOTSPOT_FRAMES = [1, 91, 181, 271] as const;
+export const MASTER_PLAN_HOTSPOT_FRAMES = [0, 91, 181, 271] as const;
 export const MASTER_PLAN_HOTSPOT_KEYS = ["A1", "A2", "A3", "A4"] as const;
 
 export type MasterPlanHotspotKey = (typeof MASTER_PLAN_HOTSPOT_KEYS)[number];

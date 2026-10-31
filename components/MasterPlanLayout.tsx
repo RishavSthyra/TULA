@@ -42,6 +42,7 @@ import { scheduleAmenityVideoWarmup } from "@/lib/amenity-video-warmup";
 import {
   MASTER_PLAN_HOTSPOT_FRAMES,
   getNearestMasterPlanHotspot,
+  isInventoryApartmentAllowedAtHotspot,
 } from "@/lib/master-plan-hotspots";
 import { readJsonResponse } from "@/lib/utils";
 import { formatBlockLabel } from "@/lib/inventory-display";
@@ -64,7 +65,9 @@ const MATCHING_FLATS_PAGE_SIZE = 24;
 const FALLBACK_AREA_RANGE = { min: 1376.73, max: 2801.81 } as const;
 const AREA_RANGE_STEP = 0.01;
 const TOTAL_MASTER_PLAN_FRAMES = 360;
-const MASTER_PLAN_SNAP_FRAMES = MASTER_PLAN_HOTSPOT_FRAMES;
+const MASTER_PLAN_SNAP_FRAMES = MASTER_PLAN_HOTSPOT_FRAMES.map((frame) =>
+  frame === 0 ? TOTAL_MASTER_PLAN_FRAMES : frame,
+).sort((left, right) => left - right);
 const SPECIAL_UNIT_VIDEO_TOWER: TowerType = "Tower B";
 const SPECIAL_UNIT_VIDEO_HOTSPOT = "A1";
 const SPECIAL_UNIT_VIDEO_FRAME = 1;
@@ -85,9 +88,9 @@ const SPECIAL_UNIT_VIDEO_CONFIGS: Record<string, SpecialUnitVideoConfig> = {
 };
 const MASTER_PLAN_STAGE_FALLBACK_IMAGE = "images/first_frame_again.png";
 const SPECIAL_UNIT_VIDEO_NAVIGATION_DELAY_MS = 760;
-const HOTSPOT_NAVIGATION_MIN_DURATION_MS = 380;
-const HOTSPOT_NAVIGATION_MAX_DURATION_MS = 720;
-const HOTSPOT_NAVIGATION_MS_PER_FRAME = 6.8;
+const HOTSPOT_NAVIGATION_MIN_DURATION_MS = 480;
+const HOTSPOT_NAVIGATION_MAX_DURATION_MS = 1800;
+const HOTSPOT_NAVIGATION_MS_PER_FRAME = 10.5;
 const smoothEase: Easing = [0.22, 1, 0.36, 1];
 let sharedInventoryRequest: Promise<InventoryApartment[]> | null = null;
 
@@ -716,6 +719,7 @@ export default function MasterPlanLayout({
   const lastApartmentSelectionAtRef = useRef(0);
   const inventorySignatureRef = useRef("");
   const currentFrameRef = useRef(1);
+  const lastHandledCameraFilterRef = useRef("");
   const signedAssetUrls = useSignedAssetUrls([
     masterPlanFallbackImageKey,
     ...Object.values(specialUnitVideoConfigs).flatMap((config) => [
@@ -1247,7 +1251,7 @@ export default function MasterPlanLayout({
     floor !== FLOOR_ALL_VALUE ||
     isAreaFiltered;
 
-  const filteredApartments = useMemo(() => {
+  const allFilteredApartments = useMemo(() => {
     if (!filterTower || !hasExplicitUnitFilter) {
       return [];
     }
@@ -1296,6 +1300,49 @@ export default function MasterPlanLayout({
     minArea,
     maxArea,
   ]);
+  const activeInventoryHotspot = useMemo(
+    () =>
+      getNearestMasterPlanHotspot(
+        currentFrame,
+        masterPlanConfig?.reverseHotspotDirection,
+      ),
+    [currentFrame, masterPlanConfig?.reverseHotspotDirection],
+  );
+  const filteredApartments = useMemo(
+    () =>
+      allFilteredApartments.filter((apartment) =>
+        isInventoryApartmentAllowedAtHotspot(
+          apartment,
+          activeInventoryHotspot,
+        ),
+      ),
+    [activeInventoryHotspot, allFilteredApartments],
+  );
+  const cameraFilterSignature = useMemo(
+    () =>
+      [
+        filterTower ?? "none",
+        normalizedDeferredSearch,
+        bhk ?? "none",
+        facing ?? "none",
+        status ?? "none",
+        floor,
+        minArea,
+        maxArea,
+        allFilteredApartments.map((apartment) => apartment.id).join(","),
+      ].join("|"),
+    [
+      allFilteredApartments,
+      bhk,
+      facing,
+      filterTower,
+      floor,
+      maxArea,
+      minArea,
+      normalizedDeferredSearch,
+      status,
+    ],
+  );
   const floorOptions = useMemo<FloorFilterOption[]>(() => {
     if (!filterTower) {
       return [{ value: FLOOR_ALL_VALUE, label: "All floors" }];
@@ -1775,6 +1822,69 @@ export default function MasterPlanLayout({
   );
 
   useEffect(() => {
+    if (!hasActiveInventoryFilters) {
+      lastHandledCameraFilterRef.current = "";
+      return;
+    }
+
+    if (lastHandledCameraFilterRef.current === cameraFilterSignature) {
+      return;
+    }
+
+    lastHandledCameraFilterRef.current = cameraFilterSignature;
+
+    if (
+      allFilteredApartments.length === 0 ||
+      filteredApartments.length > 0
+    ) {
+      return;
+    }
+
+    const currentFrameValue = currentFrameRef.current;
+    const targetView = MASTER_PLAN_SNAP_FRAMES.map((frame) => {
+      const hotspot = getNearestMasterPlanHotspot(
+        frame,
+        masterPlanConfig?.reverseHotspotDirection,
+      );
+      const matchCount = allFilteredApartments.reduce(
+        (count, apartment) =>
+          count +
+          (isInventoryApartmentAllowedAtHotspot(apartment, hotspot) ? 1 : 0),
+        0,
+      );
+
+      return {
+        frame,
+        matchCount,
+        distance: getShortestMasterPlanFrameDistance(
+          currentFrameValue,
+          frame,
+        ),
+      };
+    })
+      .filter((view) => view.matchCount > 0)
+      .sort(
+        (left, right) =>
+          left.distance - right.distance ||
+          right.matchCount - left.matchCount ||
+          left.frame - right.frame,
+      )[0];
+
+    if (!targetView || targetView.frame === currentFrameValue) {
+      return;
+    }
+
+    currentFrameRef.current = targetView.frame;
+    setCurrentFrame(targetView.frame);
+  }, [
+    allFilteredApartments,
+    cameraFilterSignature,
+    filteredApartments.length,
+    hasActiveInventoryFilters,
+    masterPlanConfig?.reverseHotspotDirection,
+  ]);
+
+  useEffect(() => {
     const getScrollAreaElement = (
       target: EventTarget | null,
       event?: Event,
@@ -1933,8 +2043,8 @@ export default function MasterPlanLayout({
           }`}
         >
           <MasterPlanHotspotControls
-            onPrevious={() => goToHotspot(-1)}
-            onNext={() => goToHotspot(1)}
+            onPrevious={() => goToHotspot(1)}
+            onNext={() => goToHotspot(-1)}
           />
         </div>
       ) : null}
@@ -2077,8 +2187,8 @@ export default function MasterPlanLayout({
                 >
                   <MasterPlanHotspotControls
                     compact
-                    onPrevious={() => goToHotspot(-1)}
-                    onNext={() => goToHotspot(1)}
+                    onPrevious={() => goToHotspot(1)}
+                    onNext={() => goToHotspot(-1)}
                   />
                 </div>
               ) : null}

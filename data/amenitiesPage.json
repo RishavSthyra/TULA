@@ -161,18 +161,6 @@
       "statValue": "Vibrant"
     },
     {
-      "id": "spa",
-      "title": "Spa",
-      "category": "Wellness",
-      "shortDescription": "A restorative retreat designed for relaxation, renewal, and quiet personal time.",
-      "details": "A refined wellness setting that offers residents a calm pause from the pace of everyday life.",
-      "videoSrc": "https://cdn.sthyra.com/TULA/Videos/Spa_compressed.mp4",
-      "thumbnailSrc": "https://cdn.sthyra.com/TULA/Images/Spa.avif",
-      "tags": ["Wellness", "Relaxation", "Indoor"],
-      "statLabel": "Mood",
-      "statValue": "Restorative"
-    },
-    {
       "id": "sports-area",
       "title": "Sports Area",
       "category": "Sport",

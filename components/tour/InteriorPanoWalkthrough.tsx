@@ -413,7 +413,7 @@ const INTERIOR_DIMENSION_MARKER_OVERRIDES: Record<
   InteriorDimensionMarkerOverride[]
 > = {
   LS_spline_pano_02_F0013: [
-   { yaw: 4.75, pitch: 0.03, roomNumber: "02", rotation:{roll: 0, yaw :-10, pitch : 0}, roomName: "Master Bedroom", dimensions: `12'0" x 15'0"`, size : 1.2 },
+   { yaw: 4.55, pitch: 0.03, roomNumber: "02", rotation:{roll: 0, yaw :10, pitch : 0}, roomName: "Master Bedroom", dimensions: `12'0" x 15'0"`, size : 1.2 },
   ],
   LS_spline_pano_01_F0001: [
    { yaw: 4, pitch: 0.03, roomNumber: "02", rotation:{roll: 0, yaw :-43, pitch : 0}, roomName: "Master Bedroom", dimensions: `12'0" x 15'0"`, size : 2.4 },
