@@ -5,7 +5,6 @@ import PreloaderCornerLogo from "@/components/ui/PreloaderCornerLogo";
 
 const TULA_LOGO_URL =
   "https://cdn.sthyra.com/TULA/Images/Tula%20Logo.avif";
-const TULA_LOGO_FILTER_ID = "tula-loader-logo-cream";
 
 type TulaBrandPreloaderProps = {
   progress?: number;
@@ -49,48 +48,25 @@ export default function TulaBrandPreloader({
           className="flex flex-col items-center"
           style={{ width: "clamp(200px, 34vw, 520px)" }}
         >
-          <svg
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             className="select-none drop-shadow-[0_18px_42px_rgba(22,31,18,0.34)]"
             style={{
               display: "block",
               width: "100%",
               height: "auto",
               maxHeight: "clamp(220px, 42vh, 540px)",
+              objectFit: "contain",
             }}
-            viewBox="0 0 1296 1176"
-            role="img"
-            aria-label="TULA — Whisper of Trees"
-            preserveAspectRatio="xMidYMid meet"
-          >
-            <defs>
-              <filter
-                id={TULA_LOGO_FILTER_ID}
-                x="-5%"
-                y="-5%"
-                width="110%"
-                height="110%"
-                colorInterpolationFilters="sRGB"
-              >
-                <feColorMatrix
-                  type="matrix"
-                  values="0 0 0 0 0.953
-                          0 0 0 0 0.929
-                          0 0 0 0 0.867
-                          0.2126 0.7152 0.0722 0 0"
-                />
-                <feComponentTransfer>
-                  <feFuncA type="linear" slope="4" intercept="0" />
-                </feComponentTransfer>
-              </filter>
-            </defs>
-            <image
-              href={TULA_LOGO_URL}
-              width="1296"
-              height="1176"
-              preserveAspectRatio="xMidYMid meet"
-              filter={`url(#${TULA_LOGO_FILTER_ID})`}
-            />
-          </svg>
+            src={TULA_LOGO_URL}
+            alt="TULA — Whisper of Trees"
+            width={1337}
+            height={1176}
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
+            draggable={false}
+          />
           <span
             className="text-center font-normal uppercase leading-[1.2] tracking-[0.08em] text-[#f3eddd]/78"
             style={{
