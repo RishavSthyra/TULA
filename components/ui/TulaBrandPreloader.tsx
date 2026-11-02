@@ -37,7 +37,21 @@ export default function TulaBrandPreloader({
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_68%_54%_at_50%_48%,transparent_0%,rgba(18,29,15,0.14)_58%,rgba(12,21,11,0.38)_100%)]" />
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(13,23,11,0.24)_0%,transparent_28%,transparent_72%,rgba(13,22,11,0.30)_100%)]" />
 
-      <div className="relative flex min-h-screen items-center justify-center px-7">
+      <div
+        className="pointer-events-none absolute inset-0 z-[1] hidden overflow-hidden xl:block"
+        aria-hidden="true"
+      >
+        <div
+          className="absolute -bottom-[4vh] -left-[15vh] h-[46vh] w-[46vh] bg-contain bg-left-bottom bg-no-repeat opacity-20"
+          style={{ backgroundImage: 'url("/LEAF%20UI.png")' }}
+        />
+        <div
+          className="absolute -right-[4vh] -top-[3vh] h-[44vh] w-[44vh] bg-contain bg-right-top bg-no-repeat opacity-20"
+          style={{ backgroundImage: 'url("/flowerUI.png")' }}
+        />
+      </div>
+
+      <div className="relative z-10 flex min-h-screen items-center justify-center px-7">
         <motion.div
           initial={false}
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
