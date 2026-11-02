@@ -4,7 +4,6 @@ import { forwardRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import {
-  ArrowUpRight,
   BedDouble,
   Building2,
   Compass,
@@ -182,10 +181,9 @@ const SelectedFlatDetailsPanel = forwardRef<
 
             <Link
               href="/interior-kitchen-foyer"
-              className="mt-5 flex min-h-12 items-center justify-between gap-3 rounded-full border border-[#b9974d] bg-[#d8b866] px-5 py-3 text-sm font-semibold text-[#294733] shadow-[inset_0_1px_0_rgba(255,250,227,0.55),0_10px_24px_rgba(97,73,25,0.18)] transition hover:bg-[#e2c574] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#8a713b]"
+              className="mt-5 flex min-h-14 items-center justify-center rounded-full border border-[#e8c977] bg-[linear-gradient(100deg,#f3dda9_0%,#dfbd75_48%,#c89a4b_100%)] px-5 py-3 text-center text-base font-semibold text-[#30230f] shadow-[inset_0_1px_0_rgba(255,250,227,0.78),0_10px_24px_rgba(97,73,25,0.18)] transition hover:brightness-[1.04] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#8a713b]"
             >
-              View interior
-              <ArrowUpRight className="h-4 w-4 shrink-0 text-[#294733]" strokeWidth={1.9} aria-hidden="true" />
+              Open walkthrough
             </Link>
 
             {!desktopEnhancedCompact && dimensionItems.length > 0 ? (
