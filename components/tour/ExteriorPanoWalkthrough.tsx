@@ -131,10 +131,6 @@ const LOCAL_EXTERIOR_MINIMAP_IMAGE_URL = EXTERIOR_MINIMAP_IMAGE_URL;
 // Single calibration value aligning world heading with the minimap image's north.
 const EXTERIOR_MINIMAP_HEADING_OFFSET_DEG = -90;
 const EXTERIOR_COMPACT_MINIMAP_ZOOM = 1.32;
-const EXTERIOR_EXPANDED_MINIMAP_ZOOM = 1.5;
-const EXTERIOR_EXPANDED_MINIMAP_LAYER_WIDTH = 2.25;
-const EXTERIOR_MINIMAP_IMAGE_ASPECT =
-  EXTERIOR_MINIMAP_IMAGE_LAYOUT.height / EXTERIOR_MINIMAP_IMAGE_LAYOUT.width;
 const PREMIUM_OLIVE_GRADIENT = "walkthrough-glass-accent";
 const PREMIUM_PANEL_SURFACE = "walkthrough-glass-panel";
 const PREMIUM_PILL_SURFACE = "walkthrough-glass-chip";
@@ -611,31 +607,6 @@ function clampMinimapOffset(
   };
 }
 
-function clampExpandedMinimapOffset(
-  offset: { x: number; y: number },
-  width: number,
-  height: number,
-) {
-  const scaledMapWidth =
-    width *
-    EXTERIOR_EXPANDED_MINIMAP_LAYER_WIDTH *
-    EXTERIOR_EXPANDED_MINIMAP_ZOOM;
-  const scaledMapHeight =
-    width *
-    EXTERIOR_EXPANDED_MINIMAP_LAYER_WIDTH *
-    EXTERIOR_MINIMAP_IMAGE_ASPECT *
-    EXTERIOR_EXPANDED_MINIMAP_ZOOM;
-
-  return {
-    x: clamp(offset.x, (width - scaledMapWidth) / 2, (scaledMapWidth - width) / 2),
-    y: clamp(
-      offset.y,
-      (height - scaledMapHeight) / 2,
-      (scaledMapHeight - height) / 2,
-    ),
-  };
-}
-
 const AmenityCard = forwardRef<
   HTMLButtonElement,
   {
@@ -748,8 +719,10 @@ function ExteriorMinimapGraphic({
   variant,
   signedMinimapImageUrl,
   fallbackMinimapImageUrl,
+  minimapZoom,
   minimapOffset,
   isMinimapDragging,
+  handleMinimapWheel,
   handleMinimapPointerDown,
   handleMinimapPointerMove,
   handleMinimapPointerUp,
@@ -782,9 +755,7 @@ function ExteriorMinimapGraphic({
       ? signedMinimapImageUrl
       : fallbackMinimapImageUrl;
   const isCompact = variant === "compact";
-  const followZoom = isCompact
-    ? EXTERIOR_COMPACT_MINIMAP_ZOOM
-    : EXTERIOR_EXPANDED_MINIMAP_ZOOM;
+  const followZoom = isCompact ? EXTERIOR_COMPACT_MINIMAP_ZOOM : 1;
   const followTranslateX = isCompact
     ? (0.5 - activeMinimapPoint.leftPercent) * 100 * followZoom
     : 0;
@@ -820,8 +791,10 @@ function ExteriorMinimapGraphic({
                   void jumpToAmenity(marker.amenity);
                 }
               }}
-              className={`group absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border transition ${
-                marker.amenity ? "hover:scale-110" : "cursor-default"
+              className={`group absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border transition duration-150 ${
+                marker.amenity
+                  ? "hover:z-10 hover:scale-[1.35] hover:border-white/95 hover:bg-[#78e89a] hover:shadow-none"
+                  : "cursor-default"
               } ${
                 activeAmenityId === marker.id
                   ? "border-white/90 bg-[#d7b878] shadow-[0_0_0_3px_rgba(215,184,120,0.2),0_0_12px_rgba(215,184,120,0.34)]"
@@ -893,42 +866,41 @@ function ExteriorMinimapGraphic({
 
   return (
     <div
-      className={`walkthrough-glass-map relative aspect-square overflow-hidden rounded-full border border-[#ead9b5] bg-black/80 shadow-[0_28px_90px_rgba(0,0,0,0.52),inset_0_0_0_7px_rgb(234,217,181)] ${
-        isMinimapDragging ? "cursor-grabbing" : "cursor-grab"
+      className={`walkthrough-glass-map relative overflow-hidden rounded-[1.45rem] border border-[#ead9b5] bg-black/80 shadow-[0_28px_90px_rgba(0,0,0,0.52),inset_0_0_0_3px_rgb(234,217,181)] transition-[width,height,transform,opacity] duration-300 ${
+        minimapZoom > 1
+          ? isMinimapDragging
+            ? "cursor-grabbing"
+            : "cursor-grab"
+          : "cursor-default"
       } ${className ?? ""}`}
+      onWheelCapture={handleMinimapWheel}
       onPointerDown={handleMinimapPointerDown}
       onPointerMove={handleMinimapPointerMove}
       onPointerUp={handleMinimapPointerUp}
       onPointerCancel={handleMinimapPointerUp}
-      style={{ touchAction: "none" }}
+      style={{
+        touchAction: "none",
+        aspectRatio: `${EXTERIOR_MINIMAP_IMAGE_LAYOUT.width} / ${EXTERIOR_MINIMAP_IMAGE_LAYOUT.height}`,
+      }}
     >
       <div
-        className="absolute left-1/2 top-1/2 w-[225%] will-change-transform"
+        className="absolute inset-0 transition-transform duration-150 ease-out"
         style={{
-          aspectRatio: `${EXTERIOR_MINIMAP_IMAGE_LAYOUT.width} / ${EXTERIOR_MINIMAP_IMAGE_LAYOUT.height}`,
-          transform: `translate(calc(-50% + ${minimapOffset.x}px), calc(-50% + ${minimapOffset.y}px))`,
+          transform: `translate(${minimapOffset.x}px, ${minimapOffset.y}px) scale(${minimapZoom})`,
+          transformOrigin: "center center",
+          willChange: "transform",
         }}
       >
-        <div
-          className="relative h-full w-full will-change-transform"
-          style={{
-            transform: followTransform,
-            transformOrigin: "center center",
-            transition: "transform 450ms cubic-bezier(0.22, 1, 0.36, 1)",
-          }}
-        >
-          {mapContents}
-        </div>
+        {mapContents}
       </div>
 
-      <div className="pointer-events-none absolute inset-0 z-10 rounded-full bg-[radial-gradient(circle_at_center,transparent_50%,rgba(0,0,0,0.18)_72%,rgba(0,0,0,0.62)_100%)]" />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-30 rounded-full"
+        className="pointer-events-none absolute inset-0 z-30 rounded-[1.45rem]"
         style={{
-          border: "8px solid #ead9b5",
+          border: "2px solid #ead9b5",
           boxShadow:
-            "inset 0 0 0 2px #fff8e8, 0 0 0 1px rgba(63, 49, 25, 0.45)",
+            "inset 0 0 0 1px #fff8e8, 0 0 0 1px rgba(63, 49, 25, 0.35)",
         }}
       />
     </div>
@@ -1010,9 +982,7 @@ function ExteriorMinimapPanel({
   }
 
   return (
-    <div
-      className={`relative aspect-square ${className ?? ""}`}
-    >
+    <div className={`relative ${className ?? ""}`}>
       <ExteriorMinimapGraphic
         variant="expanded"
         signedMinimapImageUrl={signedMinimapImageUrl}
@@ -2644,6 +2614,10 @@ export default function ExteriorPanoWalkthrough({
         return;
       }
 
+      if (minimapZoom <= 1) {
+        return;
+      }
+
       event.preventDefault();
       event.stopPropagation();
 
@@ -2657,7 +2631,7 @@ export default function ExteriorPanoWalkthrough({
 
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [],
+    [minimapZoom],
   );
 
   const handleMinimapPointerMove = useCallback(
@@ -2678,17 +2652,18 @@ export default function ExteriorPanoWalkthrough({
       dragState.lastY = event.clientY;
 
       setMinimapOffset((current) =>
-        clampExpandedMinimapOffset(
+        clampMinimapOffset(
           {
             x: current.x + deltaX,
             y: current.y + deltaY,
           },
           bounds.width,
           bounds.height,
+          minimapZoom,
         ),
       );
     },
-    [],
+    [minimapZoom],
   );
 
   const handleMinimapPointerUp = useCallback(
@@ -3762,10 +3737,7 @@ export default function ExteriorPanoWalkthrough({
             }}
             className="absolute inset-0 bg-[rgba(6,12,10,0.42)] backdrop-blur-[10px]"
           />
-          <div
-            className="relative z-10"
-            style={{ width: "min(78vh, 92vw, 46rem)" }}
-          >
+          <div className="relative z-10 w-[min(94vw,72rem)]">
             <ExteriorMinimapPanel
               isExpanded
               onToggleExpanded={() => {
@@ -3785,8 +3757,8 @@ export default function ExteriorPanoWalkthrough({
               activeAmenityId={activeAmenityId}
               activeMinimapPoint={activeMinimapPoint}
               jumpToAmenity={jumpToAmenityFromExpandedMap}
-              className="mx-auto w-full"
-              mapClassName="h-full w-full"
+              className="mx-auto w-full max-w-[72rem]"
+              mapClassName="w-full"
             />
           </div>
         </div>

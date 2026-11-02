@@ -11,7 +11,7 @@ export const KITCHEN_FOYER_PANO_BASE_PATH =
 export const KITCHEN_FOYER_BARE_SHELL_PANO_BASE_PATH =
   "TULA/Panos/interior-kitchen-foyer-bare-shell-v1/";
 
-export const KITCHEN_FOYER_BALCONY_PANO_BASE_PATH = "TULA/Panos/interior-balcony-v1/";
+export const KITCHEN_FOYER_BALCONY_PANO_BASE_PATH = "TULA/Panos/interior-balcony-v2/";
 
 export const KITCHEN_FOYER_BLOCKED_NAVIGATION_PAIRS = [
   ["spline_pano_01_F0006", "spline_pano_05_F0025"],

@@ -172,7 +172,7 @@ const SelectedFlatDetailsPanel = forwardRef<
             <dl className="mt-5 divide-y divide-[#d8bd78]/30 border-y border-[#d8bd78]/40">
               {compactFacts.map((item) => (
                 <div key={item.label} className="flex items-baseline justify-between gap-4 py-3">
-                  <dt className="shrink-0 text-xs font-semibold text-[#fff6df] [text-shadow:0_1px_3px_rgba(20,40,26,0.55)]">{item.label}</dt>
+                  <dt className="shrink-0 text-[15px] font-semibold text-[#294733]">{item.label}</dt>
                   <dd className="min-w-0 break-words text-right text-sm font-semibold tabular-nums text-[#1f3f2b]">
                     {item.value}
                   </dd>
@@ -182,12 +182,11 @@ const SelectedFlatDetailsPanel = forwardRef<
 
             <Link
               href="/interior-kitchen-foyer"
-              className="mt-5 flex min-h-12 items-center justify-between gap-3 rounded-full border border-[#d7bf80]/40 bg-[#23412a]/90 px-5 py-3 text-sm font-medium text-[#fff6df] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-sm transition hover:bg-[#2c5134] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#c4a667]"
+              className="mt-5 flex min-h-12 items-center justify-between gap-3 rounded-full border border-[#b9974d] bg-[#d8b866] px-5 py-3 text-sm font-semibold text-[#294733] shadow-[inset_0_1px_0_rgba(255,250,227,0.55),0_10px_24px_rgba(97,73,25,0.18)] transition hover:bg-[#e2c574] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#8a713b]"
             >
               View interior
-              <ArrowUpRight className="h-4 w-4 shrink-0 text-[#d9c28a]" strokeWidth={1.7} aria-hidden="true" />
+              <ArrowUpRight className="h-4 w-4 shrink-0 text-[#294733]" strokeWidth={1.9} aria-hidden="true" />
             </Link>
-            <p className="mt-2.5 text-[11px] font-medium leading-4 text-[#fff6df] [text-shadow:0_1px_3px_rgba(20,40,26,0.55)]">Representative interior</p>
 
             {!desktopEnhancedCompact && dimensionItems.length > 0 ? (
               <section className="mt-6 rounded-[22px] border border-[#d7bf80]/40 bg-[#23412a]/90 p-4 text-[#f7efd9]" aria-label="Room dimensions">

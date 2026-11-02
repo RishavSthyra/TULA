@@ -562,6 +562,12 @@ function wrapFrame(frame: number) {
   return ((frame - 1 + TOTAL_FRAMES) % TOTAL_FRAMES) + 1;
 }
 
+function normalizeSnapFrames(frames?: readonly number[]) {
+  const sourceFrames = frames?.length ? frames : SNAP_FRAMES;
+
+  return sourceFrames.filter((frame) => Number.isFinite(frame));
+}
+
 function wrapProgress(progress: number) {
   return ((progress % 1) + 1) % 1;
 }
@@ -591,17 +597,23 @@ function getProgressRotation(progress: number) {
   return -(wrapProgress(progress) * Math.PI * 2);
 }
 
-function isSnapFrame(frame: number) {
-  return SNAP_FRAMES.includes(wrapFrame(frame) as (typeof SNAP_FRAMES)[number]);
+function isSnapFrame(frame: number, snapFrames: readonly number[] = SNAP_FRAMES) {
+  const normalizedFrame = wrapFrame(frame);
+  return snapFrames.some(
+    (snapFrame) => wrapFrame(snapFrame) === normalizedFrame,
+  );
 }
 
-function getNearestSnapFrameInfo(frame: number) {
+function getNearestSnapFrameInfo(
+  frame: number,
+  snapFrames: readonly number[] = SNAP_FRAMES,
+) {
   const normalizedFrame = wrapFrame(frame);
-  let closestFrame: number = SNAP_FRAMES[0];
+  let closestFrame = snapFrames[0] ?? 1;
   let closestIndex = 0;
   let closestDistance = Number.POSITIVE_INFINITY;
 
-  SNAP_FRAMES.forEach((snapFrame, index) => {
+  snapFrames.forEach((snapFrame, index) => {
     const distance = Math.min(
       Math.abs(normalizedFrame - snapFrame),
       Math.abs(normalizedFrame - (snapFrame + TOTAL_FRAMES)),
@@ -622,29 +634,41 @@ function getNearestSnapFrameInfo(frame: number) {
   };
 }
 
-function getNearestSnapFrame(frame: number) {
-  return getNearestSnapFrameInfo(frame).frame;
+function getNearestSnapFrame(
+  frame: number,
+  snapFrames: readonly number[] = SNAP_FRAMES,
+) {
+  return getNearestSnapFrameInfo(frame, snapFrames).frame;
 }
 
-function getDirectionalSnapFrame(frame: number, direction: 1 | -1) {
+function getDirectionalSnapFrame(
+  frame: number,
+  direction: 1 | -1,
+  snapFrames: readonly number[] = SNAP_FRAMES,
+) {
   const normalizedFrame = wrapFrame(frame);
 
   if (direction === 1) {
     return (
-      SNAP_FRAMES.find((snapFrame) => snapFrame > normalizedFrame) ??
-      SNAP_FRAMES[0]
+      snapFrames.find((snapFrame) => snapFrame > normalizedFrame) ??
+      snapFrames[0] ??
+      1
     );
   }
 
-  const previousSnapFrames = SNAP_FRAMES.filter(
+  const previousSnapFrames = snapFrames.filter(
     (snapFrame) => snapFrame < normalizedFrame,
   );
 
-  return previousSnapFrames.at(-1) ?? SNAP_FRAMES.at(-1) ?? SNAP_FRAMES[0];
+  return previousSnapFrames.at(-1) ?? snapFrames.at(-1) ?? snapFrames[0] ?? 1;
 }
 
-function isFrameWithinSnapWindow(frame: number, frameWindow: number) {
-  return getNearestSnapFrameInfo(frame).distance <= frameWindow;
+function isFrameWithinSnapWindow(
+  frame: number,
+  frameWindow: number,
+  snapFrames: readonly number[] = SNAP_FRAMES,
+) {
+  return getNearestSnapFrameInfo(frame, snapFrames).distance <= frameWindow;
 }
 
 function getShortestProgressDelta(startProgress: number, endProgress: number) {
@@ -1333,18 +1357,21 @@ function getUnrealTowerFootprintInThreeSpace(
   } satisfies TowerFootprint;
 }
 
-function getTrackingInterpolationSegment(currentFrame: number) {
+function getTrackingInterpolationSegment(
+  currentFrame: number,
+  snapFrames: readonly number[] = SNAP_FRAMES,
+) {
   const normalizedFrame =
     ((currentFrame - 1 + TOTAL_FRAMES) % TOTAL_FRAMES) + 1;
 
-  for (let index = 0; index < SNAP_FRAMES.length; index += 1) {
-    const startFrame = SNAP_FRAMES[index];
+  for (let index = 0; index < snapFrames.length; index += 1) {
+    const startFrame = snapFrames[index];
     const endFrame =
-      index === SNAP_FRAMES.length - 1
-        ? SNAP_FRAMES[0] + TOTAL_FRAMES
-        : SNAP_FRAMES[index + 1];
+      index === snapFrames.length - 1
+        ? (snapFrames[0] ?? 1) + TOTAL_FRAMES
+        : snapFrames[index + 1];
     const adjustedFrame =
-      index === SNAP_FRAMES.length - 1 && normalizedFrame < startFrame
+      index === snapFrames.length - 1 && normalizedFrame < startFrame
         ? normalizedFrame + TOTAL_FRAMES
         : normalizedFrame;
 
@@ -2656,6 +2683,10 @@ const TowerScene = memo(function TowerScene({
 }) {
   const { camera, gl, invalidate, raycaster } = useThree();
   const isThreeDsMaxTrial = masterPlanConfig?.renderer === "3ds-max-vantage";
+  const snapFrames = useMemo(
+    () => normalizeSnapFrames(masterPlanConfig?.hotspotFrames),
+    [masterPlanConfig?.hotspotFrames],
+  );
   const towerAGltf = useGLTF(towerAModelPath);
   const towerBGltf = useGLTF(towerBModelPath);
   const towerAInteractionGltf = useGLTF(towerAModelPath);
@@ -2724,12 +2755,12 @@ const TowerScene = memo(function TowerScene({
   );
   const cameraTargetY = primaryPreparedModel.scaledHeight * 0.52;
   const nearestTrackingFrameInfo = useMemo(
-    () => getNearestSnapFrameInfo(currentFrame),
-    [currentFrame],
+    () => getNearestSnapFrameInfo(currentFrame, snapFrames),
+    [currentFrame, snapFrames],
   );
   const trackingInterpolation = useMemo(
-    () => getTrackingInterpolationSegment(currentFrame),
-    [currentFrame],
+    () => getTrackingInterpolationSegment(currentFrame, snapFrames),
+    [currentFrame, snapFrames],
   );
   const towerATrackingTransform = useMemo(
     () =>
@@ -2922,8 +2953,13 @@ const TowerScene = memo(function TowerScene({
       getNearestMasterPlanHotspot(
         currentFrame,
         masterPlanConfig?.reverseHotspotDirection,
+        snapFrames,
       ),
-    [currentFrame, masterPlanConfig?.reverseHotspotDirection],
+    [
+      currentFrame,
+      masterPlanConfig?.reverseHotspotDirection,
+      snapFrames,
+    ],
   );
   const apartmentIndex = useMemo(
     () => buildInventoryApartmentIndex(apartments),
@@ -3572,6 +3608,10 @@ export default function MasterPlanFrameHoverStage({
 }: MasterPlanFrameHoverStageProps) {
   const isThreeDsMaxTrial = config?.renderer === "3ds-max-vantage";
   const scrubEnabled = dragEnabled;
+  const snapFrames = useMemo(
+    () => normalizeSnapFrames(config?.hotspotFrames),
+    [config?.hotspotFrames],
+  );
   const initialFrame = wrapFrame(currentFrame);
   const scrubVideoKey =
     config?.scrubVideoKey ?? MASTER_PLAN_SCRUB_HQ_VIDEO_PATH;
@@ -3653,7 +3693,7 @@ export default function MasterPlanFrameHoverStage({
   const [showTowerMeshes, setShowTowerMeshes] = useState(() =>
     updateVisibilityWithHysteresis(
       false,
-      getNearestSnapFrameInfo(initialFrame).distance,
+      getNearestSnapFrameInfo(initialFrame, snapFrames).distance,
       TOWER_MESH_ENTER_WINDOW,
       TOWER_MESH_EXIT_WINDOW,
     ),
@@ -3661,7 +3701,7 @@ export default function MasterPlanFrameHoverStage({
   const [showApartmentMeshes, setShowApartmentMeshes] = useState(() =>
     updateVisibilityWithHysteresis(
       false,
-      getNearestSnapFrameInfo(initialFrame).distance,
+      getNearestSnapFrameInfo(initialFrame, snapFrames).distance,
       APARTMENT_MESH_ENTER_WINDOW,
       APARTMENT_MESH_EXIT_WINDOW,
     ),
@@ -3902,7 +3942,10 @@ export default function MasterPlanFrameHoverStage({
 
   const syncSnapVisibility = useCallback(
     (frame: number, mode: InteractionMode) => {
-      const distanceToSnap = getNearestSnapFrameInfo(frame).distance;
+      const distanceToSnap = getNearestSnapFrameInfo(
+        frame,
+        snapFrames,
+      ).distance;
 
       const nextShowTowerMeshes =
         mode !== "idle"
@@ -3933,7 +3976,7 @@ export default function MasterPlanFrameHoverStage({
         setShowApartmentMeshes(nextShowApartmentMeshes);
       }
     },
-    [],
+    [snapFrames],
   );
 
   const clearHoverCooldown = useCallback(() => {
@@ -4207,15 +4250,21 @@ export default function MasterPlanFrameHoverStage({
       const previousInPrewarmWindow = isFrameWithinSnapWindow(
         previousDisplayedFrame,
         TOWER_MESH_PREWARM_FRAMES,
+        snapFrames,
       );
       const nextInPrewarmWindow = isFrameWithinSnapWindow(
         nextDisplayedFrame,
         TOWER_MESH_PREWARM_FRAMES,
+        snapFrames,
       );
       const previousSnapIndex = getNearestSnapFrameInfo(
         previousDisplayedFrame,
+        snapFrames,
       ).index;
-      const nextSnapIndex = getNearestSnapFrameInfo(nextDisplayedFrame).index;
+      const nextSnapIndex = getNearestSnapFrameInfo(
+        nextDisplayedFrame,
+        snapFrames,
+      ).index;
 
       if (
         previousInPrewarmWindow !== nextInPrewarmWindow ||
@@ -4237,6 +4286,7 @@ export default function MasterPlanFrameHoverStage({
       passiveVideoSyncIntervalMs,
       performanceProfile.isSafariLike,
       performanceProfile.tier,
+      snapFrames,
       syncSnapVisibility,
       syncDisplayedFrameState,
       syncVisibleVideoTime,
@@ -4413,7 +4463,7 @@ export default function MasterPlanFrameHoverStage({
     setIsDragging(false);
 
     const releaseFrame = progressToFrame(displayProgressRef.current);
-    const snappedFrame = getNearestSnapFrame(releaseFrame);
+    const snappedFrame = getNearestSnapFrame(releaseFrame, snapFrames);
     const targetProgress = frameToProgress(snappedFrame);
     const totalFrames =
       Math.abs(
@@ -4431,7 +4481,7 @@ export default function MasterPlanFrameHoverStage({
       startHoverCooldown();
       onSetFrame(snappedFrame);
     });
-  }, [animateToProgress, onSetFrame, startHoverCooldown]);
+  }, [animateToProgress, onSetFrame, snapFrames, startHoverCooldown]);
 
   const handleStageWheel = useCallback(
     (event: ReactWheelEvent<HTMLDivElement>) => {
@@ -4886,8 +4936,8 @@ export default function MasterPlanFrameHoverStage({
             : -1;
       const snappedFrame =
         dragDirection === 0
-          ? getNearestSnapFrame(releaseFrame)
-          : getDirectionalSnapFrame(releaseFrame, dragDirection);
+          ? getNearestSnapFrame(releaseFrame, snapFrames)
+          : getDirectionalSnapFrame(releaseFrame, dragDirection, snapFrames);
       const targetProgress = frameToProgress(snappedFrame);
       dragTargetProgressRef.current = targetProgress;
       const totalFrames =
@@ -4928,6 +4978,7 @@ export default function MasterPlanFrameHoverStage({
     scrubEnabled,
     isStartupInteractionPending,
     onSetFrame,
+    snapFrames,
     startDragLoop,
     startHoverCooldown,
     stopDragLoop,
@@ -5036,8 +5087,8 @@ export default function MasterPlanFrameHoverStage({
             : -1;
       const snappedFrame =
         dragDirection === 0
-          ? getNearestSnapFrame(releaseFrame)
-          : getDirectionalSnapFrame(releaseFrame, dragDirection);
+          ? getNearestSnapFrame(releaseFrame, snapFrames)
+          : getDirectionalSnapFrame(releaseFrame, dragDirection, snapFrames);
       const targetProgress = frameToProgress(snappedFrame);
       dragTargetProgressRef.current = targetProgress;
       const totalFrames =
@@ -5074,6 +5125,7 @@ export default function MasterPlanFrameHoverStage({
     scrubEnabled,
     isStartupInteractionPending,
     onSetFrame,
+    snapFrames,
     startDragLoop,
     startHoverCooldown,
     stopDragLoop,
@@ -5105,8 +5157,8 @@ export default function MasterPlanFrameHoverStage({
   ]);
 
   const snapInfo = useMemo(
-    () => getNearestSnapFrameInfo(displayedFrame),
-    [displayedFrame],
+    () => getNearestSnapFrameInfo(displayedFrame, snapFrames),
+    [displayedFrame, snapFrames],
   );
   const allowHover = isThreeDsMaxTrial
     ? isVideoReady && interactionMode === "idle"
@@ -5116,7 +5168,7 @@ export default function MasterPlanFrameHoverStage({
       performanceProfile.tier !== "low" &&
       isInteractiveSceneReady &&
       interactionMode === "idle" &&
-      (!scrubEnabled || isSnapFrame(displayedFrame));
+      (!scrubEnabled || isSnapFrame(displayedFrame, snapFrames));
   const showTrackingDebug = ENABLE_TRACKING_DEBUG && interactionMode === "idle";
   const showVideo = isVideoReady;
   const showFallbackBackdrop = !isVideoReady;

@@ -48,6 +48,7 @@ type OrbitPreviewFrame = {
 export type OrbitPreviewOptions = {
   debugModel?: boolean;
   fov?: number;
+  hotspotFrames?: readonly number[];
   modelOffset?: Partial<Vector3Config>;
   modelScaleMultiplier?: number;
   modelYawOffsetDegrees?: number;
@@ -152,10 +153,17 @@ export function getOrbitPreviewMasterPlanConfig(
   const frameCameras = sourceFrames.map((frame) =>
     buildCameraConfig(frame, horizontalFov),
   );
+  const hotspotFrames =
+    options.hotspotFrames?.length === MASTER_PLAN_HOTSPOT_KEYS.length
+      ? [...options.hotspotFrames]
+      : [...MASTER_PLAN_HOTSPOT_FRAMES];
   const cameras = Object.fromEntries(
     MASTER_PLAN_HOTSPOT_KEYS.map((key, index) => [
       key,
-      frameCameras[MASTER_PLAN_HOTSPOT_FRAMES[index] - 1],
+      frameCameras[
+        ((hotspotFrames[index] - 1 + frameCameras.length) %
+          frameCameras.length)
+      ],
     ]),
   ) as Record<string, MasterPlanCameraConfig>;
   const transform = buildModelTransform(options);
@@ -173,10 +181,10 @@ export function getOrbitPreviewMasterPlanConfig(
     fallbackImageKey: MASTER_PLAN_ORBIT_FALLBACK_IMAGE_URL,
     fps: 60,
     frameCameras,
-    hotspotFrames: [...MASTER_PLAN_HOTSPOT_FRAMES],
+    hotspotFrames,
     hotspots: MASTER_PLAN_HOTSPOT_KEYS.map((key, index) => ({
       camera: cameras[key],
-      frame: MASTER_PLAN_HOTSPOT_FRAMES[index],
+      frame: hotspotFrames[index],
       key,
     })),
     interactionVideoKey: MASTER_PLAN_ORBIT_VIDEO_URL,

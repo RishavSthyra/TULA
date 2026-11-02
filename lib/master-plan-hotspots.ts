@@ -37,6 +37,7 @@ function wrapMasterPlanFrame(frame: number, totalFrames = 360) {
 export function getNearestMasterPlanHotspot(
   frame: number,
   reverseDirection = false,
+  hotspotFrames: readonly number[] = MASTER_PLAN_HOTSPOT_FRAMES,
 ): MasterPlanHotspotKey {
   const normalizedFrame = wrapMasterPlanFrame(
     reverseDirection ? 2 - frame : frame,
@@ -44,8 +45,9 @@ export function getNearestMasterPlanHotspot(
   let closestIndex = 0;
   let smallestDistance = Number.POSITIVE_INFINITY;
 
-  MASTER_PLAN_HOTSPOT_FRAMES.forEach((snapFrame, index) => {
-    const directDistance = Math.abs(snapFrame - normalizedFrame);
+  hotspotFrames.forEach((snapFrame, index) => {
+    const normalizedSnapFrame = wrapMasterPlanFrame(snapFrame);
+    const directDistance = Math.abs(normalizedSnapFrame - normalizedFrame);
     const wrappedDistance = 360 - directDistance;
     const distance = Math.min(directDistance, wrappedDistance);
 

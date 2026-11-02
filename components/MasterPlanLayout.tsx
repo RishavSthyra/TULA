@@ -65,9 +65,18 @@ const MATCHING_FLATS_PAGE_SIZE = 24;
 const FALLBACK_AREA_RANGE = { min: 1376.73, max: 2801.81 } as const;
 const AREA_RANGE_STEP = 0.01;
 const TOTAL_MASTER_PLAN_FRAMES = 360;
-const MASTER_PLAN_SNAP_FRAMES = MASTER_PLAN_HOTSPOT_FRAMES.map((frame) =>
-  frame === 0 ? TOTAL_MASTER_PLAN_FRAMES : frame,
-).sort((left, right) => left - right);
+function normalizeMasterPlanSnapFrames(frames: readonly number[]) {
+  return frames
+    .map((frame) =>
+      frame === 0
+        ? TOTAL_MASTER_PLAN_FRAMES
+        : ((frame - 1 + TOTAL_MASTER_PLAN_FRAMES) %
+            TOTAL_MASTER_PLAN_FRAMES) +
+          1,
+    )
+    .sort((left, right) => left - right);
+}
+
 const SPECIAL_UNIT_VIDEO_TOWER: TowerType = "Tower B";
 const SPECIAL_UNIT_VIDEO_HOTSPOT = "A1";
 const SPECIAL_UNIT_VIDEO_FRAME = 1;
@@ -475,6 +484,7 @@ function SelectedFlatPlanPanel({
       ? floorPlanLoadState.status
       : "loading";
   const isFloorPlanLoaded = currentFloorPlanLoadState === "loaded";
+  const rotateFloorPlanPreview = apartment.bhk === 4;
 
   return (
     <div
@@ -581,9 +591,9 @@ function SelectedFlatPlanPanel({
                   status: "error",
                 })
               }
-              className={`z-10 object-contain mix-blend-multiply drop-shadow-[0_18px_30px_rgba(19,61,40,0.16)] transition-opacity duration-500 ${
+              className={`z-10 object-contain mix-blend-multiply drop-shadow-[0_18px_30px_rgba(19,61,40,0.16)] transition-[opacity,transform] duration-500 ${
                 isFloorPlanLoaded ? "opacity-100" : "opacity-0"
-              } group-hover:scale-[1.025]`}
+              } ${rotateFloorPlanPreview ? "rotate-90" : ""} group-hover:scale-[1.025]`}
             />
           </button>
 
@@ -697,6 +707,17 @@ export default function MasterPlanLayout({
   masterPlanConfig,
 }: MasterPlanLayoutProps) {
   const router = useRouter();
+  const masterPlanHotspotFrames = useMemo(
+    () =>
+      masterPlanConfig?.hotspotFrames?.length
+        ? [...masterPlanConfig.hotspotFrames]
+        : [...MASTER_PLAN_HOTSPOT_FRAMES],
+    [masterPlanConfig?.hotspotFrames],
+  );
+  const masterPlanSnapFrames = useMemo(
+    () => normalizeMasterPlanSnapFrames(masterPlanHotspotFrames),
+    [masterPlanHotspotFrames],
+  );
   primeSignedAssetUrls(initialSignedAssetUrls);
   const specialUnitVideoConfigs = masterPlanConfig
     ? Object.fromEntries(
@@ -1305,8 +1326,13 @@ export default function MasterPlanLayout({
       getNearestMasterPlanHotspot(
         currentFrame,
         masterPlanConfig?.reverseHotspotDirection,
+        masterPlanHotspotFrames,
       ),
-    [currentFrame, masterPlanConfig?.reverseHotspotDirection],
+    [
+      currentFrame,
+      masterPlanHotspotFrames,
+      masterPlanConfig?.reverseHotspotDirection,
+    ],
   );
   const filteredApartments = useMemo(
     () =>
@@ -1789,19 +1815,19 @@ export default function MasterPlanLayout({
 
       if (direction === 1) {
         return (
-          MASTER_PLAN_SNAP_FRAMES.find(
+          masterPlanSnapFrames.find(
             (snapFrame) => snapFrame > normalizedFrame,
-          ) ?? MASTER_PLAN_SNAP_FRAMES[0]
+          ) ?? masterPlanSnapFrames[0]
         );
       }
 
-      const previousSnapFrames = MASTER_PLAN_SNAP_FRAMES.filter(
+      const previousSnapFrames = masterPlanSnapFrames.filter(
         (snapFrame) => snapFrame < normalizedFrame,
       );
 
-      return previousSnapFrames.at(-1) ?? MASTER_PLAN_SNAP_FRAMES.at(-1) ?? 1;
+      return previousSnapFrames.at(-1) ?? masterPlanSnapFrames.at(-1) ?? 1;
     },
-    [wrapFrame],
+    [masterPlanSnapFrames, wrapFrame],
   );
 
   const goToHotspot = useCallback(
@@ -1841,10 +1867,11 @@ export default function MasterPlanLayout({
     }
 
     const currentFrameValue = currentFrameRef.current;
-    const targetView = MASTER_PLAN_SNAP_FRAMES.map((frame) => {
+    const targetView = masterPlanSnapFrames.map((frame) => {
       const hotspot = getNearestMasterPlanHotspot(
         frame,
         masterPlanConfig?.reverseHotspotDirection,
+        masterPlanHotspotFrames,
       );
       const matchCount = allFilteredApartments.reduce(
         (count, apartment) =>
@@ -1881,7 +1908,9 @@ export default function MasterPlanLayout({
     cameraFilterSignature,
     filteredApartments.length,
     hasActiveInventoryFilters,
+    masterPlanHotspotFrames,
     masterPlanConfig?.reverseHotspotDirection,
+    masterPlanSnapFrames,
   ]);
 
   useEffect(() => {

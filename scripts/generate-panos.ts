@@ -4,7 +4,7 @@ import os from "os"
 import sharp from "sharp"
 
 const INPUT = process.env.PANO_INPUT ?? "./raw-panos"
-const OUTPUT = process.env.PANO_OUTPUT ?? "./public/exterior-pano-changed"
+const OUTPUT = process.env.PANO_OUTPUT ?? "./public/interior-balcony-v2"
 
 const PREVIEW_WIDTH = 2000
 
